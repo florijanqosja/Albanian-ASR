@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.css" type="text/css" media="all" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" type="text/javascript"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js" type="text/javascript"></script>
+  <title>Data Collextion</title>
+  <link rel="stylesheet" href="https://api.uneduashqiperine.com/splices/style.css">
+  <style>
+* {
+  /* margin: 0;
+  padding: 0; */
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+.navMenu {
+  position: absolute;
+  /* text-align: center; */
+  left: 45%;
+  /* top: 100%;
+  
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(100%, 100%); */
+}
+
+.navMenu a {
+  color: #f6f4e6;
+  text-decoration: none;
+  font-size: 1.2em;
+  text-transform: uppercase;
+  font-weight: 500;
+  display: inline-block;
+  width: 80px;
+  -webkit-transition: all 0.2s ease-in-out;
+  transition: all 0.2s ease-in-out;
+}
+
+.navMenu a:hover {
+  color: #fddb3a;
+}
+
+.navMenu .dot {
+  width: 6px;
+  height: 6px;
+  background: #fddb3a;
+  border-radius: 50%;
+  opacity: 0;
+  -webkit-transform: translateX(30px);
+  transform: translateX(30px);
+  -webkit-transition: all 0.2s ease-in-out;
+  transition: all 0.2s ease-in-out;
+}
+
+.navMenu a:nth-child(1):hover ~ .dot {
+  -webkit-transform: translateX(30px);
+  transform: translateX(30px);
+  -webkit-transition: all 0.2s ease-in-out;
+  transition: all 0.2s ease-in-out;
+  opacity: 1;
+}
+
+.navMenu a:nth-child(2):hover ~ .dot {
+  -webkit-transform: translateX(110px);
+  transform: translateX(110px);
+  -webkit-transition: all 0.2s ease-in-out;
+  transition: all 0.2s ease-in-out;
+  opacity: 1;
+}
+
+.navMenu a:nth-child(3):hover ~ .dot {
+  -webkit-transform: translateX(200px);
+  transform: translateX(200px);
+  -webkit-transition: all 0.2s ease-in-out;
+  transition: all 0.2s ease-in-out;
+  opacity: 1;
+}
+
+.navMenu a:nth-child(4):hover ~ .dot {
+  -webkit-transform: translateX(285px);
+  transform: translateX(285px);
+  -webkit-transition: all 0.2s ease-in-out;
+  transition: all 0.2s ease-in-out;
+  opacity: 1;
+}
+
+.hide{
+display:none;
+}
+
+.show{
+display:block;
+}
+
+.loader {
+  border: 16px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 16px solid #3498db;
+  width: 80px;
+  height: 80px;
+  -webkit-animation: spin 2s linear infinite; /* Safari */
+  animation: spin 2s linear infinite;
+  position: absolute;
+  left: 42%;
+}
+
+/* Safari */
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+  </style>
+
+</head>
+<body>
+
+  <nav class="navMenu">
+    <!-- <a href="#">Label</a>
+    <a href="#">Validate</a> -->
+    {% for item in nav.top %}
+    <li class="{{ 'active' if item.is_active else '' }}">
+        <a href="{{ item.url }}">{{ item.label }}</a>
+    </li>
+    {% endfor %}
+    <div class="dot"></div>
+  </nav>
+<!-- partial:index.partial.html -->
+<script src="https://kit.fontawesome.com/7c33dff1d8.js" crossorigin="anonymous"></script>
+
+<div id="overlay"></div>
+<h3>Labeled Datas: {{sumofLabeled}}</h3>
+<h3>UnLabeled Datas: {{sumofUnLabeled}}</h3>
+<br/>
+<h1 style="text-align: center;" id="here_transcript" name="here_transcript">text: {{ validationaudio }}</h1>
+<div class="loader" id="none" style="display: block;"></div>
+
+<br/>
+<h3>Labeled Datas Duration: {{sumofLabeledDuration}}</h3>
+<h3>UnLabeled Datas Duration: {{sumofUnLabeledDuration}}</h3>
+<h3>Progress: {{progressPercentage}}</h3>
+<br/>
+<br/>
+<h3>Validated Labeled Datas Duration: {{sumofLabeledDurationValidated}}</h3>
+
+<div class="container">
+  <div class="player" id="player">
+    <div id="music-info">
+      <br/>
+      <div class="bg"></div>
+      <br/>
+      <div id="controls" style="display: flex; justify-content: center;">
+        <button id="recordButton" >Record</button>
+        <button id="pauseButton" disabled>Pause</button>
+        <button id="stopButton" disabled>Stop</button>     
+       </div>
+       <div id="formats">Format: start recording to see sample rate</div>
+       <p><strong>Recordings:</strong></p>
+       <ol id="recordingsList"></ol>
+       <!-- inserting these scripts at the end to be able to use all the elements in the DOM -->
+       <script src="https://cdn.rawgit.com/mattdiamond/Recorderjs/08e7abd9/dist/recorder.js"></script>
+       <script src="https://api.uneduashqiperine.com/splices/js/app.js"></script>
+       <div hidden id="transcribe_button">      
+        <br/>
+        <button class="button-65" id="transcribe_button_function" onclick="transcribe_button_function()">Transcribe</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+<!-- partial -->
+  <script  src="https://api.uneduashqiperine.com/splices/script.js"></script>
+
+</body>
+</html>
