@@ -22,7 +22,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" type="text/javascript"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js" type="text/javascript"></script>
   <title>Data Collextion</title>
-  <link rel="stylesheet" href="https://api.uneduashqiperine.com/splices/style.css">
+  <link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}">
 
 </head>
 <body>
@@ -35,7 +35,7 @@
           {% endfor %}
         </div>
 
-        <image style='height: 46.5px; border-radius: 20%; margin-left: 20px;' src="https://api.uneduashqiperine.com/splices/resources/logo.png" alt="logo">
+        <image style='height: 46.5px; border-radius: 20%; margin-left: 20px;' src="{{ url_for('static',filename='logo.png') }}" alt="logo">
         </div>
     </div>
 
@@ -162,7 +162,7 @@
   </div>
 </div>
 <!-- partial -->
-<script src="https://api.uneduashqiperine.com/splices/script.js"></script>
+<script src="{{ url_for('static',filename='script.js') }}"></script>
 
 </body>
 
