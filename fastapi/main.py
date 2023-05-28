@@ -182,8 +182,8 @@ def populate_splice_table(mp3path, path):
 
 
 def splicer(filein, video_name):
-    os.system(f"mkdir splices/{video_name}")  
-    os.system("python3 ../automation/pyAudioAnalysis/audioAnalysis.py silenceRemoval -i " + filein + " --smoothing 0.2 --weight 0.1")
+    os.system(f"mkdir splices/{video_name}")
+    os.system("python3 /home/flori/.local/lib/python3.10/site-packages/pyAudioAnalysis/audioAnalysis.py silenceRemoval -i " + filein + " --smoothing 0.2 --weight 0.1")
     os.system(f"mv mp3/{video_name}/*.wav splices/{video_name}")
 
  
@@ -226,14 +226,16 @@ async def fetch_data(video_name, video_category, video_file: UploadFile):
         raise HTTPException(400, detail="Invalid document type")
     os.system(f"mkdir mp4/{video_name}")
     os.system(f"mkdir mp3/{video_name}")
-    file_location = f"mp4/{video_name}/{video_file.filename}"
-    mp4filepath = "mp4/"  + video_name  + "/" + video_file.filename
-    mp3path = "mp3/" + video_name  + "/" + video_file.filename.replace(".mp4", ".mp3" )
+    
+    video_file_name = "".join(x for x in video_file.filename if x.isalnum()) + ".mp4"
+    file_location = f"mp4/{video_name}/{video_file_name}"
+    mp4filepath = "mp4/"  + video_name  + "/" + video_file_name
+    mp3path = "mp3/" + video_name  + "/" + video_file_name.replace(".mp4", ".mp3" )
     with open(file_location, "wb+") as file_object:
         file_object.write(video_file.file.read())
     query = f"INSERT INTO video_table (Vid_NAME, Vid_PATH, Vid_CATEGORY, Vid_UPLOAD_TIME, Vid_TO_MP3_STATUS, Vid_SPLICE_STATUS) VALUES ('{video_name}', '{file_location}', '{video_category}', '{getime()}', 'false', 'false')"
     results = await database.execute(query=query)
-    mp4tomp3(video_file.filename, video_name, mp4filepath, mp3path)
+    mp4tomp3(video_file_name, video_name, mp4filepath, mp3path)
     splicesDir = f"splices/{video_name}/"
     query = f"INSERT INTO splice_table (Sp_NAME, Sp_PATH, Sp_ORIGIN, Sp_DURATION, Sp_VALIDATION) VALUES {populate_splice_table(mp3path, splicesDir)}"
     await database.execute(query=query)
@@ -269,8 +271,7 @@ async def fetch_data(video_name, video_category, video_file: UploadFile):
 file_path = "large-video-file.mp4"
 randomId = random.randint(1,100)
 
-
-# app.mount("/media/flori/flori/final_directory_new/final_directory/fastapi/splices", StaticFiles(directory="splices"), name="splices")
+app.mount("/home/flori/Desktop/fypfloo/fastapi/splices", StaticFiles(directory="splices"), name="splices")
 @app.get("/audio/getsa")
 async def emer():
     sql = text("SELECT * FROM splice_table ORDER BY ROWID ASC LIMIT 1")

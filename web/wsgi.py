@@ -3,12 +3,10 @@ import requests as req
 from pydub import AudioSegment
 import os
 from flask_navigation import Navigation
-import collections
 try:
-    from collections import abc
-    collections.MutableMapping = abc.MutableMapping
-except:
-    pass
+    from collections.abc import Callable, Iterable # noqa
+except ImportError:
+    from collections import Callable, Iterable  # noqa
 app = Flask(__name__)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
@@ -21,6 +19,9 @@ nav.Bar('top', [
     
 ])
 
+# API_DOMAIN = "https://api.uneduashqiperine.com/"
+API_DOMAIN = "http://127.0.0.1:8000/"
+
 def save_trimed_clip(link, StrtTime, EndTime):
     if (StrtTime == "" or EndTime == ""):
         aaa = print("skiping because limit not selected")
@@ -31,7 +32,7 @@ def save_trimed_clip(link, StrtTime, EndTime):
     print(sumin)
     
     if (sumin > 3):
-        name_to_Load = "../fastapi/" + link.replace("https://api.uneduashqiperine.com/", "")
+        name_to_Load = "../fastapi/" + link.replace(API_DOMAIN, "")
         print("this is where we see the type: ", type(EndTime), " : ", EndTime)
         sound = AudioSegment.from_wav(name_to_Load)
         extract = sound[StrtTime:EndTime]
@@ -40,14 +41,15 @@ def save_trimed_clip(link, StrtTime, EndTime):
         print("skipped")
 
 def delete_reco():
-    clip_id = req.get("https://api.uneduashqiperine.com/clip_ID/")
-    url = f'https://api.uneduashqiperine.com/video/delete/{clip_id.text}'
+    endpoint = f"{API_DOMAIN}clip_ID/"
+    clip_id = req.get(endpoint)
+    url = f'{API_DOMAIN}video/delete/{clip_id.text}'
     x = req.post(url)
     print(x.text)
 
 def delete_reco_validated():
     clip_id = validation_data()["Id"]
-    url = f'https://api.uneduashqiperine.com/audio/delete/validated/{clip_id}'
+    url = f'{API_DOMAIN}audio/delete/validated/{clip_id}'
     x = req.post(url)
     print(x.text)
 
@@ -55,8 +57,9 @@ def post_label(content, start, end, link):
     print(start)
     print(end)
     save_trimed_clip(link, start, end)
-    clip_id = req.get("https://api.uneduashqiperine.com/clip_ID/")
-    link = f'https://api.uneduashqiperine.com/audio/label/{clip_id.text}?label_content={content}'
+    url_endpoint = f"{API_DOMAIN}clip_ID/"
+    clip_id = req.get(url_endpoint)
+    link = f'{API_DOMAIN}audio/label/{clip_id.text}?label_content={content}'
     print(link)
     return req.get(link)
 
@@ -66,16 +69,15 @@ def post_label_validated(content, start, end, link):
     save_trimed_clip(link, start, end)
     clip_id = validation_data()["Id"]
     print("this is the clip id of the validated", clip_id)
-    link = f'https://api.uneduashqiperine.com/audio/label/validated/{clip_id}?label_content={content}'
+    link = f'{API_DOMAIN}audio/label/validated/{clip_id}?label_content={content}'
     print(link)
     return req.get(link)
 
-domain = "https://api.uneduashqiperine.com/"
-
 
 def get_audio_link():
-    partial_clip_path = req.get("https://api.uneduashqiperine.com/audio/getsa")
-    clip_path = domain + partial_clip_path.text.replace('"', '')
+    endpoint = f"{API_DOMAIN}audio/getsa"
+    partial_clip_path = req.get(endpoint)
+    clip_path = API_DOMAIN + partial_clip_path.text.replace('"', '')
     return clip_path
 
 def convert(seconds):
@@ -94,30 +96,44 @@ def convert(seconds):
     return "%d:%02d:%02d" % (hours, minutes, seconds)
 
 def sumOfLabeled ():
-    partial_clip_path = req.get("https://api.uneduashqiperine.com/sumOfLabeled/")
+    endpoint = f"{API_DOMAIN}sumOfLabeled/"
+    partial_clip_path = req.get(endpoint)
     clip_path = partial_clip_path.text.replace('"', '')
     return clip_path
 
 def sumOfUnLabeled ():
-    partial_clip_path = req.get("https://api.uneduashqiperine.com/sumOfUnLabeled/")
+    endpoint = f"{API_DOMAIN}sumOfUnLabeled/"
+    partial_clip_path = req.get(endpoint)
     clip_path = partial_clip_path.text.replace('"', '')
     return clip_path
 
 def sumOfLabeledDuration ():
-    partial_clip_path = req.get("https://api.uneduashqiperine.com/sumOfLabeledDuration/")
+    endpoint = f"{API_DOMAIN}sumOfLabeledDuration/"
+    partial_clip_path = req.get(endpoint)
     clip_path = partial_clip_path.text.replace('"', '')
-    return convert(round(float(clip_path)))
+    if (clip_path != 'null'):
+        return convert(round(float(clip_path)))
+    else:
+        return 0
 
 def sumOfLabeledDurationValidated ():
-    partial_clip_path = req.get("https://api.uneduashqiperine.com/sumOfLabeledDuration/validated")
+    endpoint = f"{API_DOMAIN}sumOfLabeledDuration/validated/"
+    partial_clip_path = req.get(endpoint)
     clip_path = partial_clip_path.text.replace('"', '')
-    return convert(round(float(clip_path)))
+    if (clip_path != 'null'):
+        return convert(round(float(clip_path)))
+    else:
+        return 0
 
 
 def sumOfUnLabeledDuration ():
-    partial_clip_path = req.get("https://api.uneduashqiperine.com/sumOfUnLabeledDuration/")
+    endpoint = f"{API_DOMAIN}sumOfUnLabeledDuration/"
+    partial_clip_path = req.get(endpoint)
     clip_path = partial_clip_path.text.replace('"', '')
-    return convert(round(float(clip_path)))
+    if (clip_path != 'null'):
+        return convert(round(float(clip_path)))
+    else:
+        return 0
 
 def progressPercentage ():
     c = float("%.2f" % float(sumOfUnLabeled()))
@@ -133,14 +149,16 @@ def validationaudio ():
     return textt
 
 def validation_data():
+    endpoint = f"{API_DOMAIN}audio/get_validation_audio_link"
     from google.protobuf.json_format import MessageToDict
-    aresponse = req.get("https://api.uneduashqiperine.com/audio/get_validation_audio_link")
+    aresponse = req.get(endpoint)
     response = aresponse.json()
     return response
 
 def validation_data_plus():
+    endpoint = f"{API_DOMAIN}audio/get_validation_audio_link_plus"
     from google.protobuf.json_format import MessageToDict
-    aresponse = req.get("https://api.uneduashqiperine.com/audio/get_validation_audio_link_plus")
+    aresponse = req.get(endpoint)
     response = aresponse.json()
     return response
 
