@@ -1,0 +1,14 @@
+version: '1'
+services:
+  # web:
+  #   container_name: "web"
+  #   build: 
+  #     dockerfile: ./images/web/Dockerfile
+  #   ports:
+  #     - "100:80"
+  api:
+    container_name: "api"
+    build:
+      dockerfile: ./images/api/Dockerfile
+    ports:
+      - "200:80"
