@@ -271,7 +271,7 @@ async def fetch_data(video_name, video_category, video_file: UploadFile):
 file_path = "large-video-file.mp4"
 randomId = random.randint(1,100)
 
-app.mount("/home/flori/Desktop/fypfloo/fastapi/splices", StaticFiles(directory="splices"), name="splices")
+# app.mount("/home/flori/Desktop/fypfloo/fastapi/splices", StaticFiles(directory="splices"), name="splices")
 @app.get("/audio/getsa")
 async def emer():
     sql = text("SELECT * FROM splice_table ORDER BY ROWID ASC LIMIT 1")
