@@ -1,0 +1,10 @@
+build:
+  docker:
+    # - web:
+    #     context: ./web-project
+    #     dockerfile: Dockerfile
+    #   port: 5000
+    api:
+      # context: ./api-project
+      dockerfile: ./api-project/dockerfiles/Dockerfile
+      # port: 800
