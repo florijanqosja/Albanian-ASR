@@ -7,4 +7,4 @@ build:
     api:
       # context: ./api-project
       dockerfile: ./api-project/dockerfiles/Dockerfile
-      # port: 8000
+      # port: 800
