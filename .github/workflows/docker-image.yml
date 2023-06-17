@@ -15,5 +15,5 @@ jobs:
 
       - name: Build and Deploy
         run: |
-          cd /path/to/your/project
+          cd /home/ubuntu/Desktop/actions-runner/unedua/Albanian-ASR/Albanian-ASR
           docker-compose up --build -d
