@@ -6,5 +6,5 @@ build:
     #   port: 5000
     api:
       # context: ./api-project
-      dockerfile: api-project/dockerfiles/Dockerfile
+      dockerfile: ./api-project/dockerfiles/Dockerfile
       # port: 8000
