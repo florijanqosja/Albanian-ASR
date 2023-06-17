@@ -1,14 +1,19 @@
-version: '1'
 services:
-  # web:
-  #   container_name: "web"
-  #   build: 
-  #     dockerfile: ./images/web/Dockerfile
-  #   ports:
-  #     - "100:80"
   api:
-    container_name: "api"
-    build:
-      dockerfile: ./images/api/Dockerfile
+    container_name: "new-api"
+    # API service configuration
     ports:
-      - "200:80"
+      - 120:80  # Map host port 8000 to container port 8000
+    build:
+      dockerfile: ./new-api/dockerfiles/Dockerfile
+      context: .
+    
+
+  web:
+    container_name: "new-web"
+    # Web interface service configuration
+    ports:
+      - 140:80  # Map host port 8080 to container port 80
+    build:
+      dockerfile: ./new-web/dockerfiles/Dockerfile
+      context: .

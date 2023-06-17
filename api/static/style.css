@@ -1,0 +1,302 @@
+*{
+  box-sizing:border-box;
+}
+:root{
+  --small: 35px;
+  --medium: 50px;
+  --large: 65px;
+  --bar-height:10px;
+  --bar2-height:15px;
+}
+body{
+  font-family:sans-serif;
+  user-select:none;
+  padding:0;
+  margin:0;
+  background: rgb(149,1,193);
+  background: linear-gradient(159deg, rgb(98 42 115) 0%, rgba(227,129,102,1) 100%);
+}
+#overlay{
+  position:absolute;
+  top:0;
+  left:0;
+  bottom:0;
+  right:0;
+  z-index:9999;
+  display:none;
+}
+.container{
+  height:100vh;
+}
+.player{
+  border-radius: 20px;
+  width: 500px;
+  height: 350px;
+  position: absolute;
+  top:calc(50% - 175px);
+  left:calc(50% - 250px);
+  box-shadow:6px 6px 15px rgba(51,51,51,0.5);
+  overflow:hidden;
+  background:#fff;
+}
+.player #music-info{
+  padding: 15px;
+  /*background-image:url("https://www.bensound.com/bensound-img/evolution.jpg");*/
+  height: 238px;
+  background-repeat:no-repeat;
+  background-size:100%;
+  color: #fff;
+}
+.player #music-info .title{
+  font-size: 23px;
+  text-align: center;
+  margin-bottom: 8px;
+  z-index:1;
+}
+.player #music-info .bg{
+  width: 100%;
+  box-shadow: 0 -100px 100px 100px rgba(0,0,0,0.5);
+}
+.player #music-info .author{
+  text-align: center;
+  font-size: 14px;
+  
+}
+.player #music-info .album{
+  font-size: 14px;
+}
+.player .timestamp{
+  position: absolute;
+  width: 100%;
+  bottom: 110px;
+}
+.player .timestamp #bar{
+  width: 100%;
+  height: var(--bar-height);
+  background: #bbb;
+}
+.player .timestamp #current-time{
+  position:absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: var(--bar-height);
+  background: #5453af;
+  pointer-events:none;
+}
+.player .timestamp #current-time:after{
+  content:"";
+  width: 16px;
+  height: 16px;
+  background: #5453af;
+  position: absolute;
+  right: -8px;
+  bottom: -4px;
+  z-index: 9;
+  border-radius: 50%;
+  box-shadow: 0 0 3px 2px #eee;
+}
+.player .timestamp2{
+  position: absolute;
+  width: 100%;
+  bottom: 110px;
+}
+.player .timestamp2 #bar2{
+  width: 100%;
+  height: var(--bar2-height);
+  background: #bbb;
+}
+.player .timestamp2 #current-time2{
+  position:absolute;
+  right: 0;
+  bottom: 0;
+  width: 0;
+  height: var(--bar2-height);
+  background: #FF0000;
+  pointer-events:none;
+}
+.player .timestamp2 #current-time2:after{
+  content:"";
+  width: 16px;
+  height: 16px;
+  background: #FF0000;
+  position: absolute;
+  right: -8px;
+  bottom: -4px;
+  z-index: 9;
+  border-radius: 50%;
+  box-shadow: 0 0 3px 2px #eee;
+}
+.player .timestamp3{
+  position: absolute;
+  width: 100%;
+  bottom: 110px;
+}
+
+.player .timestamp3 #bar3{
+  width: 100%;
+  height: var(--bar2-height);
+  background: #bbb;
+}
+.player .timestamp3 #current-time3{
+  position:absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: var(--bar2-height);
+  background: #FF0000;
+  pointer-events:none;
+}
+.player .timestamp3 #current-time3:after{
+  content:"";
+  width: 16px;
+  height: 16px;
+  background: #FF0000;
+  position: absolute;
+  right: -8px;
+  bottom: -4px;
+  z-index: 9;
+  border-radius: 50%;
+  box-shadow: 0 0 3px 2px #eee;
+}
+
+.player .buttons{
+  position: absolute;
+  bottom: 0px;
+  border-top: 1px solid #ddd;
+  width:100%;
+  height:110px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.player .buttons .button{
+  border: 1px solid #ddd;
+  border-radius: 50%;
+  text-align:center;
+  margin:7px;
+  color: #333;
+}
+.player .buttons .button-small{
+  width: var(--small);
+  height: var(--small);
+  line-height: var(--small);
+}
+.player .buttons .button-medium{
+  width: var(--medium);
+  height: var(--medium);
+  line-height: var(--medium);
+  font-size: 25px;
+}
+.player .buttons .button-large{
+  width: var(--large);
+  height: var(--large);
+  line-height: var(--large);
+  font-size: 35px;
+}
+.player .buttons .button-small:hover, .player .buttons .button-medium:hover, .player .buttons .button-large:hover{
+  background: #5453af;
+  color: #fff;
+}
+
+.center-block {
+  display: block;
+  margin-right: auto;
+  margin-left: auto;
+  position: relative;
+  cursor: text;
+  font-size: 14px;
+  line-height: 20px;
+  padding: 0 16px;
+  height: 48px;
+  background-color: #fff;
+  border: 1px solid #d6d6e7;
+  border-radius: 3px;
+  color: rgb(35, 38, 59);
+  box-shadow: inset 0 1px 4px 0 rgb(119 122 175 / 30%);
+  overflow: hidden;
+  transition: all 100ms ease-in-out;
+  :focus {
+      border-color: #3c4fe0;
+      box-shadow: 0 1px 0 0 rgb(35 38 59 / 5%);
+  }
+}
+
+.button-65 {
+  display: block;
+  margin-right: auto;
+  margin-left: auto;
+  appearance: none;
+  backface-visibility: hidden;
+  background-color: #2f80ed;
+  border-radius: 10px;
+  border-style: none;
+  box-shadow: none;
+  box-sizing: border-box;
+  color: #fff;
+  cursor: pointer;
+  font-family: Inter,-apple-system,system-ui,"Segoe UI",Helvetica,Arial,sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  height: 50px;
+  letter-spacing: normal;
+  line-height: 1.5;
+  outline: none;
+  overflow: hidden;
+  padding: 14px 30px;
+  position: relative;
+  text-align: center;
+  text-decoration: none;
+  transform: translate3d(0, 0, 0);
+  transition: all .3s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.button-65:hover {
+  background-color: #1366d6;
+  box-shadow: rgba(0, 0, 0, .05) 0 5px 30px, rgba(0, 0, 0, .05) 0 1px 4px;
+  opacity: 1;
+  transform: translateY(0);
+  transition-duration: .35s;
+}
+
+.button-65:hover:after {
+  opacity: .5;
+}
+
+.button-65:active {
+  box-shadow: rgba(0, 0, 0, .1) 0 3px 6px 0, rgba(0, 0, 0, .1) 0 0 10px 0, rgba(0, 0, 0, .1) 0 1px 4px -1px;
+  transform: translateY(2px);
+  transition-duration: .35s;
+}
+
+.button-65:active:after {
+  opacity: 1;
+}
+
+@media (min-width: 768px) {
+  .button-65 {
+    padding: 14px 22px;
+    width: 176px;
+  }
+}
+
+
+[id*=flat-slider].ui-slider,
+[id*=flat-slider].ui-slider .ui-slider-pip .ui-slider-line {background: lighten($bg, 25%);
+}
+
+[id*=flat-slider].ui-slider .ui-slider-handle .ui-slider-tip:after {border-left-color: #434d5a;}
+
+
+[id*=flat-slider].ui-slider .ui-slider-handle.ui-state-hover, 
+[id*=flat-slider].ui-slider .ui-slider-handle.ui-state-focus, 
+[id*=flat-slider].ui-slider .ui-slider-handle.ui-state-active {border-color: white; }
+
+
+
+@import url(https://fonts.googleapis.com/css?family=Roboto:100,300,600);
