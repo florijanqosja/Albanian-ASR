@@ -9,9 +9,16 @@ COPY ./requirements.txt /code/requirements.txt
 
 # 
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+RUN apt-get -y update
+RUN apt-get -y upgrade
+RUN apt-get install -y ffmpeg
 
 # 
 COPY ./api /code/app
+
+VOLUME /code/app/mp4
+VOLUME /code/app/splices
+VOLUME /code/app/mp3
 
 # 
 EXPOSE 80
