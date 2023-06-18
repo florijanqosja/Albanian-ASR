@@ -17,3 +17,21 @@ services:
     build:
       dockerfile: ./api/dockerfiles/Dockerfile
       context: .
+    volumes:
+      - /home/ubuntu/Desktop/audio_files/mp3:/code/mp3
+      - /home/ubuntu/Desktop/audio_files/4:/code/mp4
+      - /home/ubuntu/Desktop/audio_files/splices:/code/splices
+    depends_on:
+      - db
+  
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: your_username
+      POSTGRES_PASSWORD: your_password
+      POSTGRES_DB: your_database_name
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
