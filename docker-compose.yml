@@ -1,15 +1,6 @@
 services:
-  # api:
-  #   container_name: "new-api"
-  #   # API service configuration
-  #   ports:
-  #     - 120:80  # Map host port 8000 to container port 8000
-  #   build:
-  #     dockerfile: ./new-api/dockerfiles/Dockerfile
-  #     context: .
-    
 
-  web:
+  api:
     container_name: "api"
     # Web interface service configuration
     ports:
@@ -17,12 +8,24 @@ services:
     build:
       dockerfile: ./api/dockerfiles/Dockerfile
       context: .
-    volumes:
-      - /home/ubuntu/Desktop/audio_files/mp3:/code/mp3
-      - /home/ubuntu/Desktop/audio_files/4:/code/mp4
-      - /home/ubuntu/Desktop/audio_files/splices:/code/splices
+    # volumes:
+    #   - /home/ubuntu/Desktop/audio_files/mp3:/code/mp3
+    #   - /home/ubuntu/Desktop/audio_files/4:/code/mp4
+    #   - /home/ubuntu/Desktop/audio_files/splices:/code/splices
     depends_on:
       - db
+
+  web:
+    container_name: "web"
+    # Web interface service configuration
+    ports:
+      - 160:5000  # Map host port 8080 to container port 80
+    build:
+      dockerfile: ./web/dockerfiles/Dockerfile
+      context: .
+    depends_on:
+      - db
+      - api
   
   db:
     image: postgres
