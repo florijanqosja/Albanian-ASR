@@ -13,5 +13,5 @@ RUN pip install --upgrade pip wheel setuptools requests
 COPY ./web /code/app
 
 EXPOSE 5000
-# CMD ["uvicorn", "app.wsgi:app", "--host", "0.0.0.0", "--port", "5000"]
-# RUN gunicorn --bind 0.0.0.0:5000 app.wsgi:app
+
+CMD ["gunicorn", "-b", "0.0.0.0:5000", "app.wsgi:app"]
