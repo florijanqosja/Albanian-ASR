@@ -1,5 +1,5 @@
+version: '3'
 services:
-
   api:
     container_name: "api"
     # Web interface service configuration
@@ -35,7 +35,6 @@ services:
       POSTGRES_PASSWORD: your_password
       POSTGRES_DB: your_database_name
     volumes:
-      # - ./data:/var/lib/postgresql/data
       - /home/ubuntu/Desktop/audio_files/postgresql/data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
@@ -49,13 +48,4 @@ services:
       - 443:443
     volumes:
       - ./volume/nginx/conf/:/etc/nginx/conf.d/:ro
-  
-  certbot:
-    image: certbot/certbot
-    volumes:
       - ./ssl:/etc/letsencrypt
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
-    command: certonly --webroot --webroot-path=/usr/share/nginx/html --agree-tos --email flooxperia@gmail.com --no-eff-email -d api.uneduashqiperine.com -d uneduashqiperine.com
-    depends_on:
-      - nginx
-    entrypoint: sh -c "certbot renew -q --webroot --webroot-path=/usr/share/nginx/html --no-random-sleep-on-renew"
