@@ -48,11 +48,14 @@ services:
       - 80:80
       - 443:443
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./certbot/www:/var/www/certbot/:ro
-
+      - ./volume/nginx/conf/:/etc/nginx/conf.d/:ro
+  
   certbot:
-    image: certbot/certbot:latest
+    image: certbot/certbot
     volumes:
-      - ./certbot/www/:/var/www/certbot/:rw
-      - ./certbot/conf/:/etc/letsencrypt/:rw
+      - ./ssl:/etc/letsencrypt
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    command: certonly --webroot --webroot-path=/usr/share/nginx/html --agree-tos --email flooxperia@gmail.com --no-eff-email -d api.uneduashqiperine.com -d uneduashqiperine.com
+    depends_on:
+      - nginx
+    entrypoint: sh -c "certbot renew -q --webroot --webroot-path=/usr/share/nginx/html --no-random-sleep-on-renew"
