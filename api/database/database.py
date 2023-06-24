@@ -11,11 +11,9 @@ env_vars = dotenv_values()
 DATABASE_USER = env_vars.get("POSTGRES_USER")
 DATABASE_PASSWORD = env_vars.get("POSTGRES_PASSWORD")
 DATABASE_NAME = env_vars.get("POSTGRES_DB")
-DATABASE_HOST = env_vars.get("DATABASE_HOST")
-DATABASE_PORT = env_vars.get("DATABASE_PORT")
 
 # Create the database connection URL
-DATABASE_URL = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
+DATABASE_URL = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@db/{DATABASE_NAME}"
 
 # Create the database engine
 engine = _sql.create_engine(DATABASE_URL)
