@@ -26,8 +26,9 @@ nav.Bar('top', [
     
 ])
 
-# API_DOMAIN = "https://api.uneduashqiperine.com/"
-API_DOMAIN = "http://api:80/"
+API_DOMAIN = "https://api.uneduashqiperine.com/"
+# API_DOMAIN = "http://api:80/"
+# API_DOMAIN = "http://0.0.0.0:80/"
 
 def save_trimed_clip(link, StrtTime, EndTime):
     if (StrtTime == "" or EndTime == ""):
