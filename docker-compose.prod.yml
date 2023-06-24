@@ -34,3 +34,18 @@ services:
       - ${DB_VOLUME_PATH}:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+
+  nginx:
+    image: nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ${SSL_API_CERT_PATH}:/etc/nginx/ssl/api.crt
+      - ${SSL_API_KEY_PATH}:/etc/nginx/ssl/api.key
+      - ${SSL_UNEDUASHQIPERINE_CERT_PATH}:/etc/nginx/ssl/uneduashqiperine.crt
+      - ${SSL_UNEDUASHQIPERINE_KEY_PATH}:/etc/nginx/ssl/uneduashqiperine.key
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - api
+      - web
