@@ -19,8 +19,10 @@ jobs:
           sudo apt install docker-compose
 
       - name: Configure environment
+        env:
+          ENV_FILE_LOCATION: ${{ secrets.envFileLocation }}
         run: |
-          cp ${{ secrets.envFileLocation }} .env
+          cp $ENV_FILE_LOCATION .env
           sudo chmod 600 .env
 
       - name: Build and Deploy
