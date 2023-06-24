@@ -2,40 +2,36 @@ version: '3'
 services:
   api:
     container_name: "api"
-    # Web interface service configuration
     ports:
-      - 140:80  # Map host port 8080 to container port 80
+      - 140:80
     build:
       dockerfile: ./api/dockerfiles/Dockerfile
       context: .
     volumes:
-      - /home/ubuntu/Desktop/audio_files/mp3:/code/mp3
-      - /home/ubuntu/Desktop/audio_files/4:/code/mp4
-      - /home/ubuntu/Desktop/audio_files/splices:/code/splices
+      - ${MP3_VOLUME_PATH}:/code/mp3
+      - ${MP4_VOLUME_PATH}:/code/mp4
+      - ${SPLICES_VOLUME_PATH}:/code/splices
     depends_on:
       - db
 
   web:
     container_name: "web"
-    # Web interface service configuration
     ports:
-      - 160:5000  # Map host port 8080 to container port 80
+      - 160:5000
     build:
       dockerfile: ./web/dockerfiles/Dockerfile
       context: .
     depends_on:
       - db
       - api
-  
+
   db:
     image: postgres
     restart: always
-    environment:
-      POSTGRES_USER: your_username
-      POSTGRES_PASSWORD: your_password
-      POSTGRES_DB: your_database_name
+    env_file:
+      - .env
     volumes:
-      - /home/ubuntu/Desktop/audio_files/postgresql/data:/var/lib/postgresql/data
+      - ${DB_VOLUME_PATH}:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 
@@ -43,11 +39,10 @@ services:
     image: nginx
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
-      - /home/ubuntu/Desktop/letsencrypt/live/api.uneduashqiperine.com/fullchain.pem:/etc/nginx/ssl/api.crt
-      - /home/ubuntu/Desktop/letsencrypt/live/api.uneduashqiperine.com/privkey.pem:/etc/nginx/ssl/api.key
-      - /home/ubuntu/Desktop/letsencrypt/live/uneduashqiperine.com/fullchain.pem:/etc/nginx/ssl/uneduashqiperine.crt
-      - /home/ubuntu/Desktop/letsencrypt/live/uneduashqiperine.com/privkey.pem:/etc/nginx/ssl/uneduashqiperine.key
-      
+      - ${SSL_API_CERT_PATH}:/etc/nginx/ssl/api.crt
+      - ${SSL_API_KEY_PATH}:/etc/nginx/ssl/api.key
+      - ${SSL_UNEDUASHQIPERINE_CERT_PATH}:/etc/nginx/ssl/uneduashqiperine.crt
+      - ${SSL_UNEDUASHQIPERINE_KEY_PATH}:/etc/nginx/ssl/uneduashqiperine.key
     ports:
       - "80:80"
       - "443:443"
