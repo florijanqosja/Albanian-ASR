@@ -15,7 +15,7 @@ jobs:
 
       - name: Configure environment
         run: |
-          echo "$(<${{ secrets.envFileLocation }})" > .env
+          cp /home/ubuntu/Desktop/.env.prod .env
           sudo chmod 600 .env
         env:
           ENV_FILE_LOCATION: ${{ secrets.ENVFILELOCATION }}
