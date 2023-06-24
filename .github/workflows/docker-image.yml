@@ -13,15 +13,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set up Docker Compose
-        run: |
-          sudo apt update
-          sudo apt install docker-compose
-
       - name: Configure environment
         env:
           ENV_FILE_LOCATION: ${{ secrets.ENVFILELOCATION }}
         run: |
+          echo "$ENV_FILE_LOCATION"
           cp $ENV_FILE_LOCATION .env
           sudo chmod 600 .env
 
