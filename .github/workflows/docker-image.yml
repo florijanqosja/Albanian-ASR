@@ -24,4 +24,6 @@ jobs:
         run: |
           cd /home/ubuntu/Desktop/actions-runner/unedua/Albanian-ASR/Albanian-ASR
           yes | sudo apt install ffmpeg
-          sudo docker-compose.prod --env-file .env up --build -d
+          sudo docker-compose.prod up --build -d
+        env:
+          ENV_FILE_LOCATION: ${{ secrets.ENVFILELOCATION }}
