@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, List
 import fastapi as _fastapi
 import sqlalchemy.orm as _orm
+import sqlalchemy as _sql
 from moviepy.editor import VideoFileClip
 import os
 from pyAudioAnalysis import audioSegmentation
@@ -10,9 +11,11 @@ from sqlalchemy.orm import Session
 import os
 import librosa
 import wave
+from sqlalchemy import func, select
 
 from .database import schemas as _schemas
 from .database import services as _services
+from .database import models as _models
 
 app = FastAPI()
 
@@ -22,45 +25,11 @@ if TYPE_CHECKING:
 app = _fastapi.FastAPI()
 _services._add_tables()
 
-
-@app.post("/api/contacts/", response_model=_schemas.Contact)
-async def create_contact(
-    contact: _schemas.CreateContact,
-    db: _orm.Session = _fastapi.Depends(_services.get_db),
-):
-    return await _services.create_contact(contact=contact, db=db)
-
-# def populate_splice_table(mp3path, path):
-    values = []
-    f = []
-    for (dirpath, dirnames, filenames) in walk(path):
-        f.extend(filenames)
-        break
-    for filename in f:
-        Sp_NAME = filename.replace(".wav", "")
-        Sp_PATH = path + filename
-        Sp_ORIGIN = mp3path
-        Sp_DURATION = librosa.get_duration(filename= path + filename)
-        Sp_VALIDATION = "0"
-        # Sp_FILESIZE = Path(Sp_PATH).stat().st_size
-        val = f"('{Sp_NAME}', '{Sp_PATH}', '{Sp_ORIGIN}', '{Sp_DURATION}', '{Sp_VALIDATION}')"
-        values = list(values)
-        values.append(val)
-    values = tuple(values)
-    values = str(values)
-    values = values.replace('("', '')
-    values = values.replace('")', '')
-    values = values.replace('"', '')
-    return values
-
-
-
 def splicer(filein, video_name):
     os.system(f"mkdir splices")
     os.system(f"mkdir splices/{video_name}")
     os.system("python3 /usr/local/lib/python3.9/site-packages/pyAudioAnalysis/audioAnalysis.py silenceRemoval -i " + filein + " --smoothing 0.2 --weight 0.1")
     os.system(f"mv mp3/{video_name}/*.wav splices/{video_name}")
-
 
 def mp4tomp3(mp4filename, video_name, mp4filepath, mp3path):
     video = VideoFileClip(os.path.join(mp4filepath))
@@ -138,9 +107,50 @@ async def create_video(
     return updated_video
 
 
-@app.post("/api/contacts/", response_model=_schemas.Contact)
-async def create_contact(
-    contact: _schemas.CreateContact,
-    db: _orm.Session = _fastapi.Depends(_services.get_db),
-):
-    return await _services.create_contact(contact=contact, db=db)
+@app.get("/audio/getsa")
+async def getNextSpliceLink(db: Session = Depends(_services.get_db)):
+    splice = _models.Splice_table.__table__
+    query = select([splice.c.Sp_PATH]).order_by(splice.c.Sp_ID).limit(1)
+    result = db.execute(query).scalar()
+    if result is None:
+        return []
+    return [result]
+
+@app.get("/audio/get_validation_audio_link_plus")
+async def getNextSpliceLink(db: Session = Depends(_services.get_db)):
+    first_splice = db.query(_models.Splice_table).order_by(_models.Splice_table.Sp_ID).first()
+    if first_splice is None:
+        return []
+    return [first_splice.Sp_PATH]
+
+@app.get("/audio/get_clip_id/")
+async def get_clip_id(db: Session = Depends(_services.get_db)):
+    first_splice = db.query(_models.Splice_table).order_by(_models.Splice_table.Sp_ID).first()
+    if first_splice is None:
+        return None
+    return first_splice.Sp_ID
+
+@app.get("/sumOfLabeledDuration/")
+async def get_sum_of_labeled_duration(db: Session = Depends(_services.get_db)):
+    total_duration = db.query(func.sum(_models.Labeled_splice_table.Sp_DURATION.cast(_sql.Float))).scalar()
+    return total_duration
+
+@app.get("/sumOfLabeledDuration/validated")
+async def get_sum_of_labeled_duration_validated(db: Session = Depends(_services.get_db)):
+    total_duration = db.query(func.sum(_models.High_quality_labeled_splice_table.Sp_DURATION.cast(_sql.Float))).scalar()
+    return total_duration
+
+@app.get("/sumOfUnLabeledDuration/")
+async def get_sum_of_unlabeled_duration(db: Session = Depends(_services.get_db)):
+    total_duration = db.query(func.sum(_models.Splice_table.Sp_DURATION.cast(_sql.Float))).scalar()
+    return total_duration
+
+@app.get("/sumOfLabeled/")
+async def get_sum_of_labeled(db: Session = Depends(_services.get_db)):
+    count = db.query(func.count(_models.Labeled_splice_table.Sp_ID)).scalar()
+    return count
+
+@app.get("/sumOfUnLabeled/")
+async def get_sum_of_unlabeled(db: Session = Depends(_services.get_db)):
+    count = db.query(func.count(_models.Splice_table.Sp_ID)).scalar()
+    return count

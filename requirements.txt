@@ -58,3 +58,4 @@ imblearn==0.0
 plotly==5.15.0
 simplejson==3.19.1
 pandas==2.0.2
+gunicorn==20.1.0

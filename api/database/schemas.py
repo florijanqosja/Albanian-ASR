@@ -37,7 +37,7 @@ class Video(_BaseViedo):
 class CreateVideo(_BaseViedo):
     pass
 
-class _BaseSplie(_pydantic.BaseModel):
+class _BaseSplice(_pydantic.BaseModel):
     Sp_NAME: str
     Sp_PATH: str
     Sp_LABEL: str
@@ -46,11 +46,50 @@ class _BaseSplie(_pydantic.BaseModel):
     Sp_VALIDATION: str
 
 
-class Splice(_BaseSplie):
+class Splice_table(_BaseSplice):
     Sp_ID: int
 
     class Config:
         orm_mode = True
 
-class CreateSplice(_BaseViedo):
+class CreateSplice(_BaseSplice):
+    pass
+
+
+
+class _BaseLabeledSplie(_pydantic.BaseModel):
+    Sp_NAME: str
+    Sp_PATH: str
+    Sp_LABEL: str
+    Sp_ORIGIN: str
+    Sp_DURATION: str
+    Sp_VALIDATION: str
+
+
+class Labeled_splice_table(_BaseLabeledSplie):
+    Sp_ID: int
+
+    class Config:
+        orm_mode = True
+
+class CreateHighQualityLabeledSplice(_BaseLabeledSplie):
+    pass
+
+
+class _BaseHighQualityLabeledSplie(_pydantic.BaseModel):
+    Sp_NAME: str
+    Sp_PATH: str
+    Sp_LABEL: str
+    Sp_ORIGIN: str
+    Sp_DURATION: str
+    Sp_VALIDATION: str
+
+
+class High_quality_labeled_splice_table(_BaseHighQualityLabeledSplie):
+    Sp_ID: int
+
+    class Config:
+        orm_mode = True
+
+class CreateHighQualtyLabeledSplice(_BaseHighQualityLabeledSplie):
     pass

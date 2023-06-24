@@ -1,3 +1,4 @@
+import sys
 from flask import Flask, render_template, request, redirect, url_for
 import requests as req
 from pydub import AudioSegment
@@ -7,6 +8,12 @@ try:
     from collections.abc import Callable, Iterable # noqa
 except ImportError:
     from collections import Callable, Iterable  # noqa
+import collections 
+if sys.version_info.major == 3 and sys.version_info.minor >= 10:
+
+    from collections.abc import MutableMapping
+else :
+    from collections import MutableMapping
 app = Flask(__name__)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
@@ -20,7 +27,7 @@ nav.Bar('top', [
 ])
 
 # API_DOMAIN = "https://api.uneduashqiperine.com/"
-API_DOMAIN = "http://127.0.0.1:8000/"
+API_DOMAIN = "http://api:80/"
 
 def save_trimed_clip(link, StrtTime, EndTime):
     if (StrtTime == "" or EndTime == ""):
@@ -98,6 +105,7 @@ def convert(seconds):
 def sumOfLabeled ():
     endpoint = f"{API_DOMAIN}sumOfLabeled/"
     partial_clip_path = req.get(endpoint)
+    print(partial_clip_path)
     clip_path = partial_clip_path.text.replace('"', '')
     return clip_path
 
@@ -111,6 +119,8 @@ def sumOfLabeledDuration ():
     endpoint = f"{API_DOMAIN}sumOfLabeledDuration/"
     partial_clip_path = req.get(endpoint)
     clip_path = partial_clip_path.text.replace('"', '')
+    print(clip_path)
+    print(type(clip_path))
     if (clip_path != 'null'):
         return convert(round(float(clip_path)))
     else:
@@ -130,6 +140,7 @@ def sumOfUnLabeledDuration ():
     endpoint = f"{API_DOMAIN}sumOfUnLabeledDuration/"
     partial_clip_path = req.get(endpoint)
     clip_path = partial_clip_path.text.replace('"', '')
+    print(clip_path)
     if (clip_path != 'null'):
         return convert(round(float(clip_path)))
     else:
