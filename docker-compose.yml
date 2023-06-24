@@ -29,9 +29,7 @@ services:
     image: postgres
     restart: always
     env_file:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      - .env
     volumes:
       - ${DB_VOLUME_PATH}:/var/lib/postgresql/data
     ports:
