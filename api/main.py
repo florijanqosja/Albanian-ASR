@@ -12,6 +12,8 @@ import os
 import librosa
 import wave
 from sqlalchemy import func, select
+from fastapi.staticfiles import StaticFiles
+from flask import send_from_directory
 
 from .database import schemas as _schemas
 from .database import services as _services
@@ -24,6 +26,12 @@ if TYPE_CHECKING:
 
 app = _fastapi.FastAPI()
 _services._add_tables()
+
+app.mount("/code/app/splices", StaticFiles(directory="splices"), name="splices")
+
+@app.route('/splices/<path:filename>')
+def serve_file(filename):
+    return send_from_directory('splices', filename)
 
 def splicer(filein, video_name):
     os.system(f"mkdir splices")
@@ -114,14 +122,14 @@ async def getNextSpliceLink(db: Session = Depends(_services.get_db)):
     result = db.execute(query).scalar()
     if result is None:
         return []
-    return [result]
+    return result
 
 @app.get("/audio/get_validation_audio_link_plus")
 async def getNextSpliceLink(db: Session = Depends(_services.get_db)):
     first_splice = db.query(_models.Splice_table).order_by(_models.Splice_table.Sp_ID).first()
     if first_splice is None:
         return []
-    return [first_splice.Sp_PATH]
+    return first_splice.Sp_PATH
 
 @app.get("/audio/get_clip_id/")
 async def get_clip_id(db: Session = Depends(_services.get_db)):
