@@ -15,7 +15,7 @@ jobs:
 
       - name: Configure environment
         run: |
-          cp "$ENV_FILE_LOCATION" .env
+          echo "$(<${{ secrets.envFileLocation }})" > .env
           sudo chmod 600 .env
         env:
           ENV_FILE_LOCATION: ${{ secrets.ENVFILELOCATION }}
