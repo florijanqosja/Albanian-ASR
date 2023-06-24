@@ -48,4 +48,4 @@ services:
       - 443:443
     volumes:
       - ./volume/nginx/conf/:/etc/nginx/conf.d/:ro
-      - ./ssl:/etc/letsencrypt
+      - /etc/letsencrypt/live:/etc/letsencrypt/live:ro
