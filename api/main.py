@@ -27,11 +27,7 @@ if TYPE_CHECKING:
 app = _fastapi.FastAPI()
 _services._add_tables()
 
-app.mount("/code/app/splices", StaticFiles(directory="splices"), name="splices")
-
-@app.route('/splices/<path:filename>')
-def serve_file(filename):
-    return send_from_directory('splices', filename)
+app.mount("/splices", StaticFiles(directory="splices"), name="splices")
 
 def splicer(filein, video_name):
     os.system(f"mkdir splices")
