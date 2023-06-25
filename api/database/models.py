@@ -65,3 +65,4 @@ class Splice_beeing_processed_table(_database.Base):
     Sp_ORIGIN = _sql.Column(_sql.String, nullable=True)
     Sp_DURATION = _sql.Column(_sql.String, nullable=True)
     Sp_VALIDATION = _sql.Column(_sql.String, nullable=True)
+    Sp_STATUS = _sql.Column(_sql.String, nullable=True)

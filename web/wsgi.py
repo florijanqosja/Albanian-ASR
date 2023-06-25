@@ -205,31 +205,6 @@ def hello2():
     else: 
         return render_template("finalvalidate.html", sumofLabeledDurationValidated = sumOfLabeledDurationValidated(), validationaudio = validation_data()["Label"], progressPercentage = progressPercentage(), audio_link = validation_data()["Path"], sumofLabeled = sumOfLabeled(), sumofUnLabeled = sumOfUnLabeled() , sumofLabeledDuration = sumOfLabeledDuration(), sumofUnLabeledDuration = sumOfUnLabeledDuration())
 
-# @app.route('/test', methods=["POST", "GET"])
-# def hello3():
-#     if request.method == "POST":
-#         if request.form['submit_button_validation'] == 'submit':
-#             print("is is the vaue of input: ", request.form["asinput_val1"])
-
-#             # print(request.form["input_content"])
-#             # label = request.form["input_content"]
-#             # val_start = request.form["input_val1"]
-#             # val_end = request.form["input_val2"]
-#             # post_label_validated(label, val_start, val_end, validation_data()["Path"])
-#             return render_template("record.html", sumofLabeledDurationValidated = sumOfLabeledDurationValidated(), validationaudio = validation_data()["Label"], progressPercentage = progressPercentage(), audio_link = validation_data()["Path"], sumofLabeled = sumOfLabeled(), sumofUnLabeled = sumOfUnLabeled() , sumofLabeledDuration = sumOfLabeledDuration(), sumofUnLabeledDuration = sumOfUnLabeledDuration())
-#         elif request.form['stop_button_valid'] == 'submit':
-#             print("is is the vaue of input: ", request.form["asinput_val1"])
-#             # delete_reco_validated()
-#             return render_template("record.html", sumofLabeledDurationValidated = sumOfLabeledDurationValidated(), validationaudio = validation_data()["Label"], progressPercentage = progressPercentage(), audio_link = validation_data()["Path"], sumofLabeled = sumOfLabeled(), sumofUnLabeled = sumOfUnLabeled() , sumofLabeledDuration = sumOfLabeledDuration(), sumofUnLabeledDuration = sumOfUnLabeledDuration())
-#     else: 
-#         return render_template("record.html", sumofLabeledDurationValidated = sumOfLabeledDurationValidated(), validationaudio = validation_data()["Label"], progressPercentage = progressPercentage(), audio_link = validation_data()["Path"], sumofLabeled = sumOfLabeled(), sumofUnLabeled = sumOfUnLabeled() , sumofLabeledDuration = sumOfLabeledDuration(), sumofUnLabeledDuration = sumOfUnLabeledDuration())
-
-def wav_wdown ():
-
-    import urllib.request
-    urllib.request.urlretrieve("http://www.example.com/songs/mp3.mp3", "mp3.mp3")
-
-
 @app.route('/test', methods=["POST", "GET"])
 def hello3():
     if request.method == "POST":

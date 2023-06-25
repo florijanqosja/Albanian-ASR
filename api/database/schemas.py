@@ -21,6 +21,8 @@ class Video(_BaseViedo):
 class CreateVideo(_BaseViedo):
     pass
 
+
+
 class _BaseSplice(_pydantic.BaseModel):
     Sp_ID: int
     Sp_NAME: str
@@ -29,7 +31,6 @@ class _BaseSplice(_pydantic.BaseModel):
     Sp_ORIGIN: str
     Sp_DURATION: str
     Sp_VALIDATION: str
-
 
 class Splice_table(_BaseSplice):
     Sp_ID: int
@@ -51,15 +52,15 @@ class _BaseLabeledSplie(_pydantic.BaseModel):
     Sp_DURATION: str
     Sp_VALIDATION: str
 
-
 class Labeled_splice_table(_BaseLabeledSplie):
     Sp_ID: int
 
     class Config:
         orm_mode = True
 
-class CreateHighQualityLabeledSplice(_BaseLabeledSplie):
+class CreateLabeledSplice(_BaseLabeledSplie):
     pass
+
 
 
 class _BaseHighQualityLabeledSplie(_pydantic.BaseModel):
@@ -71,15 +72,15 @@ class _BaseHighQualityLabeledSplie(_pydantic.BaseModel):
     Sp_DURATION: str
     Sp_VALIDATION: str
 
-
 class High_quality_labeled_splice_table(_BaseHighQualityLabeledSplie):
     Sp_ID: int
 
     class Config:
         orm_mode = True
 
-class CreateHighQualtyLabeledSplice(_BaseHighQualityLabeledSplie):
+class CreateHighQualityLabeledSplice(_BaseHighQualityLabeledSplie):
     pass
+
 
 
 class _BaseSpliceBeeingProcessed(_pydantic.BaseModel):
@@ -90,7 +91,7 @@ class _BaseSpliceBeeingProcessed(_pydantic.BaseModel):
     Sp_ORIGIN: str
     Sp_DURATION: str
     Sp_VALIDATION: str
-
+    Sp_STATUS: str
 
 class Splice_beeing_processed_table(_BaseSpliceBeeingProcessed):
     Sp_ID: int
@@ -100,3 +101,18 @@ class Splice_beeing_processed_table(_BaseSpliceBeeingProcessed):
 
 class CreateSpliceBeingProcessed(_BaseSpliceBeeingProcessed):
     pass
+
+
+
+class LabelSplice(_pydantic.BaseModel):
+    Sp_ID: int
+    Sp_LABEL: str
+    Sp_VALIDATION: Optional[str]
+
+class ValidateSplice(_pydantic.BaseModel):
+    Sp_ID: int
+    Sp_LABEL: str
+    Sp_VALIDATION: Optional[str]
+
+class DeleteSplice(_pydantic.BaseModel):
+    Sp_ID: int
