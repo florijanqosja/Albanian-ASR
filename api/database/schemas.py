@@ -3,22 +3,6 @@ from typing import Optional
 import pydantic as _pydantic
 
 
-class _BaseContact(_pydantic.BaseModel):
-    first_name: str
-    last_name: str
-    email: str
-    phone_number: str
-
-class Contact(_BaseContact):
-    id: int
-    date_created: _dt.datetime
-
-    class Config:
-        orm_mode = True
-
-class CreateContact(_BaseContact):
-    pass
-
 class _BaseViedo(_pydantic.BaseModel):
     Vid_NAME: Optional[str]
     Vid_PATH: Optional[str]
@@ -38,6 +22,7 @@ class CreateVideo(_BaseViedo):
     pass
 
 class _BaseSplice(_pydantic.BaseModel):
+    Sp_ID: int
     Sp_NAME: str
     Sp_PATH: str
     Sp_LABEL: str
@@ -58,6 +43,7 @@ class CreateSplice(_BaseSplice):
 
 
 class _BaseLabeledSplie(_pydantic.BaseModel):
+    Sp_ID: int
     Sp_NAME: str
     Sp_PATH: str
     Sp_LABEL: str
@@ -77,6 +63,7 @@ class CreateHighQualityLabeledSplice(_BaseLabeledSplie):
 
 
 class _BaseHighQualityLabeledSplie(_pydantic.BaseModel):
+    Sp_ID: int
     Sp_NAME: str
     Sp_PATH: str
     Sp_LABEL: str
@@ -96,6 +83,7 @@ class CreateHighQualtyLabeledSplice(_BaseHighQualityLabeledSplie):
 
 
 class _BaseSpliceBeeingProcessed(_pydantic.BaseModel):
+    Sp_ID: int
     Sp_NAME: str
     Sp_PATH: str
     Sp_LABEL: str
