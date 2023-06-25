@@ -11,6 +11,7 @@ services:
       - ${MP3_VOLUME_PATH}:/code/mp3
       - ${MP4_VOLUME_PATH}:/code/mp4
       - ${SPLICES_VOLUME_PATH}:/code/splices
+
     depends_on:
       - db
 
@@ -24,7 +25,7 @@ services:
     depends_on:
       - db
       - api
-
+    
   db:
     image: postgres
     restart: always
@@ -34,3 +35,4 @@ services:
       - ${DB_VOLUME_PATH}:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+

@@ -110,6 +110,32 @@ async def create_video(
 
     return updated_video
 
+@app.get("/audio/to_label")
+async def getNextSpliceLink(db: Session = Depends(_services.get_db)):
+    # Retrieve the first splice from the Splice_table
+    first_splice = db.query(_models.Splice_table).order_by(_models.Splice_table.Sp_ID).first()
+    
+    if first_splice is None:
+        return None
+
+    try:
+        # Transfer the splice to the Splice_beeing_processed_table
+        processed_splice = _models.Splice_beeing_processed_table(**first_splice.dict())
+        db.add(processed_splice)
+        db.commit()
+        db.refresh(processed_splice)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to process splice.")
+
+    return processed_splice
+
+@app.get("/audio/to_validate")
+async def getNextSpliceLink(db: Session = Depends(_services.get_db)):
+    first_splice = db.query(_models.Labeled_splice_table).order_by(_models.Labeled_splice_table.Sp_ID).first()
+    if first_splice is None:
+        return None
+    return first_splice
 
 @app.get("/audio/getsa")
 async def getNextSpliceLink(db: Session = Depends(_services.get_db)):
@@ -119,6 +145,20 @@ async def getNextSpliceLink(db: Session = Depends(_services.get_db)):
     if result is None:
         return []
     return result
+
+@app.get("/audio/get_validation_audio_link")
+async def next_validation_data(db: Session = Depends(_services.get_db)):
+    first_splice = db.query(_models.Labeled_splice_table).order_by(_models.Labeled_splice_table.Sp_ID).first()
+    if first_splice is None:
+        return None
+    return first_splice
+
+@app.get("/audio/get_clip_id/")
+async def get_clip_id(db: Session = Depends(_services.get_db)):
+    first_splice = db.query(_models.Splice_table).order_by(_models.Splice_table.Sp_ID).first()
+    if first_splice is None:
+        return None
+    return first_splice.Sp_ID
 
 @app.get("/audio/get_validation_audio_link_plus")
 async def getNextSpliceLink(db: Session = Depends(_services.get_db)):

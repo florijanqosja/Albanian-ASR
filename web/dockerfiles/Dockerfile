@@ -3,6 +3,7 @@ FROM tiangolo/uwsgi-nginx:python3.9
 WORKDIR /code
 
 COPY /requirements.txt /app/requirements.txt
+COPY ./.env /code/.env
 
 RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
 RUN apt-get -y update
