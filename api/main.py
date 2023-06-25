@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
 app = _fastapi.FastAPI()
+
 _services._add_tables()
 
 app.mount("/splices", StaticFiles(directory="splices"), name="splices")
@@ -112,18 +113,28 @@ async def create_video(
 
 @app.get("/audio/to_label")
 async def getNextSpliceLink(db: Session = Depends(_services.get_db)):
-    # Retrieve the first splice from the Splice_table
-    first_splice = db.query(_models.Splice_table).order_by(_models.Splice_table.Sp_ID).first()
-    
+    first_splice = await _services.get_first_splice(db)
     if first_splice is None:
         return None
 
-    try:
-        await _services.create_splice_being_processed(splice=first_splice, db=db)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail='failed')
+    # Create a record in Splice_beeing_processed_table
+    splice_being_processed_data = _schemas.CreateSpliceBeingProcessed(
+        Sp_ID=first_splice.Sp_ID,
+        Sp_NAME=first_splice.Sp_NAME,
+        Sp_PATH=first_splice.Sp_PATH,
+        Sp_LABEL=first_splice.Sp_LABEL,
+        Sp_ORIGIN=first_splice.Sp_ORIGIN,
+        Sp_DURATION=first_splice.Sp_DURATION,
+        Sp_VALIDATION=first_splice.Sp_VALIDATION,
+        Sp_STATUS='un_labeled',
 
-    return first_splice
+    )
+    processed_splice = await _services.create_splice_being_processed(splice_being_processed_data, db)
+
+    # Delete the record from Labeled_splice_table
+    await _services.delete_splice(first_splice.Sp_ID, db)
+
+    return processed_splice
 
 @app.get("/audio/to_validate")
 async def getNextSpliceLink(db: _services.get_db = Depends()):
@@ -140,6 +151,7 @@ async def getNextSpliceLink(db: _services.get_db = Depends()):
         Sp_ORIGIN=first_splice.Sp_ORIGIN,
         Sp_DURATION=first_splice.Sp_DURATION,
         Sp_VALIDATION=first_splice.Sp_VALIDATION,
+        Sp_STATUS='labeled',
     )
     processed_splice = await _services.create_splice_being_processed(splice_being_processed_data, db)
 
@@ -148,6 +160,83 @@ async def getNextSpliceLink(db: _services.get_db = Depends()):
 
     return processed_splice
 
+@app.put("/audio/label")
+async def label_splice(label_splice: _schemas.LabelSplice, db: Session = Depends(_services.get_db)):
+    try:
+        splice_being_processed = await _services.get_splice_being_processed(label_splice.Sp_ID, db)
+        if splice_being_processed is None or splice_being_processed.Sp_STATUS != 'un_labeled':
+            raise HTTPException(status_code=404, detail="Splice not found")
+        
+        update_splice_being_processed_data = {
+            "Sp_ID": label_splice.Sp_ID,
+            "Sp_LABEL": label_splice.Sp_LABEL,
+            "Sp_VALIDATION": label_splice.Sp_VALIDATION or '0.95',
+        }
+        await _services.update_splice_being_processed(Sp_ID=label_splice.Sp_ID, data=update_splice_being_processed_data, db=db)
+
+        labeled_splice_data = _schemas.CreateLabeledSplice(
+            Sp_ID=splice_being_processed.Sp_ID,
+            Sp_NAME=splice_being_processed.Sp_NAME,
+            Sp_PATH=splice_being_processed.Sp_PATH,
+            Sp_LABEL=splice_being_processed.Sp_LABEL,
+            Sp_ORIGIN=splice_being_processed.Sp_ORIGIN,
+            Sp_DURATION=splice_being_processed.Sp_DURATION,
+            Sp_VALIDATION=splice_being_processed.Sp_VALIDATION,
+        )
+        await _services.create_labeled_splice(labeled_splice_data, db)
+
+        await _services.delete_splice_being_processed(splice_being_processed, db)
+
+        return {"message": "Splice labeled and moved successfully"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/audio")
+async def delete_splice(delete_splice: _schemas.DeleteSplice, db: Session = Depends(_services.get_db)):
+    try:
+        splice_being_processed = await _services.get_splice_being_processed(delete_splice.Sp_ID, db)
+        if splice_being_processed is None:
+            raise HTTPException(status_code=404, detail="Splice not found")
+
+        await _services.delete_splice_being_processed(splice_being_processed, db)
+
+        return {"message": "Splice deleted sucsessfully"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/audio/validate")
+async def validate_splice(validate_splice: _schemas.LabelSplice, db: Session = Depends(_services.get_db)):
+    try:
+        splice_being_processed = await _services.get_splice_being_processed(validate_splice.Sp_ID, db)
+        if splice_being_processed is None or splice_being_processed.Sp_STATUS != 'labeled':
+            raise HTTPException(status_code=404, detail="Splice not found")
+        
+        update_splice_being_processed_data = {
+            "Sp_ID": validate_splice.Sp_ID,
+            "Sp_LABEL": validate_splice.Sp_LABEL,
+            "Sp_VALIDATION": validate_splice.Sp_VALIDATION or '1.0',
+        }
+        await _services.update_splice_being_processed(Sp_ID=validate_splice.Sp_ID, data=update_splice_being_processed_data, db=db)
+
+        labeled_splice_data = _schemas.CreateHighQualityLabeledSplice(
+            Sp_ID=splice_being_processed.Sp_ID,
+            Sp_NAME=splice_being_processed.Sp_NAME,
+            Sp_PATH=splice_being_processed.Sp_PATH,
+            Sp_LABEL=splice_being_processed.Sp_LABEL,
+            Sp_ORIGIN=splice_being_processed.Sp_ORIGIN,
+            Sp_DURATION=splice_being_processed.Sp_DURATION,
+            Sp_VALIDATION=splice_being_processed.Sp_VALIDATION,
+        )
+        await _services.create_high_quality_labeled_splice(labeled_splice_data, db)
+
+        await _services.delete_splice_being_processed(splice_being_processed, db)
+
+        return {"message": "Splice validated and moved successfully"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/audio/getsa")
 async def getNextSpliceLink(db: Session = Depends(_services.get_db)):
