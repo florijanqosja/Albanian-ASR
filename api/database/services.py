@@ -35,6 +35,26 @@ async def create_splice(splice: _schemas.CreateSplice, db: "Session") -> _schema
     db.refresh(splice_db)
     return _schemas.Splice_table.from_orm(splice_db)
 
+
+async def create_splice_being_processed(splice: _schemas.CreateSpliceBeingProcessed, db: "Session") -> _schemas.Splice_beeing_processed_table:
+    splice_dict = splice.dict()
+    splice_being_processed_db = _models.Splice_beeing_processed_table(**splice_dict)
+    db.add(splice_being_processed_db)
+    db.commit()
+    db.refresh(splice_being_processed_db)
+    return _schemas.Splice_beeing_processed_table.from_orm(splice_being_processed_db)
+
+async def delete_labeled_splice(splice_id: int, db: "Session"):
+    db.query(_models.Labeled_splice_table).filter(_models.Labeled_splice_table.Sp_ID == splice_id).delete()
+    db.commit()
+
+async def get_first_labeled_splice(db: "Session") -> _schemas.Labeled_splice_table:
+    first_splice = db.query(_models.Labeled_splice_table).order_by(_models.Labeled_splice_table.Sp_ID).first()
+    return _schemas.Labeled_splice_table.from_orm(first_splice) if first_splice else None
+
+
+
+
 async def update_video(video_path: str, update_data: dict, db: "Session") -> _schemas.Video:
     video_db = db.query(_models.Video_table).filter(_models.Video_table.Vid_PATH == video_path).first()
     if video_db is None:

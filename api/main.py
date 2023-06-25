@@ -119,23 +119,35 @@ async def getNextSpliceLink(db: Session = Depends(_services.get_db)):
         return None
 
     try:
-        # Transfer the splice to the Splice_beeing_processed_table
-        processed_splice = _models.Splice_beeing_processed_table(**first_splice.dict())
-        db.add(processed_splice)
-        db.commit()
-        db.refresh(processed_splice)
+        await _services.create_splice_being_processed(splice=first_splice, db=db)
     except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail="Failed to process splice.")
+        raise HTTPException(status_code=500, detail='failed')
+
+    return first_splice
+
+@app.get("/audio/to_validate")
+async def getNextSpliceLink(db: _services.get_db = Depends()):
+    first_splice = await _services.get_first_labeled_splice(db)
+    if first_splice is None:
+        return None
+
+    # Create a record in Splice_beeing_processed_table
+    splice_being_processed_data = _schemas.CreateSpliceBeingProcessed(
+        Sp_ID=first_splice.Sp_ID,
+        Sp_NAME=first_splice.Sp_NAME,
+        Sp_PATH=first_splice.Sp_PATH,
+        Sp_LABEL=first_splice.Sp_LABEL,
+        Sp_ORIGIN=first_splice.Sp_ORIGIN,
+        Sp_DURATION=first_splice.Sp_DURATION,
+        Sp_VALIDATION=first_splice.Sp_VALIDATION,
+    )
+    processed_splice = await _services.create_splice_being_processed(splice_being_processed_data, db)
+
+    # Delete the record from Labeled_splice_table
+    await _services.delete_labeled_splice(first_splice.Sp_ID, db)
 
     return processed_splice
 
-@app.get("/audio/to_validate")
-async def getNextSpliceLink(db: Session = Depends(_services.get_db)):
-    first_splice = db.query(_models.Labeled_splice_table).order_by(_models.Labeled_splice_table.Sp_ID).first()
-    if first_splice is None:
-        return None
-    return first_splice
 
 @app.get("/audio/getsa")
 async def getNextSpliceLink(db: Session = Depends(_services.get_db)):
