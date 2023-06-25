@@ -4,6 +4,7 @@ import requests as req
 from pydub import AudioSegment
 import os
 from flask_navigation import Navigation
+from dotenv import dotenv_values
 try:
     from collections.abc import Callable, Iterable # noqa
 except ImportError:
@@ -14,6 +15,8 @@ if sys.version_info.major == 3 and sys.version_info.minor >= 10:
     from collections.abc import MutableMapping
 else :
     from collections import MutableMapping
+
+env_vars = dotenv_values()
 app = Flask(__name__)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
@@ -26,9 +29,9 @@ nav.Bar('top', [
     
 ])
 
-API_DOMAIN = "https://api.uneduashqiperine.com/"
-# API_DOMAIN = "http://api:80/"
-# API_DOMAIN = "http://0.0.0.0:80/"
+
+API_DOMAIN = env_vars.get("API_DOMAIN")
+FILE_ACCESS_DOMAIN = env_vars.get("FILE_ACCESS_DOMAIN")
 
 def save_trimed_clip(link, StrtTime, EndTime):
     if (StrtTime == "" or EndTime == ""):
@@ -85,16 +88,10 @@ def post_label_validated(content, start, end, link):
 def get_audio_link():
     endpoint = f"{API_DOMAIN}audio/getsa"
     partial_clip_path = req.get(endpoint)
-    clip_path = API_DOMAIN + partial_clip_path.text.replace('"', '')
+    clip_path = FILE_ACCESS_DOMAIN + partial_clip_path.text.replace('"', '')
     return clip_path
 
 def convert(seconds):
-    # seconds = seconds % (24 * 3600)
-    # hour = seconds // 3600
-    # seconds %= 3600
-    # minutes = seconds // 60
-    # seconds %= 60
-    # seconds = 331045
 
     minutes, seconds = divmod(seconds, 60)
     hours, minutes = divmod(minutes, 60)

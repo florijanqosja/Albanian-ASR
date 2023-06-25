@@ -93,3 +93,22 @@ class High_quality_labeled_splice_table(_BaseHighQualityLabeledSplie):
 
 class CreateHighQualtyLabeledSplice(_BaseHighQualityLabeledSplie):
     pass
+
+
+class _BaseSpliceBeeingProcessed(_pydantic.BaseModel):
+    Sp_NAME: str
+    Sp_PATH: str
+    Sp_LABEL: str
+    Sp_ORIGIN: str
+    Sp_DURATION: str
+    Sp_VALIDATION: str
+
+
+class Splice_beeing_processed_table(_BaseSpliceBeeingProcessed):
+    Sp_ID: int
+
+    class Config:
+        orm_mode = True
+
+class CreateSpliceBeingProcessed(_BaseSpliceBeeingProcessed):
+    pass
