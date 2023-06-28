@@ -14,6 +14,9 @@ import wave
 from sqlalchemy import func, select
 from fastapi.staticfiles import StaticFiles
 from flask import send_from_directory
+from starlette.middleware.cors import CORSMiddleware
+from starlette.responses import RedirectResponse
+
 
 from .database import schemas as _schemas
 from .database import services as _services
@@ -27,6 +30,13 @@ if TYPE_CHECKING:
 app = _fastapi.FastAPI()
 
 _services._add_tables()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.mount("/splices", StaticFiles(directory="splices"), name="splices")
 
@@ -192,20 +202,6 @@ async def label_splice(label_splice: _schemas.LabelSplice, db: Session = Depends
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/audio")
-async def delete_splice(delete_splice: _schemas.DeleteSplice, db: Session = Depends(_services.get_db)):
-    try:
-        splice_being_processed = await _services.get_splice_being_processed(delete_splice.Sp_ID, db)
-        if splice_being_processed is None:
-            raise HTTPException(status_code=404, detail="Splice not found")
-
-        await _services.delete_splice_being_processed(splice_being_processed, db)
-
-        return {"message": "Splice deleted sucsessfully"}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 @app.put("/audio/validate")
 async def validate_splice(validate_splice: _schemas.LabelSplice, db: Session = Depends(_services.get_db)):
     try:
@@ -234,6 +230,20 @@ async def validate_splice(validate_splice: _schemas.LabelSplice, db: Session = D
         await _services.delete_splice_being_processed(splice_being_processed, db)
 
         return {"message": "Splice validated and moved successfully"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/audio")
+async def delete_splice(delete_splice: _schemas.DeleteSplice, db: Session = Depends(_services.get_db)):
+    try:
+        splice_being_processed = await _services.get_splice_being_processed(delete_splice.Sp_ID, db)
+        if splice_being_processed is None:
+            raise HTTPException(status_code=404, detail="Splice not found")
+
+        await _services.delete_splice_being_processed(splice_being_processed, db)
+
+        return {"message": "Splice deleted sucsessfully"}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -275,27 +285,19 @@ async def get_clip_id(db: Session = Depends(_services.get_db)):
         return None
     return first_splice.Sp_ID
 
-@app.get("/sumOfLabeledDuration/")
-async def get_sum_of_labeled_duration(db: Session = Depends(_services.get_db)):
-    total_duration = db.query(func.sum(_models.Labeled_splice_table.Sp_DURATION.cast(_sql.Float))).scalar()
-    return total_duration
+@app.get("/dataset_insight_info")
+async def get_summary(db: Session = Depends(_services.get_db)):
+    total_duration_labeled = db.query(func.sum(_models.Labeled_splice_table.Sp_DURATION.cast(_sql.Float))).scalar()
+    total_duration_validated = db.query(func.sum(_models.High_quality_labeled_splice_table.Sp_DURATION.cast(_sql.Float))).scalar()
+    total_duration_unlabeled = db.query(func.sum(_models.Splice_table.Sp_DURATION.cast(_sql.Float))).scalar()
+    total_labeled = db.query(func.count(_models.Labeled_splice_table.Sp_ID)).scalar()
+    total_unlabeled = db.query(func.count(_models.Splice_table.Sp_ID)).scalar()
 
-@app.get("/sumOfLabeledDuration/validated")
-async def get_sum_of_labeled_duration_validated(db: Session = Depends(_services.get_db)):
-    total_duration = db.query(func.sum(_models.High_quality_labeled_splice_table.Sp_DURATION.cast(_sql.Float))).scalar()
-    return total_duration
+    return {
+        "total_duration_labeled": total_duration_labeled,
+        "total_duration_validated": total_duration_validated,
+        "total_duration_unlabeled": total_duration_unlabeled,
+        "total_labeled": total_labeled,
+        "total_unlabeled": total_unlabeled,
+    }
 
-@app.get("/sumOfUnLabeledDuration/")
-async def get_sum_of_unlabeled_duration(db: Session = Depends(_services.get_db)):
-    total_duration = db.query(func.sum(_models.Splice_table.Sp_DURATION.cast(_sql.Float))).scalar()
-    return total_duration
-
-@app.get("/sumOfLabeled/")
-async def get_sum_of_labeled(db: Session = Depends(_services.get_db)):
-    count = db.query(func.count(_models.Labeled_splice_table.Sp_ID)).scalar()
-    return count
-
-@app.get("/sumOfUnLabeled/")
-async def get_sum_of_unlabeled(db: Session = Depends(_services.get_db)):
-    count = db.query(func.count(_models.Splice_table.Sp_ID)).scalar()
-    return count

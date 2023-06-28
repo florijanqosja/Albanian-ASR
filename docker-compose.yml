@@ -15,17 +15,27 @@ services:
     depends_on:
       - db
 
+  # old_web:
+  #   container_name: "old_web"
+  #   ports:
+  #     - 220:5000
+  #   build:
+  #     dockerfile: ./old_web/dockerfiles/Dockerfile
+  #     context: .
+  #   depends_on:
+  #     - db
+  #     - api
+    
   web:
     container_name: "web"
     ports:
-      - 160:5000
+      - 160:3000
     build:
       dockerfile: ./web/dockerfiles/Dockerfile
       context: .
     depends_on:
       - db
       - api
-    
   db:
     image: postgres
     restart: always
