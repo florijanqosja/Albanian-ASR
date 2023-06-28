@@ -1,18 +1,24 @@
-FROM tiangolo/uwsgi-nginx:python3.9
+# Base image
+FROM node:14-alpine
 
+# Set the working directory
 WORKDIR /code
 
-COPY /requirements.txt /app/requirements.txt
-COPY ./.env /code/.env
+# Copy package.json and package-lock.json
+COPY package*.json ./package.json
 
-RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
-RUN apt-get -y update
-RUN apt-get -y upgrade
-RUN apt-get install -y ffmpeg
-RUN pip install --upgrade pip wheel setuptools requests
+# Install dependencies
+RUN npm install react-scripts
+RUN npm install
 
-COPY ./web /code/app
+# Copy the entire project
+COPY ./web ./
 
-EXPOSE 5000
+# Build the React app
+RUN npm run build
 
-CMD ["gunicorn", "-b", "0.0.0.0:5000", "app.wsgi:app"]
+# Expose port 3000
+EXPOSE 3000
+
+# Run the React app
+CMD ["npm", "start"]
