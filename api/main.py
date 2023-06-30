@@ -33,10 +33,13 @@ _services._add_tables()
 
 app.add_middleware(
     CORSMiddleware,
+    allow_credentials=True,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 
 app.mount("/splices", StaticFiles(directory="splices"), name="splices")
 
