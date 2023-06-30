@@ -5,10 +5,10 @@ FROM node:14-alpine
 WORKDIR /code
 
 # Copy package.json and package-lock.json
-COPY package*.json ./package.json
+COPY ./web/package.json ./
 
 # Install dependencies
-RUN npm install react-scripts
+
 RUN npm install
 
 # Copy the entire project
