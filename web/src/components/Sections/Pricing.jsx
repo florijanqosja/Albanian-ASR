@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 
 const SectionWrapper = styled.div`
@@ -53,6 +53,22 @@ const DataProgress = styled.div`
 `;
 
 export default function Pricing() {
+  const [summaryInfo, setSummaryInfo] = useState(null);
+
+  useEffect(() => {
+    async function fetchSummaryInfo() {
+      try {
+        const response = await fetch("https://api.uneduashqiperine.com/dataset_insight_info/");
+        const datas = await response.json();
+        setSummaryInfo(datas);
+      } catch (error) {
+        console.error("Error fetching summary info:", error);
+      }
+    }
+
+    fetchSummaryInfo();
+  }, []);
+
   return (
     <SectionWrapper>
       <ContentWrapper>
@@ -67,36 +83,40 @@ export default function Pricing() {
           appreciate your support and interest in our project.
         </SectionText>
         <SectionHeading>OUR DATASET SO FAR</SectionHeading>
-        <DataContainer>
-          <DataLabel>Labeled Datas</DataLabel>
-          <DataBar>
-            <DataProgress style={{ width: "80%" }} />
-          </DataBar>
-        </DataContainer>
-        <DataContainer>
-          <DataLabel>UnLabeled Datas</DataLabel>
-          <DataBar>
-            <DataProgress style={{ width: "60%" }} />
-          </DataBar>
-        </DataContainer>
-        <DataContainer>
-          <DataLabel>Labeled Datas Duration</DataLabel>
-          <DataBar>
-            <DataProgress style={{ width: "70%" }} />
-          </DataBar>
-        </DataContainer>
-        <DataContainer>
-          <DataLabel>UnLabeled Datas Duration</DataLabel>
-          <DataBar>
-            <DataProgress style={{ width: "50%" }} />
-          </DataBar>
-        </DataContainer>
-        <DataContainer>
-          <DataLabel>Progress</DataLabel>
-          <DataBar>
-            <DataProgress style={{ width: "90%" }} />
-          </DataBar>
-        </DataContainer>
+        {summaryInfo && (
+          <>
+            <DataContainer>
+              <DataLabel>Labeled Datas</DataLabel>
+              <DataBar>
+                <DataProgress style={{ width: `${summaryInfo.sumofLabeled}%` }} />
+              </DataBar>
+            </DataContainer>
+            <DataContainer>
+              <DataLabel>UnLabeled Datas</DataLabel>
+              <DataBar>
+                <DataProgress style={{ width: `${summaryInfo.sumofUnLabeled}%` }} />
+              </DataBar>
+            </DataContainer>
+            <DataContainer>
+              <DataLabel>Labeled Datas Duration</DataLabel>
+              <DataBar>
+                <DataProgress style={{ width: `${summaryInfo.sumofLabeledDuration}%` }} />
+              </DataBar>
+            </DataContainer>
+            <DataContainer>
+              <DataLabel>UnLabeled Datas Duration</DataLabel>
+              <DataBar>
+                <DataProgress style={{ width: `${summaryInfo.sumofUnLabeledDuration}%` }} />
+              </DataBar>
+            </DataContainer>
+            <DataContainer>
+              <DataLabel>Progress</DataLabel>
+              <DataBar>
+                <DataProgress style={{ width: `${summaryInfo.progressPercentage}` }} />
+              </DataBar>
+            </DataContainer>
+          </>
+        )}
       </ContentWrapper>
     </SectionWrapper>
   );
