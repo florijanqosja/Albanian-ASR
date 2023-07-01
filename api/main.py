@@ -4,7 +4,6 @@ import sqlalchemy.orm as _orm
 import sqlalchemy as _sql
 from moviepy.editor import VideoFileClip
 import os
-from pyAudioAnalysis import audioSegmentation
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from datetime import datetime
 from sqlalchemy.orm import Session
