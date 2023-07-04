@@ -15,7 +15,7 @@ services:
     depends_on:
       - db
 
-  # old_web:test
+  # old_web:
   #   container_name: "old_web"
   #   ports:
   #     - 220:5000

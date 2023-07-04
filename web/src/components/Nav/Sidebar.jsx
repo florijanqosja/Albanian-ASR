@@ -26,26 +26,12 @@ export default function Sidebar({ sidebarOpen, toggleSidebar }) {
             activeClass="active"
             className="whiteColor"
             style={{ padding: "10px 15px", color: "#ffffff" }}
-            to="home"
-            spy={true}
-            smooth={true}
-            offset={-60}
-          >
-            Label
-          </Link>
-        </li>
-        <li className="semiBold font15 pointer">
-          <Link
-            onClick={() => toggleSidebar(!sidebarOpen)}
-            activeClass="active"
-            className="whiteColor"
-            style={{ padding: "10px 15px", color: "#ffffff" }}
             to="/"
             spy={true}
             smooth={true}
             offset={-60}
           >
-            Services
+            Label
           </Link>
         </li>
         <li className="semiBold font15 pointer">

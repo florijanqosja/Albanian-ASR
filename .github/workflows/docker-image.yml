@@ -18,6 +18,7 @@ jobs:
           rm .env
           rm docker-compose.yml
           cp /home/ubuntu/Desktop/.env.prod .env
+          cp .env web/.env
           mv docker-compose.prod.yml docker-compose.yml
 
       - name: Build and Deploy

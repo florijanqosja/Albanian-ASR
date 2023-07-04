@@ -58,7 +58,7 @@ export default function Pricing() {
   useEffect(() => {
     async function fetchSummaryInfo() {
       try {
-        const response = await fetch("https://api.uneduashqiperine.com/dataset_insight_info/");
+        const response = await fetch(`${process.env.REACT_APP_API_DOMAIN}dataset_insight_info/`);
         const datas = await response.json();
         setSummaryInfo(datas);
       } catch (error) {
