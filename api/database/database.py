@@ -11,7 +11,7 @@ env_vars = dotenv_values()
 DATABASE_USER = env_vars.get("POSTGRES_USER")
 DATABASE_PASSWORD = env_vars.get("POSTGRES_PASSWORD")
 DATABASE_NAME = env_vars.get("POSTGRES_DB")
-
+print(DATABASE_USER, DATABASE_PASSWORD, DATABASE_NAME)
 # Create the database connection URL
 DATABASE_URL = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@db/{DATABASE_NAME}"
 

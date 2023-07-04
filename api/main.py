@@ -15,6 +15,8 @@ from fastapi.staticfiles import StaticFiles
 from flask import send_from_directory
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import RedirectResponse
+from pydub import AudioSegment
+from pydub.silence import split_on_silence
 
 
 from .database import schemas as _schemas
@@ -38,22 +40,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-
 app.mount("/splices", StaticFiles(directory="splices"), name="splices")
 
-def splicer(filein, video_name):
-    os.system(f"mkdir splices")
-    os.system(f"mkdir splices/{video_name}")
-    os.system("python3 /usr/local/lib/python3.9/site-packages/pyAudioAnalysis/audioAnalysis.py silenceRemoval -i " + filein + " --smoothing 0.2 --weight 0.1")
-    os.system(f"mv mp3/{video_name}/*.wav splices/{video_name}")
+def splicer(filein, video_name, min_silence_len=500, silence_thresh=-30):
+    os.makedirs(f"splices/{video_name}", exist_ok=True)
+    audio = AudioSegment.from_file(filein)
+    chunks = split_on_silence(
+        audio,
+        min_silence_len=min_silence_len,  # minimum length of silence to be considered a split point in ms
+        silence_thresh=silence_thresh  # silence threshold in dB
+    )
+    chunk_start = 0
+    for i, chunk in enumerate(chunks):
+        chunk_end = chunk_start + len(chunk)
+        chunk.export(
+            f"splices/{video_name}/videoplaybackmp4_{chunk_start/1000}-{chunk_end/1000}.wav",
+            format="wav"
+        )
+        chunk_start = chunk_end
+
 
 def mp4tomp3(mp4filename, video_name, mp4filepath, mp3path):
     video = VideoFileClip(os.path.join(mp4filepath))
-    
     print("ctu jemi tu e mar vijon:", os.path.join(mp4filepath))
     video.audio.write_audiofile(os.path.join(mp3path))
-    # splicer(mp3path, video_name)
 
 def get_wav_duration(wav_location):
     with wave.open(wav_location, 'rb') as wav_file:
