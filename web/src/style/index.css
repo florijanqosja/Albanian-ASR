@@ -39,7 +39,7 @@
   }
   a {
     text-decoration: none!important;
-    color: #0B093B;
+    color: #301616;
   }
   a:hover {
     color: #9a1212;
@@ -51,7 +51,7 @@
   }
   body {
     background: #fff;
-    color: #0B093B;
+    color: #301616;
     font-family: 'Khula', sans-serif;
     overflow-x: hidden;
     font-size: 16px;
@@ -221,7 +221,7 @@
   }
   /* COLORS */
   .darkColor {
-    color: #0B093B;
+    color: #301616;
   }
   .purpleColor {
     color: #ff4c20;
@@ -236,7 +236,7 @@
     color: #C4FFFF;
   }
   .greenColor {
-    color: #49CB86;
+    color: #cb6a49;
   }
   .greyColor {
     color: #707070;
@@ -246,22 +246,22 @@
   }
   /* BACKGROUNDS */
   .darkBg {
-    background-color: #0B093B;
+    background-color: #301616;
   }
   .purpleBg {
     background-color: #ff3a20;
   }
   .orangeBg {
-    background-color: #F2B300;
+    background-color: #f20000;
   }
   .lightBg {
     background-color: #F5F5F5;
   }
   .coralBg {
-    background-color: #C4FFFF;
+    background-color: #301616;
   }
   .greenBg {
-    background-color: #49CB86;
+    background-color: #b37269;
   }
   .greyBg {
     background-color: #707070;

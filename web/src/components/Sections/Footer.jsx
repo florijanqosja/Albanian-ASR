@@ -10,14 +10,14 @@ export default function Contact() {
     <Wrapper>
       <div className="container">
         <InnerWrapper className="flexSpaceCenter" style={{ padding: "30px 0" }}>
-          <Link className="flexCenter animate pointer" to="home" smooth={true} offset={-80}>
-            <LogoContainer>
-              <LogoImg />
-            </LogoContainer>
-            <h1 className="font15 extraBold whiteColor" style={{ marginLeft: "15px" }}>
-              DibraSpeaks
-            </h1>
-          </Link>
+        <div className="flexCenter animate pointer" onClick={() => window.scrollTo(0, 0)}>
+          <LogoContainer>
+            <LogoImg />
+          </LogoContainer>
+          <h1 className="font15 extraBold whiteColor" style={{ marginLeft: "15px" }}>
+            DibraSpeaks
+          </h1>
+        </div>
           <SocialIconsWrapper>
             <SocialIconLink href="https://github.com/florijanqosja" target="_blank" rel="noopener noreferrer">
               <FaGithub />
@@ -26,9 +26,9 @@ export default function Contact() {
               <FaLinkedin />
             </SocialIconLink>
           </SocialIconsWrapper>
-          <Link className="whiteColor animate pointer font13" to="home" smooth={true} offset={-80}>
+          <div className="whiteColor animate pointer font13" onClick={() => window.scrollTo(0, 0)}>
             Back to top
-          </Link>
+          </div>
         </InnerWrapper>
       </div>
     </Wrapper>
