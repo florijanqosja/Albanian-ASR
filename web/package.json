@@ -16,6 +16,7 @@
     "react": "^17.0.2",
     "react-audio-player": "^0.17.0",
     "react-audio-player-component": "^1.1.0",
+    "react-circular-progressbar": "^2.1.0",
     "react-dom": "^17.0.2",
     "react-helmet": "^6.1.0",
     "react-icons": "^4.10.1",
@@ -40,6 +41,9 @@
     "extends": [
       "react-app",
       "react-app/jest"
+    ],
+    "plugins": [
+      "jest"
     ]
   },
   "browserslist": {

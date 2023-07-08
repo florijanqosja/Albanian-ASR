@@ -1,58 +1,47 @@
 import React, { useState, useEffect } from "react";
-import styled from "styled-components";
+import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
+import 'react-circular-progressbar/dist/styles.css';
+import { Card, CardContent, Typography, Grid, Box } from "@material-ui/core";
+import { makeStyles } from '@material-ui/core/styles';
 
-const SectionWrapper = styled.div`
-  background-color: #d8d4d4;
-  padding: 60px 0;
-`;
+const useStyles = makeStyles((theme) => ({
+  root: {
+    padding: '60px 0',
+    backgroundColor: '#DFD5D5',
+    color: '#301616',
+  },
+  card: {
+    boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)',
+    borderRadius: '15px',
+    backgroundColor: '#cda5a3',
+  },
+  circularProgressbar: {
+    height: '150px !important',
+    width: '150px !important',
+    marginBottom: '20px'
+  },
+  title: {
+    fontSize: '36px',
+    fontWeight: 'bold',
+    marginBottom: '20px'
+  },
+  subTitle: {
+    fontStyle: 'italic',
+    marginBottom: '30px'
+  },
+  paragraph: {
+    textAlign: 'justify',
+    marginBottom: '30px'
+  },
+  label: {
+    fontSize: '18px',
+    fontWeight: '500'
+  },
+}));
 
-const ContentWrapper = styled.div`
-  max-width: 800px;
-  margin: 0 auto;
-`;
-
-const SectionHeading = styled.h2`
-  font-size: 36px;
-  font-weight: bold;
-  margin-bottom: 20px;
-  color: #301616;
-`;
-
-const SectionSubHeading = styled.p`
-  font-style: italic;
-  margin-bottom: 30px;
-  color: #a99b9d;
-`;
-
-const SectionText = styled.p`
-  text-align: justify;
-  margin-bottom: 30px;
-  color: #301616;
-`;
-
-const DataContainer = styled.div`
-  margin-bottom: 30px;
-`;
-
-const DataLabel = styled.p`
-  font-size: 18px;
-  margin-bottom: 10px;
-  color: #301616;
-`;
-
-const DataBar = styled.div`
-  background-color: #e1dddd;
-  height: 10px;
-  border-radius: 5px;
-`;
-
-const DataProgress = styled.div`
-  height: 100%;
-  background-color: #9e3936;
-  border-radius: 5px;
-`;
 
 export default function Pricing() {
+  const classes = useStyles();
   const [summaryInfo, setSummaryInfo] = useState(null);
 
   useEffect(() => {
@@ -60,6 +49,13 @@ export default function Pricing() {
       try {
         const response = await fetch(`${process.env.REACT_APP_API_DOMAIN}dataset_insight_info/`);
         const datas = await response.json();
+        const total = datas.total_labeled + datas.total_unlabeled;
+        datas.sumofLabeled = (datas.total_labeled / total) * 100;
+        datas.sumofUnLabeled = (datas.total_unlabeled / total) * 100;
+        const totalDuration = datas.total_duration_labeled + datas.total_duration_unlabeled;
+        datas.sumofLabeledDuration = (datas.total_duration_labeled / totalDuration) * 100;
+        datas.sumofUnLabeledDuration = (datas.total_duration_unlabeled / totalDuration) * 100;
+        datas.progressPercentage = (datas.total_duration_validated / totalDuration) * 100;
         setSummaryInfo(datas);
       } catch (error) {
         console.error("Error fetching summary info:", error);
@@ -70,54 +66,126 @@ export default function Pricing() {
   }, []);
 
   return (
-    <SectionWrapper>
-      <ContentWrapper>
-        <SectionHeading>THE PROJECT</SectionHeading>
-        <SectionSubHeading>We love Technology</SectionSubHeading>
-        <SectionText>
-          Welcome to the Albanian Language Transcriber project! Our goal is to develop a functioning Albanian speech-to-text AI model to improve the lives
-          of Albanians and promote the development of the country. With over 7 million speakers, the Albanian language is an important language with a rich
-          cultural heritage, yet it currently lacks a speech-to-text tool. By developing this tool, we aim to bring the benefits of speech recognition
-          technology to Albanian speakers in various fields, including the smartphone, automobile, medical, education, and jurisdiction industries. Our team
-          is committed to building a high-quality model that achieves an accuracy rate of 80% and makes a meaningful impact on the Albanian community. We
-          appreciate your support and interest in our project.
-        </SectionText>
-        <SectionHeading>OUR DATASET SO FAR</SectionHeading>
-        {summaryInfo && (
-          <>
-            <DataContainer>
-              <DataLabel>Labeled Datas</DataLabel>
-              <DataBar>
-                <DataProgress style={{ width: `${summaryInfo.sumofLabeled}%` }} />
-              </DataBar>
-            </DataContainer>
-            <DataContainer>
-              <DataLabel>UnLabeled Datas</DataLabel>
-              <DataBar>
-                <DataProgress style={{ width: `${summaryInfo.sumofUnLabeled}%` }} />
-              </DataBar>
-            </DataContainer>
-            <DataContainer>
-              <DataLabel>Labeled Datas Duration</DataLabel>
-              <DataBar>
-                <DataProgress style={{ width: `${summaryInfo.sumofLabeledDuration}%` }} />
-              </DataBar>
-            </DataContainer>
-            <DataContainer>
-              <DataLabel>UnLabeled Datas Duration</DataLabel>
-              <DataBar>
-                <DataProgress style={{ width: `${summaryInfo.sumofUnLabeledDuration}%` }} />
-              </DataBar>
-            </DataContainer>
-            <DataContainer>
-              <DataLabel>Progress</DataLabel>
-              <DataBar>
-                <DataProgress style={{ width: `${summaryInfo.progressPercentage}` }} />
-              </DataBar>
-            </DataContainer>
-          </>
-        )}
-      </ContentWrapper>
-    </SectionWrapper>
+    <Box className={classes.root}>
+      <Grid container justify="center">
+        <Grid item xs={14} sm={8} md={7}>
+          <Typography variant="h2" backgroundColor="#cda5a3" className={classes.title}>THE PROJECT</Typography>
+          <Typography variant="h5" className={classes.subTitle}>We love Technology</Typography>
+          <Typography variant="body1" className={classes.paragraph}>
+            Welcome to the Albanian Language Transcriber project! Our goal is to develop a functioning Albanian speech-to-text AI model to improve the lives
+            of Albanians and promote the development of the country. With over 7 million speakers, the Albanian language is an important language with a rich
+            cultural heritage, yet it currently lacks a speech-to-text tool. By developing this tool, we aim to bring the benefits of speech recognition
+            technology to Albanian speakers in various fields, including the smartphone, automobile, medical, education, and jurisdiction industries. Our team
+            is committed to building a high-quality model that achieves an accuracy rate of 80% and makes a meaningful impact on the Albanian community. We
+            appreciate your support and interest in our project.
+          </Typography>
+          <Typography variant="h2" className={classes.title}>OUR DATASET SO FAR</Typography>
+          {summaryInfo && (
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card className={classes.card}>
+                  <CardContent align="center">
+                    <div className={classes.circularProgressbar}>
+                      <CircularProgressbar
+                        value={summaryInfo.sumofLabeled}
+                        text={`${summaryInfo.sumofLabeled.toFixed(2)}%`}
+                        styles={buildStyles({
+                          strokeLinecap: "butt",
+                          textColor: '#301616',
+                          pathColor: '#301616',
+                          trailColor: '#d6d6d6',
+                        })}
+                      />
+                    </div>
+                    <Typography variant="h6" className={classes.label}>Labeled Data</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_labeled} / ${summaryInfo.total_labeled + summaryInfo.total_unlabeled}`}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card className={classes.card}>
+                  <CardContent align="center">
+                    <div className={classes.circularProgressbar}>
+                      <CircularProgressbar
+                        value={summaryInfo.sumofUnLabeled}
+                        text={`${summaryInfo.sumofUnLabeled.toFixed(2)}%`}
+                        styles={buildStyles({
+                          strokeLinecap: "butt",
+                          textColor: '#301616',
+                          pathColor: '#301616',
+                          trailColor: '#d6d6d6',
+                        })}
+                      />
+                    </div>
+                    <Typography variant="h6" className={classes.label}>Unlabeled Data</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_unlabeled} / ${summaryInfo.total_labeled + summaryInfo.total_unlabeled}`}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card className={classes.card}>
+                  <CardContent align="center">
+                    <div className={classes.circularProgressbar}>
+                      <CircularProgressbar
+                        value={summaryInfo.sumofLabeledDuration}
+                        text={`${summaryInfo.sumofLabeledDuration.toFixed(2)}%`}
+                        styles={buildStyles({
+                          strokeLinecap: "butt",
+                          textColor: '#301616',
+                          pathColor: '#301616',
+                          trailColor: '#d6d6d6',
+                        })}
+                      />
+                    </div>
+                    <Typography variant="h6" className={classes.label}>Labeled Data Duration</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_duration_labeled.toFixed(2)} / ${(summaryInfo.total_duration_labeled + summaryInfo.total_duration_unlabeled).toFixed(2)} hours`}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card className={classes.card}>
+                  <CardContent align="center">
+                    <div className={classes.circularProgressbar}>
+                      <CircularProgressbar
+                        value={summaryInfo.sumofUnLabeledDuration}
+                        text={`${summaryInfo.sumofUnLabeledDuration.toFixed(2)}%`}
+                        styles={buildStyles({
+                          strokeLinecap: "butt",
+                          textColor: '#301616',
+                          pathColor: '#301616',
+                          trailColor: '#d6d6d6',
+                        })}
+                      />
+                    </div>
+                    <Typography variant="h6" className={classes.label}>Unlabeled Data Duration</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_duration_unlabeled.toFixed(2)} / ${(summaryInfo.total_duration_labeled + summaryInfo.total_duration_unlabeled).toFixed(2)} hours`}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card className={classes.card}>
+                  <CardContent align="center">
+                    <div className={classes.circularProgressbar}>
+                      <CircularProgressbar
+                        value={summaryInfo.progressPercentage}
+                        text={`${summaryInfo.progressPercentage.toFixed(2)}%`}
+                        styles={buildStyles({
+                          strokeLinecap: "butt",
+                          textColor: '#301616',
+                          pathColor: '#301616',
+                          trailColor: '#d6d6d6',
+                        })}
+                      />
+                    </div>
+                    <Typography variant="h6" className={classes.label}>Progress</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_duration_validated.toFixed(2)} / ${(summaryInfo.total_duration_labeled + summaryInfo.total_duration_unlabeled).toFixed(2)} hours`}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+          )}
+        </Grid>
+      </Grid>
+    </Box>
   );
 }
