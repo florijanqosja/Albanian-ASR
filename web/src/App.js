@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 // Screens
 import Landing from "./screens/Landing.jsx";
 import Validate from "./screens/Validate.jsx";
+import TermsAndServices from "./screens/TermsAndServices.jsx";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/validate" element={<Validate />} />
+          <Route path="/termsandservices" element={<TermsAndServices />} />
         </Routes>
       </Router>
     </>

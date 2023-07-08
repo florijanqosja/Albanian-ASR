@@ -45,11 +45,11 @@ export default function MainNavbar() {
                 Validate
               </Link>
             </li>
-            <li className="semiBold font15 pointer">
+            {/* <li className="semiBold font15 pointer">
               <Link to="/" activeClass="active" style={{ padding: "10px 15px" }} spy={true} smooth={true} offset={-80}>
                 Record
               </Link>
-            </li>
+            </li> */}
           </UlWrapper>
         </NavInner>
       </Wrapper>

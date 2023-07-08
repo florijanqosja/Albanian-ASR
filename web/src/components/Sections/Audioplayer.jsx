@@ -165,9 +165,9 @@ export default function MainSection() {
           <IconButton onClick={() => setPlaying(!playing)}>
             {playing ? <PauseIcon /> : <PlayArrowIcon />}
           </IconButton>
-          <IconButton onClick={toggleRegion}>
+          {/* <IconButton onClick={toggleRegion}>
             {showRegion ? <VisibilityOffIcon /> : <VisibilityIcon />}
-          </IconButton>
+          </IconButton> */}
         </ButtonWrapper>
         <TextField
           label="Enter the content of the audio"

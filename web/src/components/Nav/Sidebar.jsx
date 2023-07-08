@@ -48,7 +48,7 @@ export default function Sidebar({ sidebarOpen, toggleSidebar }) {
             Validate
           </Link>
         </li>
-        <li className="semiBold font15 pointer">
+        {/* <li className="semiBold font15 pointer">
           <Link
             onClick={() => toggleSidebar(!sidebarOpen)}
             activeClass="active"
@@ -61,7 +61,7 @@ export default function Sidebar({ sidebarOpen, toggleSidebar }) {
           >
             Record
           </Link>
-        </li>
+        </li> */}
       </UlStyle>
     </Wrapper>
   );

@@ -3,6 +3,7 @@ import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import { Card, CardContent, Typography, Grid, Box } from "@material-ui/core";
 import { makeStyles } from '@material-ui/core/styles';
+import axios from "axios";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -47,8 +48,8 @@ export default function Pricing() {
   useEffect(() => {
     async function fetchSummaryInfo() {
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_DOMAIN}dataset_insight_info/`);
-        const datas = await response.json();
+        const response = await axios.get(`${process.env.REACT_APP_API_DOMAIN}dataset_insight_info/`);
+        const datas = response.data;
         const total = datas.total_labeled + datas.total_unlabeled;
         datas.sumofLabeled = (datas.total_labeled / total) * 100;
         datas.sumofUnLabeled = (datas.total_unlabeled / total) * 100;
