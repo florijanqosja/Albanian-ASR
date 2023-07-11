@@ -124,7 +124,7 @@ export default function MainSection() {
     <Wrapper id="main-section">
         
       <PlayerWrapper>
-      <SectionHeading>AUDIO LABELING</SectionHeading>
+      <SectionHeading>DEV AUDIO LABELING</SectionHeading>
         <div className="container example">
           <CenteredReactWavesWrapper>
             <ReactWaves
