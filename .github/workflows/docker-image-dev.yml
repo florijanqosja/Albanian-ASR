@@ -1,0 +1,26 @@
+name: Deploy to DEV
+
+on:
+  pull_request:
+    branches: [ "dev" ]
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, linux, X64, dev]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Configure environment
+        run: |
+          rm .env
+          rm docker-compose.yml
+          cp /home/ubuntu/Desktop/.env.dev .env
+          cp .env web/.env
+          mv docker-compose.dev.yml docker-compose.yml
+
+      - name: Build and Deploy
+        run: |
+          cd /home/ubuntu/Desktop/dev/actions-runner/unedua/Albanian-ASR/Albanian-ASR
+          sudo docker-compose up --build -d
