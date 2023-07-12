@@ -22,5 +22,5 @@ VOLUME /code/app/splices
 VOLUME /code/app/mp3
 
 # 
-EXPOSE 80
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+EXPOSE 180
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "180"]
