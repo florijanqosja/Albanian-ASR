@@ -43,7 +43,7 @@ services:
     ports:
       - 240:80
     build:
-      dockerfile: ./api/dockerfiles/Dockerfile
+      dockerfile: ${DEV_API_DOCKERFILE_PATH}
       context: .
     volumes:
       - ${DEV_MP3_VOLUME_PATH}:/code/mp3
@@ -57,7 +57,7 @@ services:
     ports:
       - 260:3001
     build:
-      dockerfile: ./web/dockerfiles/Dockerfile
+      dockerfile: ${DEV_WEB_DOCKERFILE_PATH}
       context: .
     depends_on:
       - db_dev
