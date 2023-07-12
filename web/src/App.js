@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Landing from "./screens/Landing.jsx";
 import Validate from "./screens/Validate.jsx";
 import TermsAndServices from "./screens/TermsAndServices.jsx";
+import Transcribe from "./screens/Transcribe.jsx";
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/validate" element={<Validate />} />
           <Route path="/termsandservices" element={<TermsAndServices />} />
+          <Route path="/transcribe" element={<Transcribe />} />
         </Routes>
       </Router>
     </>
