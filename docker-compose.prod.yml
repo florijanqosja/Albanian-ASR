@@ -74,7 +74,7 @@ services:
     volumes:
       - ${DEV_DB_VOLUME_PATH}:/var/lib/postgresql/data
     ports:
-      - "5431:5432"
+      - "3333:5432"
 
   nginx:
     image: nginx
