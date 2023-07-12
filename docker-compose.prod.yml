@@ -29,8 +29,10 @@ services:
     container_name: "db_prod"
     image: postgres
     restart: always
-    env_file:
-      - .env
+    environment:
+      - DEV_POSTGRES_DB=${PROD_POSTGRES_DB}
+      - POSTGRES_USER=${PROD_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${PROD_POSTGRES_PASSWORD}
     volumes:
       - ${PROD_DB_VOLUME_PATH}:/var/lib/postgresql/data
     ports:
@@ -65,8 +67,10 @@ services:
     container_name: "db_dev"
     image: postgres
     restart: always
-    env_file:
-      - .env
+    environment:
+      - DEV_POSTGRES_DB=${DEV_POSTGRES_DB}
+      - POSTGRES_USER=${DEV_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${DEV_POSTGRES_PASSWORD}
     volumes:
       - ${DEV_DB_VOLUME_PATH}:/var/lib/postgresql/data
     ports:
