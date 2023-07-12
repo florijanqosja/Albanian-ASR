@@ -1,51 +1,92 @@
 version: '3'
 services:
-  api:
-    container_name: "api"
+  api_prod:
+    container_name: "api_prod"
     ports:
       - 140:80
     build:
       dockerfile: ./api/dockerfiles/Dockerfile
       context: .
     volumes:
-      - ${MP3_VOLUME_PATH}:/code/mp3
-      - ${MP4_VOLUME_PATH}:/code/mp4
-      - ${SPLICES_VOLUME_PATH}:/code/splices
+      - ${PROD_MP3_VOLUME_PATH}:/code/mp3
+      - ${PROD_MP4_VOLUME_PATH}:/code/mp4
+      - ${PROD_SPLICES_VOLUME_PATH}:/code/splices
     depends_on:
-      - db
+      - db_prod
 
-  web:
-    container_name: "web"
+  web_prod:
+    container_name: "web_prod"
     ports:
-      - 160:5000
+      - 160:3000
     build:
       dockerfile: ./web/dockerfiles/Dockerfile
       context: .
     depends_on:
-      - db
-      - api
+      - db_prod
+      - api_prod
 
-  db:
+  db_prod:
+    container_name: "db_prod"
     image: postgres
     restart: always
     env_file:
       - .env
     volumes:
-      - ${DB_VOLUME_PATH}:/var/lib/postgresql/data
+      - ${PROD_DB_VOLUME_PATH}:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+
+  api_dev:
+    container_name: "api_dev"
+    ports:
+      - 240:80
+    build:
+      dockerfile: ./api/dockerfiles/Dockerfile
+      context: .
+    volumes:
+      - ${DEV_MP3_VOLUME_PATH}:/code/mp3
+      - ${DEV_MP4_VOLUME_PATH}:/code/mp4
+      - ${DEV_SPLICES_VOLUME_PATH}:/code/splices
+    depends_on:
+      - db_dev
+
+  web_dev:
+    container_name: "web_dev"
+    ports:
+      - 260:3001
+    build:
+      dockerfile: ./web/dockerfiles/Dockerfile
+      context: .
+    depends_on:
+      - db_dev
+      - api_dev
+
+  db_dev:
+    container_name: "db_dev"
+    image: postgres
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ${DEV_DB_VOLUME_PATH}:/var/lib/postgresql/data
+    ports:
+      - "5431:5432"
 
   nginx:
     image: nginx
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
-      - ${SSL_API_CERT_PATH}:/etc/nginx/ssl/api.crt
-      - ${SSL_API_KEY_PATH}:/etc/nginx/ssl/api.key
-      - ${SSL_UNEDUASHQIPERINE_CERT_PATH}:/etc/nginx/ssl/uneduashqiperine.crt
-      - ${SSL_UNEDUASHQIPERINE_KEY_PATH}:/etc/nginx/ssl/uneduashqiperine.key
+      - ${PROD_SSL_API_CERT_PATH}:/etc/nginx/ssl/api.crt
+      - ${PROD_SSL_API_KEY_PATH}:/etc/nginx/ssl/api.key
+      - ${PROD_SSL_UNEDUASHQIPERINE_CERT_PATH}:/etc/nginx/ssl/uneduashqiperine.crt
+      - ${PROD_SSL_UNEDUASHQIPERINE_KEY_PATH}:/etc/nginx/ssl/uneduashqiperine.key
     ports:
       - "80:80"
       - "443:443"
     depends_on:
-      - api
-      - web
+      - api_prod
+      - web_prod
+      - db_prod
+      - api_dev
+      - web_dev
+      - db_dev
