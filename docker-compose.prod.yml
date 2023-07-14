@@ -41,7 +41,7 @@ services:
   api_dev:
     container_name: "api_dev"
     ports:
-      - 240:80
+      - 340:80
     build:
       dockerfile: ./dev/api/dockerfiles/Dockerfile
       context: .
@@ -55,7 +55,7 @@ services:
   web_dev:
     container_name: "web_dev"
     ports:
-      - 260:3001
+      - 360:3001
     build:
       dockerfile: ./dev/web/dockerfiles/Dockerfile
       context: .
