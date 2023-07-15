@@ -21,5 +21,5 @@ jobs:
           cp -rp /home/ubuntu/Desktop/dev/actions-runner/_work/Albanian-ASR/Albanian-ASR /home/ubuntu/Desktop/actions-runner/unedua/Albanian-ASR/Albanian-ASR/dev
       - name: Build and Deploy
         run: |
-          cd /home/ubuntu/Desktop/dev/actions-runner/unedua/Albanian-ASR/Albanian-ASR
+          cd /home/ubuntu/Desktop/actions-runner/unedua/Albanian-ASR/Albanian-ASR
           sudo docker-compose up --build -d
