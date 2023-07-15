@@ -18,7 +18,7 @@ jobs:
           rm .env
           rm docker-compose.yml
           cp /home/ubuntu/Desktop/.env.prod .env
-          cp .env web/.env
+          cp /home/ubuntu/Desktop/.env.prod_web web/.env
           mv docker-compose.prod.yml docker-compose.yml
           cp -r /home/ubuntu/Desktop/dev/actions-runner/_work/Albanian-ASR/Albanian-ASR /home/ubuntu/Desktop/actions-runner/unedua/Albanian-ASR/Albanian-ASR/
           mv /home/ubuntu/Desktop/actions-runner/unedua/Albanian-ASR/Albanian-ASR/Albanian-ASR /home/ubuntu/Desktop/actions-runner/unedua/Albanian-ASR/Albanian-ASR/dev
