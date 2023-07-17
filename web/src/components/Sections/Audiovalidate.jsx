@@ -34,9 +34,9 @@ export default function AudioValidater() {
 
   const fetchAudioData = async () => {
     try {
-      const response = await axios.get(`${process.env.PROD_REACT_APP_API_DOMAIN}audio/to_validate`);
+      const response = await axios.get(`${process.env.REACT_APP_API_DOMAIN_PROD}audio/to_validate`);
       const { Sp_PATH, Sp_ID } = response.data;
-      const audioURL = `${process.env.PROD_REACT_APP_FILE_ACCESS_DOMAIN}${Sp_PATH}`;
+      const audioURL = `${process.env.REACT_APP_FILE_ACCESS_DOMAIN_PROD}${Sp_PATH}`;
       setAudioPath(audioURL);
       setAudioID(Sp_ID);
       console.log("set the audioID to ", Sp_ID);
@@ -51,7 +51,7 @@ export default function AudioValidater() {
 
   const deleteAudio = async () => {
     try {
-      await axios.delete(`${process.env.PROD_REACT_APP_API_DOMAIN}audio`, {
+      await axios.delete(`${process.env.REACT_APP_API_DOMAIN_PROD}audio`, {
         data: {
           Sp_ID: audioID,
         },
@@ -68,7 +68,7 @@ export default function AudioValidater() {
 
   const handleSubmit = async () => {
     try {
-      await axios.put(`${process.env.PROD_REACT_APP_API_DOMAIN}audio/validate`, {
+      await axios.put(`${process.env.REACT_APP_API_DOMAIN_PROD}audio/validate`, {
         Sp_ID: audioID,
         Sp_LABEL: labelValue,
       });

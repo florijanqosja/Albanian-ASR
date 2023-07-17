@@ -48,7 +48,7 @@ export default function Pricing() {
   useEffect(() => {
     async function fetchSummaryInfo() {
       try {
-        const response = await axios.get(`${process.env.PROD_REACT_APP_API_DOMAIN}dataset_insight_info`);
+        const response = await axios.get(`${process.env.REACT_APP_API_DOMAIN_PROD}dataset_insight_info`);
         const datas = response.data;
         const total = datas.total_labeled + datas.total_unlabeled;
         datas.sumofLabeled = (datas.total_labeled / total) * 100;
