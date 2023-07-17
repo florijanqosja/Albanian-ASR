@@ -34,9 +34,9 @@ export default function MainSection() {
 
   const fetchAudioData = async () => {
     try {
-      const response = await axios.get(`${process.env.REACT_APP_API_DOMAIN}audio/to_label`);
+      const response = await axios.get(`${process.env.PROD_REACT_APP_API_DOMAIN}audio/to_label`);
       const { Sp_PATH, Sp_ID } = response.data;
-      const audioURL = `${process.env.REACT_APP_FILE_ACCESS_DOMAIN}${Sp_PATH}`;
+      const audioURL = `${process.env.PROD_APP_FILE_ACCESS_DOMAIN}${Sp_PATH}`;
       setAudioPath(audioURL);
       setAudioID(Sp_ID);
       console.log("set the audioID to ", Sp_ID);
@@ -68,7 +68,7 @@ export default function MainSection() {
 
   const handleSubmit = async () => {
     try {
-      await axios.put(`${process.env.REACT_APP_API_DOMAIN}audio/label`, {
+      await axios.put(`${process.env.PROD_REACT_APP_API_DOMAIN}audio/label`, {
         Sp_ID: audioID,
         Sp_LABEL: labelValue,
       });
