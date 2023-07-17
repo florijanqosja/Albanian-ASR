@@ -36,7 +36,7 @@ export default function MainSection() {
     try {
       const response = await axios.get(`${process.env.REACT_APP_API_DOMAIN_PROD}audio/to_label`);
       const { Sp_PATH, Sp_ID } = response.data;
-      const audioURL = `${process.env.APP_FILE_ACCESS_DOMAIN_PROD}${Sp_PATH}`;
+      const audioURL = `${process.env.REACT_APP_FILE_ACCESS_DOMAIN_PROD}${Sp_PATH}`;
       setAudioPath(audioURL);
       setAudioID(Sp_ID);
       console.log("set the audioID to ", Sp_ID);
