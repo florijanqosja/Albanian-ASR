@@ -51,7 +51,7 @@ export default function MainSection() {
 
   const deleteAudio = async () => {
     try {
-      await axios.delete(`${process.env.REACT_APP_API_DOMAIN}audio`, {
+      await axios.delete(`${process.env.PROD_REACT_APP_API_DOMAIN}audio`, {
         data: {
           Sp_ID: audioID,
         },
