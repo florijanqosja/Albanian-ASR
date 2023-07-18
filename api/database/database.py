@@ -8,12 +8,12 @@ from dotenv import dotenv_values
 env_vars = dotenv_values()
 
 # Retrieve the database credentials from environment variables
-DATABASE_USER = env_vars.get("PROD_POSTGRES_USER")
-DATABASE_PASSWORD = env_vars.get("PROD_POSTGRES_PASSWORD")
-DATABASE_NAME = env_vars.get("PROD_POSTGRES_DB")
+DATABASE_USER = env_vars.get("POSTGRES_USER")
+DATABASE_PASSWORD = env_vars.get("POSTGRES_PASSWORD")
+DATABASE_NAME = env_vars.get("POSTGRES_DB")
 print(DATABASE_USER, DATABASE_PASSWORD, DATABASE_NAME)
 # Create the database connection URL
-DATABASE_URL = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@db_prod/{DATABASE_NAME}"
+DATABASE_URL = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@db/{DATABASE_NAME}"
 
 # Create the database engine
 engine = _sql.create_engine(DATABASE_URL)
