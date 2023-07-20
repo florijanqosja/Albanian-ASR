@@ -1,12 +1,15 @@
 server {
     listen 80 default_server;
-    server_name api.uneduashqiperine.com uneduashqiperine.com dev.api.uneduashqiperine.com dev.uneduashqiperine.com;
-    return 301 http://$host$request_uri;
+    server_name api.uneduashqiperine.com uneduashqiperine.com, dev.api.uneduashqiperine.com dev.uneduashqiperine.com;
+    return 301 https://$host$request_uri;
 }
 
 server {
-    listen 80;
+    listen 443 ssl;
     server_name api.uneduashqiperine.com;
+
+    ssl_certificate /etc/nginx/ssl/api.crt;
+    ssl_certificate_key /etc/nginx/ssl/api.key;
 
     location / {
         proxy_pass http://api_prod:80;
@@ -17,8 +20,11 @@ server {
 }
 
 server {
-    listen 80;
+    listen 443 ssl;
     server_name uneduashqiperine.com;
+
+    ssl_certificate /etc/nginx/ssl/uneduashqiperine.crt;
+    ssl_certificate_key /etc/nginx/ssl/uneduashqiperine.key;
 
     location / {
         proxy_pass http://web_prod:3000;
@@ -29,8 +35,12 @@ server {
 }
 
 server {
+    # listen 443 ssl;
     listen 80;
     server_name dev.api.uneduashqiperine.com;
+
+    # ssl_certificate /etc/nginx/ssl/dev.api.crt;
+    # ssl_certificate_key /etc/nginx/ssl/dev.api.key;
 
     location / {
         proxy_pass http://api_dev:180;
@@ -41,8 +51,12 @@ server {
 }
 
 server {
+    # listen 443 ssl;
     listen 80;
     server_name dev.uneduashqiperine.com;
+
+    # ssl_certificate /etc/nginx/ssl/dev.uneduashqiperine.crt;
+    # ssl_certificate_key /etc/nginx/ssl/dev.uneduashqiperine.key;
 
     location / {
         proxy_pass http://web_dev:3001;
