@@ -79,12 +79,9 @@ services:
   nginx:
     image: nginx:latest
     volumes:
-      # - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
       - ./nginx:/etc/nginx/conf.d:rw
-      # - ${PROD_SSL_API_CERT_PATH}:/etc/nginx/ssl/api.crt
-      # - ${PROD_SSL_API_KEY_PATH}:/etc/nginx/ssl/api.key
-      # - ${PROD_SSL_UNEDUASHQIPERINE_CERT_PATH}:/etc/nginx/ssl/uneduashqiperine.crt
-      # - ${PROD_SSL_UNEDUASHQIPERINE_KEY_PATH}:/etc/nginx/ssl/uneduashqiperine.key
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
     ports:
       - 80:80
       - 443:443
@@ -95,3 +92,14 @@ services:
       - api_dev
       - web_dev
       - db_dev
+      - certbot
+    
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+    command: 
+      - "/bin/sh"
+      - "-c"
+      - "trap exit TERM; certbot certonly --webroot --webroot-path=/var/www/certbot --email your-email@example.com --agree-tos --no-eff-email --force-renewal -d api.uneduashqiperine.com -d uneduashqiperine.com -d dev.api.uneduashqiperine.com -d dev.uneduashqiperine.com; while :; do certbot renew; sleep 12h & wait $${!}; done;"
