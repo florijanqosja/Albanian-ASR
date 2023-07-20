@@ -77,7 +77,7 @@ services:
       - "3333:5432"
 
   nginx:
-    image: nginx:lastest
+    image: nginx:latest
     volumes:
       # - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
       - ./nginx:/etc/nginx/conf.d:rw
