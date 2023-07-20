@@ -80,7 +80,7 @@ services:
     image: nginx:latest
     restart: always
     volumes:
-      - ./nginx:/etc/nginx/conf.d:rw/:ro
+      - ./nginx:/etc/nginx/conf.d:rw
       - /home/ubuntu/data/certbot/conf:/etc/letsencrypt/:ro
       - /home/ubuntu/data/certbot/www:/var/www/certbot/:ro
     ports:
