@@ -1,5 +1,6 @@
 name: Deploy to DEV
 
+on:
   push:
     branches:
       - dev
