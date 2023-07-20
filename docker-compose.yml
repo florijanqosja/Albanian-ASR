@@ -92,14 +92,10 @@ services:
       - api_dev
       - web_dev
       - db_dev
-      - certbot
     
   certbot:
     image: certbot/certbot
     volumes:
       - /home/ubuntu/data/certbot/conf:/etc/letsencrypt
       - /home/ubuntu/data/certbot/www:/var/www/certbot
-    command: 
-      - "/bin/sh"
-      - "-c"
-      - "trap exit TERM; certbot certonly --webroot --webroot-path=/var/www/certbot --email flooxperia@gmail.com --agree-tos --no-eff-email --force-renewal -d api.uneduashqiperine.com -d uneduashqiperine.com -d dev.api.uneduashqiperine.com -d dev.uneduashqiperine.com; while :; do certbot renew; sleep 12h & wait $${!}; done;"
+    command: /bin/sh -c "trap exit TERM; certbot certonly --webroot --webroot-path=/var/www/certbot --email flooxperia@gmail.com --agree-tos --no-eff-email --force-renewal -d api.uneduashqiperine.com -d uneduashqiperine.com -d dev.api.uneduashqiperine.com -d dev.uneduashqiperine.com; while :; do certbot renew; sleep 12h & wait $${!}; done"
