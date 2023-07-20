@@ -80,8 +80,8 @@ services:
     image: nginx:latest
     volumes:
       - ./nginx:/etc/nginx/conf.d:rw
-      - ./data/certbot/conf:/etc/letsencrypt
-      - ./data/certbot/www:/var/www/certbot
+      - /home/ubuntu/data/certbot/conf:/etc/letsencrypt
+      - /home/ubuntu/data/certbot/www:/var/www/certbot
     ports:
       - 80:80
       - 443:443
@@ -97,8 +97,8 @@ services:
   certbot:
     image: certbot/certbot
     volumes:
-      - ./data/certbot/conf:/etc/letsencrypt
-      - ./data/certbot/www:/var/www/certbot
+      - /home/ubuntu/data/certbot/conf:/etc/letsencrypt
+      - /home/ubuntu/data/certbot/www:/var/www/certbot
     command: 
       - "/bin/sh"
       - "-c"
