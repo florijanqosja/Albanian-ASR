@@ -80,9 +80,17 @@ services:
     image: nginx:latest
     restart: always
     volumes:
-      - ./nginx:/etc/nginx/conf.d:rw
-      - /home/ubuntu/data/certbot/conf:/etc/letsencrypt/:ro
-      - /home/ubuntu/data/certbot/www:/var/www/certbot/:ro
+      # - ./nginx:/etc/nginx/conf.d:rw
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ${SSL_API_CERT_PATH}:/etc/nginx/ssl/api.uneduashqiperine.crt
+      - ${SSL_API_KEY_PATH}:/etc/nginx/ssl/api.uneduashqiperine.key
+      - ${SSL_UNEDUASHQIPERINE_CERT_PATH}:/etc/nginx/ssl/uneduashqiperine.crt
+      - ${SSL_UNEDUASHQIPERINE_KEY_PATH}:/etc/nginx/ssl/uneduashqiperine.key
+      - ${DEV_SSL_API_CERT_PATH}:/etc/nginx/ssl/dev.api.uneduashqiperine.crt
+      - ${DEV_SSL_API_KEY_PATH}:/etc/nginx/ssl/dev.api.uneduashqiperine.key
+      - ${DEV_SSL_UNEDUASHQIPERINE_CERT_PATH}:/etc/nginx/ssl/dev.uneduashqiperine.crt
+      - ${DEV_SSL_UNEDUASHQIPERINE_KEY_PATH}:/etc/nginx/ssl/dev.uneduashqiperine.key
+
     ports:
       - 80:80
       - 443:443
@@ -93,9 +101,3 @@ services:
       - api_dev
       - web_dev
       - db_dev
-    
-  certbot:
-    image: certbot/certbot:latest
-    volumes:
-      - /home/ubuntu/data/certbot/conf:/etc/letsencrypt/:rw
-      - /home/ubuntu/data/certbot/www:/var/www/certbot/:rw
