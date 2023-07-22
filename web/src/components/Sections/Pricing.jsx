@@ -80,7 +80,7 @@ export default function Pricing() {
             is committed to building a high-quality model that achieves an accuracy rate of 80% and makes a meaningful impact on the Albanian community. We
             appreciate your support and interest in our project.
           </Typography>
-          <Typography variant="h2" className={classes.title}>OUR DATASET SO FAR</Typography>
+          <Typography variant="h2" className={classes.title}>OUR DATASET SO FAR Prod</Typography>
           {summaryInfo && (
             <Grid container spacing={3}>
               <Grid item xs={12} sm={6} md={4}>
