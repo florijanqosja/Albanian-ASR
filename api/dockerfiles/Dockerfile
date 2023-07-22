@@ -5,8 +5,8 @@ FROM python:3.9
 WORKDIR /code
 
 # 
-COPY ./requirements.txt /code/requirements.txt
-COPY ./.env /code/.env
+COPY ./dev/requirements.txt /code/requirements.txt
+COPY ./dev/.env /code/.env
 
 # 
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
@@ -15,7 +15,7 @@ RUN apt-get -y upgrade
 RUN apt-get install -y ffmpeg
 
 # 
-COPY ./api /code/app
+COPY ./dev/api /code/app
 
 VOLUME /code/app/mp4
 VOLUME /code/app/splices
