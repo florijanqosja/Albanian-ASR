@@ -16,7 +16,7 @@ RUN npm install
 COPY ./dev/web ./
 RUN npx browserslist@latest --update-db
 # Expose port 3000
-EXPOSE 3000
+EXPOSE 3001
 
 # Run the React app
 CMD ["npm", "start"]
