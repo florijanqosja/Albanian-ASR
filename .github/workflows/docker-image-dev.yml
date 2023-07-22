@@ -17,8 +17,8 @@ jobs:
         run: |
           cp /home/ubuntu/safe/.env.prod .env
           cp /home/ubuntu/safe/.env.prod web/.env
-          sudo rm -r /home/ubuntu/prod/actions-runner/production/Albanian-ASR/Albanian-ASR/dev
-          cp -r /home/ubuntu/dev/actions-runner/developement/Albanian-ASR/Albanian-ASR /home/ubuntu/prod/actions-runner/production/Albanian-ASR/Albanian-ASR/
+          [ -d "/home/ubuntu/prod/actions-runner/production/Albanian-ASR/Albanian-ASR/dev" ] && sudo rm -r /home/ubuntu/prod/actions-runner/production/Albanian-ASR/Albanian-ASR/dev
+          cp -r /home/ubuntu/dev/actions-runner/development/Albanian-ASR/Albanian-ASR /home/ubuntu/prod/actions-runner/production/Albanian-ASR/Albanian-ASR/
           sudo mv /home/ubuntu/prod/actions-runner/production/Albanian-ASR/Albanian-ASR/Albanian-ASR /home/ubuntu/prod/actions-runner/production/Albanian-ASR/Albanian-ASR/dev
 
       - name: Build and Deploy
