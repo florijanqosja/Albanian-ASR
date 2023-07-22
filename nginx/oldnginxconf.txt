@@ -56,12 +56,13 @@ server {
     server_name dev.uneduashqiperine.com;
 
     # ssl_certificate /etc/nginx/ssl/dev.uneduashqiperine.crt;
-    # ssl_certificate_key /etc/nginx/ssl/dev.uneduashqiperine.key;
+    # ssl_certificate_key /etc/nginx/ssl/dev.uneduashqiperine.key; test
 
     location / {
         proxy_pass http://web_dev:3001;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
     }
 }
