@@ -86,8 +86,8 @@ services:
       - ${PROD_SSL_API_KEY_PATH}:/etc/nginx/ssl/api.uneduashqiperine.key
       - ${PROD_SSL_UNEDUASHQIPERINE_CERT_PATH}:/etc/nginx/ssl/uneduashqiperine.crt
       - ${PROD_SSL_UNEDUASHQIPERINE_KEY_PATH}:/etc/nginx/ssl/uneduashqiperine.key
-      - ${DEV_SSL_API_CERT_PATH}:/etc/nginx/ssl/dev.api.uneduashqiperine.crt
-      - ${DEV_SSL_API_KEY_PATH}:/etc/nginx/ssl/dev.api.uneduashqiperine.key
+      - ${DEV_SSL_API_CERT_PATH}:/etc/nginx/ssl/devapi.uneduashqiperine.crt
+      - ${DEV_SSL_API_KEY_PATH}:/etc/nginx/ssl/devapi.uneduashqiperine.key
       - ${DEV_SSL_UNEDUASHQIPERINE_CERT_PATH}:/etc/nginx/ssl/dev.uneduashqiperine.crt
       - ${DEV_SSL_UNEDUASHQIPERINE_KEY_PATH}:/etc/nginx/ssl/dev.uneduashqiperine.key
 
