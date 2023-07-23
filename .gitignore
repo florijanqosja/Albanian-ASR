@@ -2,5 +2,6 @@ api/mp3/
 api/mp4/
 api/splices/
 api/audio_files
+audio_files
 web/node_modules/
 data/

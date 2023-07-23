@@ -40,6 +40,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+os.makedirs(f"splices", exist_ok=True)
 app.mount("/splices", StaticFiles(directory="splices"), name="splices")
 
 def splicer(filein, video_name, min_silence_len=500, silence_thresh=-30):
