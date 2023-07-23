@@ -48,7 +48,7 @@ export default function Pricing() {
   useEffect(() => {
     async function fetchSummaryInfo() {
       try {
-        const response = await axios.get(`${process.env.REACT_APP_API_DOMAIN_PROD}dataset_insight_info`);
+        const response = await axios.get(`${process.env.REACT_APP_API_DOMAIN_LOCAL}dataset_insight_info`);
         const datas = response.data;
         const total = datas.total_labeled + datas.total_unlabeled;
         datas.sumofLabeled = (datas.total_labeled / total) * 100;
@@ -80,7 +80,7 @@ export default function Pricing() {
             is committed to building a high-quality model that achieves an accuracy rate of 80% and makes a meaningful impact on the Albanian community. We
             appreciate your support and interest in our project.
           </Typography>
-          <Typography variant="h2" className={classes.title}>OUR DATASET SO FAR Prod</Typography>
+          <Typography variant="h2" className={classes.title}>OUR DATASET SO FAR LOCAL</Typography>
           {summaryInfo && (
             <Grid container spacing={3}>
               <Grid item xs={12} sm={6} md={4}>
