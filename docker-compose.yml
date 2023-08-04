@@ -90,6 +90,8 @@ services:
       - ${DEV_SSL_API_KEY_PATH}:/etc/nginx/ssl/devapi.uneduashqiperine.key
       - ${DEV_SSL_UNEDUASHQIPERINE_CERT_PATH}:/etc/nginx/ssl/dev.uneduashqiperine.crt
       - ${DEV_SSL_UNEDUASHQIPERINE_KEY_PATH}:/etc/nginx/ssl/dev.uneduashqiperine.key
+      - ${COMMUNITY_CERT_PATH}:/etc/nginx/ssl/community.uneduashqiperine.crt
+      - ${COMMUNITY_KEY_PATH}:/etc/nginx/ssl/community.uneduashqiperine.key
 
     ports:
       - 80:80
@@ -101,3 +103,32 @@ services:
       - api_dev
       - web_dev
       - db_dev
+    
+  mysql_db: 
+    container_name: mysql_container
+    environment: 
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_USER=${MYSQL_USER}
+    image: "mysql:8.0"
+    restart: always
+    volumes: 
+      - ${MYSQL_VOLUME}:/var/lib/mysql
+  wordpress: 
+    container_name: wordpress_container
+    depends_on: 
+      - mysql_db
+    environment: 
+      - WORDPRESS_DB_HOST="mysql_db:3306"
+      - WORDPRESS_DB_NAME=${MYSQL_DATABASE}
+      - WORDPRESS_DB_PASSWORD=${MYSQL_PASSWORD}
+      - WORDPRESS_DB_USER=${MYSQL_USER}
+    image: "wordpress:latest"
+    ports: 
+      - "8000:80"
+    restart: always
+    volumes: 
+      - ${WORDPRESS_VOLUME}:/var/www/html
+volumes: 
+  mysql: {}
