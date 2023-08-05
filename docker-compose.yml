@@ -107,28 +107,31 @@ services:
   mysql_db: 
     container_name: mysql_container
     environment: 
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_USER=${MYSQL_USER}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
     image: "mysql:8.0"
     restart: always
     volumes: 
       - ${MYSQL_VOLUME}:/var/lib/mysql
+
   wordpress: 
     container_name: wordpress_container
     depends_on: 
       - mysql_db
     environment: 
-      - WORDPRESS_DB_HOST="mysql_db:3306"
-      - WORDPRESS_DB_NAME=${MYSQL_DATABASE}
-      - WORDPRESS_DB_PASSWORD=${MYSQL_PASSWORD}
-      - WORDPRESS_DB_USER=${MYSQL_USER}
+      WORDPRESS_DB_HOST: "mysql_db"
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
+      WORDPRESS_DB_USER: ${MYSQL_USER}
     image: "wordpress:latest"
     ports: 
       - "8000:80"
     restart: always
     volumes: 
       - ${WORDPRESS_VOLUME}:/var/www/html
+
 volumes: 
-  mysql: {}
+  mysql_data: {}
+  wordpress_data: {}
