@@ -24,4 +24,5 @@ jobs:
       - name: Build and Deploy
         run: |
           cd /home/ubuntu/prod/actions-runner/production/Albanian-ASR/Albanian-ASR
+          sudo chown -R $USER:$USER /home/ubuntu/prod/actions-runner/production/Albanian-ASR/Albanian-ASR
           sudo docker-compose up --build -d
