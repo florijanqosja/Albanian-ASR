@@ -49,18 +49,14 @@ export default function Sidebar({ sidebarOpen, toggleSidebar }) {
           </Link>
         </li>
         <li className="semiBold font15 pointer">
-          <Link
+          <a
             onClick={() => toggleSidebar(!sidebarOpen)}
-            activeClass="active"
             className="whiteColor"
             style={{ padding: "10px 15px", color: "#ffffff" }}
-            to="https://community.uneduashqiperine.com/"
-            spy={true}
-            smooth={true}
-            offset={-60}
+            href="https://community.uneduashqiperine.com/" // Updated URL here
           >
             Community
-          </Link>
+          </a>
         </li>
       </UlStyle>
     </Wrapper>
