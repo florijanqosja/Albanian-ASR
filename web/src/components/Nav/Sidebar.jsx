@@ -48,20 +48,16 @@ export default function Sidebar({ sidebarOpen, toggleSidebar }) {
             Validate
           </Link>
         </li>
-        {/* <li className="semiBold font15 pointer">
-          <Link
+        <li className="semiBold font15 pointer">
+          <a
             onClick={() => toggleSidebar(!sidebarOpen)}
-            activeClass="active"
             className="whiteColor"
             style={{ padding: "10px 15px", color: "#ffffff" }}
-            to="/"
-            spy={true}
-            smooth={true}
-            offset={-60}
+            href="https://community.uneduashqiperine.com/" // Updated URL here
           >
-            Record
-          </Link>
-        </li> */}
+            Community
+          </a>
+        </li>
       </UlStyle>
     </Wrapper>
   );
