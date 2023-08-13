@@ -50,6 +50,15 @@ export default function MainNavbar() {
                 Record
               </Link>
             </li> */}
+            <li className="semiBold font15 pointer">
+              <a
+                href="https://community.uneduashqiperine.com/"
+                rel="noopener noreferrer" // Recommended for security when using target="_blank"
+                style={{ padding: "10px 15px" }}
+              >
+                Community
+              </a>
+            </li>
           </UlWrapper>
         </NavInner>
       </Wrapper>
