@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy to PROD
 
 on:
   push:
@@ -12,23 +12,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-        with:
-          submodules: recursive
-        user: ubuntu
 
       - name: Configure environment
-        with:
-          submodules: recursive
-        user: ubuntu
         run: |
           cp /home/ubuntu/safe/.env.prod .env
           cp /home/ubuntu/safe/.env.prod web/.env
           cp -r /home/ubuntu/dev/actions-runner/developement/Albanian-ASR/Albanian-ASR /home/ubuntu/prod/actions-runner/production/Albanian-ASR/Albanian-ASR/
           mv /home/ubuntu/prod/actions-runner/production/Albanian-ASR/Albanian-ASR/Albanian-ASR /home/ubuntu/prod/actions-runner/production/Albanian-ASR/Albanian-ASR/dev
       - name: Build and Deploy
-        with:
-          submodules: recursive
-        user: ubuntu
         run: |
           cd /home/ubuntu/prod/actions-runner/production/Albanian-ASR/Albanian-ASR
           sudo docker-compose up --build -d
