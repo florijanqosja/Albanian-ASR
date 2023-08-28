@@ -92,6 +92,8 @@ services:
       - ${DEV_SSL_UNEDUASHQIPERINE_KEY_PATH}:/etc/nginx/ssl/dev.uneduashqiperine.key
       - ${COMMUNITY_CERT_PATH}:/etc/nginx/ssl/community.uneduashqiperine.crt
       - ${COMMUNITY_KEY_PATH}:/etc/nginx/ssl/community.uneduashqiperine.key
+      - ${DIBRASPEAKS_CERT_PATH}:/etc/nginx/ssl/dibraspeaks.uneduashqiperine.crt
+      - ${DIBRASPEAKS_KEY_PATH}:/etc/nginx/ssl/dibraspeaks.uneduashqiperine.key
 
     ports:
       - 80:80
