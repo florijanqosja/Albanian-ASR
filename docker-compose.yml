@@ -11,6 +11,7 @@ services:
       - ${PROD_MP3_VOLUME_PATH}:/code/mp3
       - ${PROD_MP4_VOLUME_PATH}:/code/mp4
       - ${PROD_SPLICES_VOLUME_PATH}:/code/splices
+      - ${PROD_MODELS_VOLUME_PATH}:/code/app/models
     depends_on:
       - db_prod
 

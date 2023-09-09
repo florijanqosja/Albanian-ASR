@@ -49,11 +49,25 @@ export default function Sidebar({ sidebarOpen, toggleSidebar }) {
           </Link>
         </li>
         <li className="semiBold font15 pointer">
+          <Link
+            onClick={() => toggleSidebar(!sidebarOpen)}
+            activeClass="active"
+            className="whiteColor"
+            style={{ padding: "10px 15px", color: "#ffffff" }}
+            to="/transcribe"
+            spy={true}
+            smooth={true}
+            offset={-60}
+          >
+            Transcribe
+          </Link>
+        </li>
+        <li className="semiBold font15 pointer">
           <a
             onClick={() => toggleSidebar(!sidebarOpen)}
             className="whiteColor"
             style={{ padding: "10px 15px", color: "#ffffff" }}
-            href="https://community.uneduashqiperine.com/" // Updated URL here
+            href="https://uneduashqiperine.com/" // Updated URL here
           >
             Community
           </a>
