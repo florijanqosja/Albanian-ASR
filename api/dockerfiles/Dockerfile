@@ -20,6 +20,7 @@ COPY ./api /code/app
 VOLUME /code/app/mp4
 VOLUME /code/app/splices
 VOLUME /code/app/mp3
+VOLUME /code/app/models
 
 # 
 EXPOSE 80

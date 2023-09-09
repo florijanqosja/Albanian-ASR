@@ -1,0 +1,145 @@
+@keyframes dotPulse {
+  0% { opacity: 0.2; }
+  50% { opacity: 1; }
+  100% { opacity: 0.2; }
+}
+
+.dot {
+  animation: dotPulse 1.5s infinite;
+}
+
+.dot1 { animation-delay: 0.5s;
+  font-size: 36px; }
+.dot2 { animation-delay: 1s;
+  font-size: 36px;}
+.dot3 { animation-delay: 1.5s;
+  font-size: 36px;}
+
+.recordings-container {
+  height: 85%;
+  padding: 0 2rem;
+  background: linear-gradient(135deg, #f5e6e8, #cda5a3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: 10px;
+  width: 85%;
+  margin: 0 auto;
+  min-height: 220px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); 
+}
+
+.recordings-container h1 {
+  margin-bottom: 1rem;
+  text-align: center;
+  font-size: 36px;
+  font-weight: bold;
+  color: #301616;
+}
+
+.no-records {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2rem;
+  color: #301616;
+}
+
+.recordings-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.recordings-list::-webkit-scrollbar-track {
+  background: #e4d3cf;
+}
+
+.recordings-list::-webkit-scrollbar-thumb {
+  background: #b33e3a;
+}
+
+.recordings-list {
+  max-height: 85%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+}
+
+.record {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  width: 95%;
+  height: auto;
+  margin-bottom: 0.5rem;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); 
+  transition: all 0.3s ease; 
+}
+
+.record-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.record p {
+  width: 100%;
+  text-align: left;
+  font-size: 1.2rem;
+  color: #301616;
+  margin-top: 1rem;
+}
+
+.record audio {
+  width: 60%;
+}
+
+.delete-button-container, .submit-button-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.2s ease; 
+}
+
+.delete-button-container { width: 15%; }
+.submit-button-container { width: 25%; }
+
+.delete-button {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background-color: #b33e3a;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease; 
+}
+
+.delete-button:hover {
+  background-color: #401a1a;
+  transform: scale(1.1); 
+}
+
+.submit-button {
+  background-color: #fff;
+  height: 3rem;
+  border-radius: 20px;
+  color: #401a1a;
+  transition: all 0.3s ease; 
+}
+
+.submit-button:hover {
+  background-color: #401a1a;
+  color: #fff;
+  transform: scale(1.05); 
+}

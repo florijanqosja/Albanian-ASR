@@ -45,14 +45,14 @@ export default function MainNavbar() {
                 Validate
               </Link>
             </li>
-            {/* <li className="semiBold font15 pointer">
-              <Link to="/" activeClass="active" style={{ padding: "10px 15px" }} spy={true} smooth={true} offset={-80}>
-                Record
+            <li className="semiBold font15 pointer">
+              <Link to="/transcribe" activeClass="active" style={{ padding: "10px 15px" }} spy={true} smooth={true} offset={-80}>
+                Transcribe
               </Link>
-            </li> */}
+            </li>
             <li className="semiBold font15 pointer">
               <a
-                href="https://community.uneduashqiperine.com/"
+                href="https://uneduashqiperine.com/"
                 rel="noopener noreferrer" // Recommended for security when using target="_blank"
                 style={{ padding: "10px 15px" }}
               >
