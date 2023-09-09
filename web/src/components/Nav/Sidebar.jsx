@@ -48,20 +48,20 @@ export default function Sidebar({ sidebarOpen, toggleSidebar }) {
             Validate
           </Link>
         </li>
-        {/* <li className="semiBold font15 pointer">
+        <li className="semiBold font15 pointer">
           <Link
             onClick={() => toggleSidebar(!sidebarOpen)}
             activeClass="active"
             className="whiteColor"
             style={{ padding: "10px 15px", color: "#ffffff" }}
-            to="/"
+            to="/transcribe"
             spy={true}
             smooth={true}
             offset={-60}
           >
-            Record
+            Transcribe
           </Link>
-        </li> */}
+        </li>
       </UlStyle>
     </Wrapper>
   );

@@ -104,8 +104,8 @@
     width: 100%;
   }
   .active {
-    border-bottom: 2px solid #840b0b;
-    color: #b41c1c;
+    border-bottom: 2px solid #401a1a;
+    color: #401a1a;
   }
   .tag {
     padding: 5px 10px;
@@ -224,7 +224,7 @@
     color: #301616;
   }
   .purpleColor {
-    color: #ff4c20;
+    color: #401a1a;
   }
   .orangeColor {
     color: #F2B300;
@@ -236,7 +236,7 @@
     color: #C4FFFF;
   }
   .greenColor {
-    color: #cb6a49;
+    color: #401a1a;
   }
   .greyColor {
     color: #707070;
@@ -249,10 +249,10 @@
     background-color: #301616;
   }
   .purpleBg {
-    background-color: #ff3a20;
+    background-color: #401a1a;
   }
   .orangeBg {
-    background-color: #f20000;
+    background-color: #401a1a;
   }
   .lightBg {
     background-color: #F5F5F5;
