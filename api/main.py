@@ -100,10 +100,11 @@ def predict_word(f_path):
         loss = keras.backend.ctc_batch_cost(y_true, y_pred, input_length, label_length)
         return loss
 
-    model = keras.models.load_model('/code/app/models/finetune-saved-model-10-31.60.h5', custom_objects={'CTCLoss':                   
+    model = keras.models.load_model('/code/app/models/saved-model-08-37.94.h5', custom_objects={'CTCLoss':                   
     CTCLoss})
 
-    characters = ["a", "b", "c", "ç", "d", "dh", "e", "ë", "f", "g", "gj", "h", "i", "j", "k", "l", "ll", "m", "n", "nj", "o", "p", "q", "r", "rr", "s", "sh", "t", "th", "u", "v", "x", "xh", "y", "z", "zh", "'", "?", "!", " ", "-"]
+    # characters = ["a", "b", "c", "ç", "d", "dh", "e", "ë", "f", "g", "gj", "h", "i", "j", "k", "l", "ll", "m", "n", "nj", "o", "p", "q", "r", "rr", "s", "sh", "t", "th", "u", "v", "x", "xh", "y", "z", "zh", "'", "?", "!", " ", "-"]
+    characters = ['', ' ', '-', '.', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'x', 'y', 'z', 'ç', 'ë']
     char_to_num = keras.layers.StringLookup(vocabulary=characters, oov_token="")
 
     num_to_char = keras.layers.StringLookup(
