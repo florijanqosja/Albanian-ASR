@@ -31,7 +31,7 @@ services:
     image: postgres
     restart: always
     environment:
-      - DEV_POSTGRES_DB=${PROD_POSTGRES_DB}
+      - POSTGRES_DB=${PROD_POSTGRES_DB}
       - POSTGRES_USER=${PROD_POSTGRES_USER}
       - POSTGRES_PASSWORD=${PROD_POSTGRES_PASSWORD}
     volumes:
@@ -39,43 +39,42 @@ services:
     ports:
       - "5432:5432"
 
-  api_dev:
-    container_name: "api_dev"
-    ports:
-      - 340:180
-    build:
-      dockerfile: ./dev/api/dockerfiles/Dockerfile
-      context: .
-    volumes:
-      - ${DEV_MP3_VOLUME_PATH}:/code/mp3
-      - ${DEV_MP4_VOLUME_PATH}:/code/mp4
-      - ${DEV_SPLICES_VOLUME_PATH}:/code/splices
-    depends_on:
-      - db_dev
+  # api_dev:
+  #   container_name: "api_dev"
+  #   ports:
+  #     - 340:180
+  #   build:
+  #     dockerfile: ./dev/api/dockerfiles/Dockerfile
+  #     context: .
+  #   volumes:
+  #     - ${DEV_MP3_VOLUME_PATH}:/code/mp3
+  #     - ${DEV_MP4_VOLUME_PATH}:/code/mp4
+  #     - ${DEV_SPLICES_VOLUME_PATH}:/code/splices
+  #   depends_on:
+  #     - db_dev
 
-  web_dev:
-    container_name: "web_dev"
-    ports:
-      - 360:3000
-    build:
-      dockerfile: ./dev/web/dockerfiles/Dockerfile
-      context: .
-    depends_on:
-      - db_dev
-      - api_dev
+  # web_dev:
+  #   container_name: "web_dev"
+  #   ports:
+  #     - 360:3000
+  #   build:
+  #     dockerfile: ./dev/web/dockerfiles/Dockerfile
+  #     context: .
+  #   depends_on:
+  #     - api_dev
 
-  db_dev:
-    container_name: "db_dev"
-    image: postgres
-    restart: always
-    environment:
-      - DEV_POSTGRES_DB=${DEV_POSTGRES_DB}
-      - POSTGRES_USER=${DEV_POSTGRES_USER}
-      - POSTGRES_PASSWORD=${DEV_POSTGRES_PASSWORD}
-    volumes:
-      - ${DEV_DB_VOLUME_PATH}:/var/lib/postgresql/data
-    ports:
-      - "3333:5432"
+  # db_dev:
+  #   container_name: "db_dev"
+  #   image: postgres
+  #   restart: always
+  #   environment:
+  #     - DEV_POSTGRES_DB=${DEV_POSTGRES_DB}
+  #     - POSTGRES_USER=${DEV_POSTGRES_USER}
+  #     - POSTGRES_PASSWORD=${DEV_POSTGRES_PASSWORD}
+  #   volumes:
+  #     - ${DEV_DB_VOLUME_PATH}:/var/lib/postgresql/data
+  #   ports:
+  #     - "3333:5432"
 
   nginx:
     image: nginx:latest
@@ -87,10 +86,10 @@ services:
       - ${PROD_SSL_API_KEY_PATH}:/etc/nginx/ssl/api.uneduashqiperine.key
       - ${PROD_SSL_UNEDUASHQIPERINE_CERT_PATH}:/etc/nginx/ssl/uneduashqiperine.crt
       - ${PROD_SSL_UNEDUASHQIPERINE_KEY_PATH}:/etc/nginx/ssl/uneduashqiperine.key
-      - ${DEV_SSL_API_CERT_PATH}:/etc/nginx/ssl/devapi.uneduashqiperine.crt
-      - ${DEV_SSL_API_KEY_PATH}:/etc/nginx/ssl/devapi.uneduashqiperine.key
-      - ${DEV_SSL_UNEDUASHQIPERINE_CERT_PATH}:/etc/nginx/ssl/dev.uneduashqiperine.crt
-      - ${DEV_SSL_UNEDUASHQIPERINE_KEY_PATH}:/etc/nginx/ssl/dev.uneduashqiperine.key
+      # - ${DEV_SSL_API_CERT_PATH}:/etc/nginx/ssl/devapi.uneduashqiperine.crt
+      # - ${DEV_SSL_API_KEY_PATH}:/etc/nginx/ssl/devapi.uneduashqiperine.key
+      # - ${DEV_SSL_UNEDUASHQIPERINE_CERT_PATH}:/etc/nginx/ssl/dev.uneduashqiperine.crt
+      # - ${DEV_SSL_UNEDUASHQIPERINE_KEY_PATH}:/etc/nginx/ssl/dev.uneduashqiperine.key
       - ${COMMUNITY_CERT_PATH}:/etc/nginx/ssl/community.uneduashqiperine.crt
       - ${COMMUNITY_KEY_PATH}:/etc/nginx/ssl/community.uneduashqiperine.key
       - ${DIBRASPEAKS_CERT_PATH}:/etc/nginx/ssl/dibraspeaks.uneduashqiperine.crt
@@ -103,9 +102,9 @@ services:
       - api_prod
       - web_prod
       - db_prod
-      - api_dev
-      - web_dev
-      - db_dev
+      # - api_dev
+      # - web_dev
+      # - db_dev
     
   mysql_db: 
     container_name: mysql_container
