@@ -28,7 +28,7 @@ services:
 
   db_prod:
     container_name: "db_prod"
-    image: postgres
+    image: postgres:15
     restart: always
     environment:
       - POSTGRES_DB=${PROD_POSTGRES_DB}
