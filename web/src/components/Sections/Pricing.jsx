@@ -47,19 +47,6 @@ const useStyles = makeStyles((theme) => ({
   unlabeledCard: {
     backgroundColor: '#cda5a3', // same as is now for unlabeled
   },
-  circularProgressbar: {
-    height: '150px !important',
-    width: '150px !important',
-  },
-  title: {
-    fontSize: '36px',
-    fontWeight: 'bold',
-    marginBottom: '20px',
-  },
-  label: {
-    fontSize: '18px',
-    fontWeight: '500',
-  },
 }));
 
 const secondsToHours = (seconds) => (seconds / 3600).toFixed(2);
@@ -88,10 +75,6 @@ export default function Pricing() {
     fetchSummaryInfo();
   }, []);
 
-  const calculatePercentage = (partialValue, totalValue) => {
-    return ((100 * partialValue) / totalValue).toFixed(2);
-  };
-
   return (
     <Box className={classes.root}>
       <Grid container justify="center">
@@ -107,144 +90,113 @@ export default function Pricing() {
             appreciate your support and interest in our project.
           </Typography>
           <Typography variant="h2" className={classes.title}>OUR DATASET SO FAR Prod</Typography>
-          {/* 1. Card for Labeled Data */}
           {summaryInfo && (
-            <Grid item xs={12} sm={6} md={4}>
-              <Card className={`${classes.card} ${classes.labeledCard}`}>
-                <CardContent align="center">
-                  <Typography variant="h6" className={classes.label}>Labeled Data</Typography>
-                  <Typography variant="body2">{`${summaryInfo.total_labeled} entries`}</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          )}
-
-          {/* 2. Card for Unlabeled Data */}
-          {summaryInfo && (
-            <Grid item xs={12} sm={6} md={4}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card className={`${classes.card} ${classes.labeledCard}`}>
+                  <CardContent align="center">
+                    <Typography variant="h6" className={classes.label}>Labeled Data</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_labeled} entries`}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
               <Card className={`${classes.card} ${classes.unlabeledCard}`}>
                 <CardContent align="center">
                   <Typography variant="h6" className={classes.label}>Unlabeled Data</Typography>
                   <Typography variant="body2">{`${summaryInfo.total_unlabeled} entries`}</Typography>
                 </CardContent>
               </Card>
-            </Grid>
-          )}
-
-          {/* 3. Card for Validated Data */}
-          {summaryInfo && (
-            <Grid item xs={12} sm={6} md={4}>
-              <Card className={`${classes.card} ${classes.validatedCard}`}>
-                <CardContent align="center">
-                  <Typography variant="h6" className={classes.label}>Validated Data</Typography>
-                  <Typography variant="body2">{`${calculatePercentage(summaryInfo.total_duration_validated, summaryInfo.total_duration_labeled)}% validated`}</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          )}
-
-          {/* 4. Card for Labeled Data Duration */}
-          {summaryInfo && (
-            <Grid item xs={12} sm={6} md={4}>
-              <Card className={`${classes.card} ${classes.labeledCard}`}>
-                <CardContent align="center">
-                  <Typography variant="h6" className={classes.label}>Labeled Data Duration</Typography>
-                  <Typography variant="body2">{`${secondsToHours(summaryInfo.total_duration_labeled)} hours`}</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          )}
-
-          {/* 5. Card for Unlabeled Data Duration */}
-          {summaryInfo && (
-            <Grid item xs={12} sm={6} md={4}>
-              <Card className={`${classes.card} ${classes.unlabeledCard}`}>
-                <CardContent align="center">
-                  <Typography variant="h6" className={classes.label}>Unlabeled Data Duration</Typography>
-                  <Typography variant="body2">{`${secondsToHours(summaryInfo.total_duration_unlabeled)} hours`}</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          )}
-
-          {/* 6. Card for Validated Data Duration */}
-          {summaryInfo && (
-            <Grid item xs={12} sm={6} md={4}>
-              <Card className={`${classes.card} ${classes.validatedCard}`}>
-                <CardContent align="center">
-                  <Typography variant="h6" className={classes.label}>Validated Data Duration</Typography>
-                  <Typography variant="body2">{`${secondsToHours(summaryInfo.total_duration_validated)} hours`}</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          )}
-
-          {/* 7. Card for Progress Unlabeled - Labeled */}
-          {summaryInfo && (
-            <Grid item xs={12} sm={6} md={4}>
-              <Card className={`${classes.card} ${classes.unlabeledCard}`}>
-                <CardContent align="center">
-                  <Typography variant="h6" className={classes.label}>Progress Unlabeled - Labeled</Typography>
-                  <div className={classes.circularProgressbar}>
-                    <CircularProgressbar
-                      value={summaryInfo.sumofUnLabeled}
-                      text={`${summaryInfo.sumofUnLabeled}%`}
-                      styles={buildStyles({
-                        strokeLinecap: 'butt',
-                        textColor: '#301616',
-                        pathColor: '#301616',
-                        trailColor: '#d6d6d6',
-                      })}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </Grid>
-          )}
-
-          {/* 8. Card for Progress Labeled - Validated */}
-          {summaryInfo && (
-            <Grid item xs={12} sm={6} md={4}>
-              <Card className={`${classes.card} ${classes.labeledCard}`}>
-                <CardContent align="center">
-                  <Typography variant="h6" className={classes.label}>Progress Labeled - Validated</Typography>
-                  <div className={classes.circularProgressbar}>
-                    <CircularProgressbar
-                      value={calculatePercentage(summaryInfo.total_duration_validated, summaryInfo.total_duration_labeled)}
-                      text={`${calculatePercentage(summaryInfo.total_duration_validated, summaryInfo.total_duration_labeled)}%`}
-                      styles={buildStyles({
-                        strokeLinecap: 'butt',
-                        textColor: '#301616',
-                        pathColor: '#301616',
-                        trailColor: '#d6d6d6',
-                      })}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </Grid>
-          )}
-
-          {/* 9. Card for Progress Unlabeled - Validated */}
-          {summaryInfo && (
-            <Grid item xs={12} sm={6} md={4}>
-              <Card className={`${classes.card} ${classes.validatedCard}`}>
-                <CardContent align="center">
-                  <Typography variant="h6" className={classes.label}>Progress Unlabeled - Validated</Typography>
-                  <div className={classes.circularProgressbar}>
-                    <CircularProgressbar
-                      value={calculatePercentage(summaryInfo.total_duration_validated, summaryInfo.total_duration_unlabeled)}
-                      text={`${calculatePercentage(summaryInfo.total_duration_validated, summaryInfo.total_duration_unlabeled)}%`}
-                      styles={buildStyles({
-                        strokeLinecap: 'butt',
-                        textColor: '#301616',
-                        pathColor: '#301616',
-                        trailColor: '#d6d6d6',
-                      })}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card className={`${classes.card} ${classes.validatedCard}`}>
+                  <CardContent align="center">
+                    <Typography variant="h6" className={classes.label}>Validated Data</Typography>
+                    <Typography variant="body2">{`${calculatePercentage(summaryInfo.total_duration_validated, summaryInfo.total_duration_labeled)}% validated`}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card className={`${classes.card} ${classes.labeledCard}`}>
+                  <CardContent align="center">
+                    <Typography variant="h6" className={classes.label}>Labeled Data Duration</Typography>
+                    <Typography variant="body2">{`${secondsToHours(summaryInfo.total_duration_labeled)} hours`}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card className={`${classes.card} ${classes.unlabeledCard}`}>
+                  <CardContent align="center">
+                    <Typography variant="h6" className={classes.label}>Unlabeled Data Duration</Typography>
+                    <Typography variant="body2">{`${secondsToHours(summaryInfo.total_duration_unlabeled)} hours`}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card className={`${classes.card} ${classes.validatedCard}`}>
+                  <CardContent align="center">
+                    <Typography variant="h6" className={classes.label}>Validated Data Duration</Typography>
+                    <Typography variant="body2">{`${secondsToHours(summaryInfo.total_duration_validated)} hours`}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card className={`${classes.card} ${classes.unlabeledCard}`}>
+                  <CardContent align="center">
+                    <Typography variant="h6" className={classes.label}>Progress Unlabeled - Labeled</Typography>
+                    <div className={classes.circularProgressbar}>
+                      <CircularProgressbar
+                        value={summaryInfo.sumofUnLabeled}
+                        text={`${summaryInfo.sumofUnLabeled}%`}
+                        styles={buildStyles({
+                          strokeLinecap: 'butt',
+                          textColor: '#301616',
+                          pathColor: '#301616',
+                          trailColor: '#d6d6d6',
+                        })}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card className={`${classes.card} ${classes.labeledCard}`}>
+                  <CardContent align="center">
+                    <Typography variant="h6" className={classes.label}>Progress Labeled - Validated</Typography>
+                    <div className={classes.circularProgressbar}>
+                      <CircularProgressbar
+                        value={calculatePercentage(summaryInfo.total_duration_validated, summaryInfo.total_duration_labeled)}
+                        text={`${calculatePercentage(summaryInfo.total_duration_validated, summaryInfo.total_duration_labeled)}%`}
+                        styles={buildStyles({
+                          strokeLinecap: 'butt',
+                          textColor: '#301616',
+                          pathColor: '#301616',
+                          trailColor: '#d6d6d6',
+                        })}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card className={`${classes.card} ${classes.validatedCard}`}>
+                  <CardContent align="center">
+                    <Typography variant="h6" className={classes.label}>Progress Unlabeled - Validated</Typography>
+                    <div className={classes.circularProgressbar}>
+                      <CircularProgressbar
+                        value={calculatePercentage(summaryInfo.total_duration_validated, summaryInfo.total_duration_unlabeled)}
+                        text={`${calculatePercentage(summaryInfo.total_duration_validated, summaryInfo.total_duration_unlabeled)}%`}
+                        styles={buildStyles({
+                          strokeLinecap: 'butt',
+                          textColor: '#301616',
+                          pathColor: '#301616',
+                          trailColor: '#d6d6d6',
+                        })}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Grid>
             </Grid>
           )}
         </Grid>
