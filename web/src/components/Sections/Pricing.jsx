@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
-import { Card, CardContent, Typography, Grid, Box } from "@material-ui/core";
+import { Card, CardContent, Typography, Grid, Box } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
-import axios from "axios";
+import axios from 'axios';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -14,32 +14,36 @@ const useStyles = makeStyles((theme) => ({
   card: {
     boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)',
     borderRadius: '15px',
-    backgroundColor: '#cda5a3',
+    marginBottom: '20px',
+  },
+  validatedCard: {
+    backgroundColor: '#90ee90', // light green for validated
+  },
+  labeledCard: {
+    backgroundColor: '#ffff99', // light yellow for labeled
   },
   circularProgressbar: {
     height: '150px !important',
     width: '150px !important',
-    marginBottom: '20px'
   },
   title: {
     fontSize: '36px',
     fontWeight: 'bold',
-    marginBottom: '20px'
+    marginBottom: '20px',
   },
   subTitle: {
     fontStyle: 'italic',
-    marginBottom: '30px'
+    marginBottom: '30px',
   },
   paragraph: {
     textAlign: 'justify',
-    marginBottom: '30px'
+    marginBottom: '30px',
   },
   label: {
     fontSize: '18px',
-    fontWeight: '500'
+    fontWeight: '500',
   },
 }));
-
 
 export default function Pricing() {
   const classes = useStyles();
@@ -49,28 +53,31 @@ export default function Pricing() {
     async function fetchSummaryInfo() {
       try {
         const response = await axios.get(`${process.env.REACT_APP_API_DOMAIN_PROD}dataset_insight_info`);
-        const datas = response.data;
-        const total = datas.total_labeled + datas.total_unlabeled;
-        datas.sumofLabeled = datas.total_labeled / total;
-        datas.sumofUnLabeled = datas.total_unlabeled / total;
-        const totalDuration = datas.total_duration_labeled + datas.total_duration_unlabeled;
-        datas.sumofLabeledDuration = datas.total_duration_labeled / totalDuration;
-        datas.sumofUnLabeledDuration = datas.total_duration_unlabeled / totalDuration;
-        datas.progressPercentage = datas.total_duration_validated / totalDuration;
-        setSummaryInfo(datas);
+        const data = response.data;
+        const total = data.total_labeled + data.total_unlabeled;
+        data.sumofLabeled = (data.total_labeled / total) * 100;
+        data.sumofUnLabeled = (data.total_unlabeled / total) * 100;
+        const totalDuration = data.total_duration_labeled + data.total_duration_unlabeled;
+        data.sumofLabeledDuration = (data.total_duration_labeled / totalDuration) * 100;
+        data.sumofUnLabeledDuration = (data.total_duration_unlabeled / totalDuration) * 100;
+        data.progressPercentage = (data.total_duration_validated / totalDuration) * 100;
+        setSummaryInfo(data);
       } catch (error) {
-        console.error("Error fetching summary info:", error);
+        console.error('Error fetching summary info:', error);
       }
     }
-
     fetchSummaryInfo();
   }, []);
+
+  const calculatePercentage = (partialValue, totalValue) => {
+    return ((100 * partialValue) / totalValue).toFixed(2);
+  };
 
   return (
     <Box className={classes.root}>
       <Grid container justify="center">
-        <Grid item xs={14} sm={8} md={7}>
-          <Typography variant="h2" backgroundColor="#cda5a3" className={classes.title}>THE PROJECT</Typography>
+        <Grid item xs={12} sm={10} md={8}>
+          <Typography variant="h2" className={classes.title}>THE PROJECT</Typography>
           <Typography variant="h5" className={classes.subTitle}>We love Technology</Typography>
           <Typography variant="body1" className={classes.paragraph}>
             Welcome to the Albanian Language Transcriber project! Our goal is to develop a functioning Albanian speech-to-text AI model to improve the lives
@@ -84,14 +91,14 @@ export default function Pricing() {
           {summaryInfo && (
             <Grid container spacing={3}>
               <Grid item xs={12} sm={6} md={4}>
-                <Card className={classes.card}>
+                <Card className={`${classes.card} ${classes.labeledCard}`}>
                   <CardContent align="center">
                     <div className={classes.circularProgressbar}>
                       <CircularProgressbar
-                        value={summaryInfo.sumofLabeled.toFixed(2)}
-                        text={`${summaryInfo.sumofLabeled.toFixed(2)}%`}
+                        value={summaryInfo.sumofLabeled}
+                        text={`${summaryInfo.sumofLabeled}%`}
                         styles={buildStyles({
-                          strokeLinecap: "butt",
+                          strokeLinecap: 'butt',
                           textColor: '#301616',
                           pathColor: '#301616',
                           trailColor: '#d6d6d6',
@@ -99,19 +106,19 @@ export default function Pricing() {
                       />
                     </div>
                     <Typography variant="h6" className={classes.label}>Labeled Data</Typography>
-                    <Typography variant="body2">{`${summaryInfo.total_labeled} / ${summaryInfo.total_labeled + summaryInfo.total_unlabeled}`}</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_labeled} / ${total}`}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
               <Grid item xs={12} sm={6} md={4}>
-                <Card className={classes.card}>
+                <Card className={`${classes.card}`}>
                   <CardContent align="center">
                     <div className={classes.circularProgressbar}>
                       <CircularProgressbar
-                        value={summaryInfo.sumofUnLabeled.toFixed(2)}
-                        text={`${summaryInfo.sumofUnLabeled.toFixed(2)}%`}
+                        value={summaryInfo.sumofUnLabeled}
+                        text={`${summaryInfo.sumofUnLabeled}%`}
                         styles={buildStyles({
-                          strokeLinecap: "butt",
+                          strokeLinecap: 'butt',
                           textColor: '#301616',
                           pathColor: '#301616',
                           trailColor: '#d6d6d6',
@@ -119,59 +126,19 @@ export default function Pricing() {
                       />
                     </div>
                     <Typography variant="h6" className={classes.label}>Unlabeled Data</Typography>
-                    <Typography variant="body2">{`${summaryInfo.total_unlabeled} / ${summaryInfo.total_labeled.toFixed(2) + summaryInfo.total_unlabeled.toFixed(2)}`}</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_unlabeled} / ${total}`}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
               <Grid item xs={12} sm={6} md={4}>
-                <Card className={classes.card}>
+                <Card className={`${classes.card} ${classes.validatedCard}`}>
                   <CardContent align="center">
                     <div className={classes.circularProgressbar}>
                       <CircularProgressbar
-                        value={summaryInfo.sumofLabeledDuration.toFixed(2)}
-                        text={`${summaryInfo.sumofLabeledDuration.toFixed(2)}%`}
+                        value={summaryInfo.progressPercentage}
+                        text={`${summaryInfo.progressPercentage}%`}
                         styles={buildStyles({
-                          strokeLinecap: "butt",
-                          textColor: '#301616',
-                          pathColor: '#301616',
-                          trailColor: '#d6d6d6',
-                        })}
-                      />
-                    </div>
-                    <Typography variant="h6" className={classes.label}>Labeled Data Duration</Typography>
-                    <Typography variant="body2">{`${summaryInfo.total_duration_labeled.toFixed(2)} / ${(summaryInfo.total_duration_labeled.toFixed(2) + summaryInfo.total_duration_unlabeled.toFixed(2)).toFixed(2)} hours`}</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <Card className={classes.card}>
-                  <CardContent align="center">
-                    <div className={classes.circularProgressbar}>
-                      <CircularProgressbar
-                        value={summaryInfo.sumofUnLabeledDuration.toFixed(2)}
-                        text={`${summaryInfo.sumofUnLabeledDuration.toFixed(2)}%`}
-                        styles={buildStyles({
-                          strokeLinecap: "butt",
-                          textColor: '#301616',
-                          pathColor: '#301616',
-                          trailColor: '#d6d6d6',
-                        })}
-                      />
-                    </div>
-                    <Typography variant="h6" className={classes.label}>Unlabeled Data Duration</Typography>
-                    <Typography variant="body2">{`${summaryInfo.total_duration_unlabeled.toFixed(2)} / ${(summaryInfo.total_duration_labeled.toFixed(2) + summaryInfo.total_duration_unlabeled.toFixed(2)).toFixed(2)} hours`}</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <Card className={classes.card}>
-                  <CardContent align="center">
-                    <div className={classes.circularProgressbar}>
-                      <CircularProgressbar
-                        value={summaryInfo.progressPercentage.toFixed(2)}
-                        text={`${summaryInfo.progressPercentage.toFixed(2)}%`}
-                        styles={buildStyles({
-                          strokeLinecap: "butt",
+                          strokeLinecap: 'butt',
                           textColor: '#301616',
                           pathColor: '#301616',
                           trailColor: '#d6d6d6',
@@ -179,10 +146,33 @@ export default function Pricing() {
                       />
                     </div>
                     <Typography variant="h6" className={classes.label}>Progress</Typography>
-                    <Typography variant="body2">{`${summaryInfo.total_duration_validated.toFixed(2)} / ${(summaryInfo.total_duration_labeled.toFixed(2) + summaryInfo.total_duration_unlabeled.toFixed(2)).toFixed(2)} hours`}</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_duration_validated.toFixed(2)} / ${totalDuration.toFixed(2)} seconds`}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
+              {/* New Cards for Additional Progress Information */}
+              <Grid item xs={12} sm={6} md={4}>
+                <Card className={`${classes.card} ${classes.labeledCard}`}>
+                  <CardContent align="center">
+                    <div className={classes.circularProgressbar}>
+                      <CircularProgressbar
+                        value={calculatePercentage(summaryInfo.total_duration_validated, summaryInfo.total_duration_labeled)}
+                        text={`${calculatePercentage(summaryInfo.total_duration_validated, summaryInfo.total_duration_labeled)}%`}
+                        styles={buildStyles({
+                          strokeLinecap: 'butt',
+                          textColor: '#301616',
+                          pathColor: '#301616',
+                          trailColor: '#d6d6d6',
+                        })}
+                      />
+                    </div>
+                    <Typography variant="h6" className={classes.label}>Labeled to Validated</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_duration_validated.toFixed(2)} / ${summaryInfo.total_duration_labeled.toFixed(2)} seconds`}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              {/* Add similar cards for Unlabeled to Labeled and Unlabeled to Validated */}
+              {/* ... */}
             </Grid>
           )}
         </Grid>
