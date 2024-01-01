@@ -60,8 +60,8 @@ export default function Pricing() {
       try {
         const response = await axios.get(`${process.env.REACT_APP_API_DOMAIN_PROD}dataset_insight_info`);
         const data = response.data;
-        const total = data.total_labeled + data.total_unlabeled + data.total_validated;
-        const totalDuration = data.total_duration_labeled + data.total_duration_unlabeled + data.total_duration_validated;
+        // const total = data.total_labeled + data.total_unlabeled + data.total_validated;
+        // const totalDuration = data.total_duration_labeled + data.total_duration_unlabeled + data.total_duration_validated;
         data.sumofLabeled = data.total_labeled;
         data.sumofUnLabeled = data.total_unlabeled;
         data.sumofValidated = data.total_validated;
@@ -205,7 +205,7 @@ export default function Pricing() {
                     <div className={classes.circularProgressbar}>
                       <CircularProgressbar
                         value={calculatePercentage(
-                          (summaryInfo.total_unlabeled + summaryInfo.total_labeled),
+                          summaryInfo.total_unlabeled,
                           (summaryInfo.total_labeled + summaryInfo.total_validated + summaryInfo.total_unlabeled))}
                         text={`${calculatePercentage(
                           (summaryInfo.total_unlabeled + summaryInfo.total_labeled),

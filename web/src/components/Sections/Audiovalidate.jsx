@@ -88,6 +88,7 @@ export default function AudioValidater() {
 
   const onLoading = ({ wavesurfer, originalArgs = [] }) => {
     wavesurferRef.current = wavesurfer;
+    setWavesurfer(wavesurferRef.current); // New line
   };
 
   const onPosChange = (newPos) => {
@@ -100,9 +101,9 @@ export default function AudioValidater() {
 
   const handleRegionClick = () => {
     if (wavesurfer && wavesurfer.isPlaying()) {
-      wavesurfer.stop(); // Stop the audio playback
+      wavesurfer.stop();
     }
-    setPlaying(false); // Set the playing state to false
+    setPlaying(false);
   };
 
   const removeRegion = (name) => {
