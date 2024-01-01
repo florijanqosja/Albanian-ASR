@@ -75,6 +75,10 @@ export default function Pricing() {
     fetchSummaryInfo();
   }, []);
 
+  const calculatePercentage = (partialValue, totalValue) => {
+    return ((100 * partialValue) / totalValue).toFixed(2);
+  };
+
   return (
     <Box className={classes.root}>
       <Grid container justify="center">
