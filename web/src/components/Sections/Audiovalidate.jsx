@@ -35,10 +35,11 @@ export default function AudioValidater() {
   const fetchAudioData = async () => {
     try {
       const response = await axios.get(`${process.env.REACT_APP_API_DOMAIN_PROD}audio/to_validate`);
-      const { Sp_PATH, Sp_ID } = response.data;
+      const { Sp_PATH, Sp_ID, Sp_LABEL } = response.data;
       const audioURL = `${process.env.REACT_APP_FILE_ACCESS_DOMAIN_PROD}${Sp_PATH}`;
       setAudioPath(audioURL);
       setAudioID(Sp_ID);
+      setLabelValue(Sp_LABEL);
       console.log("set the audioID to ", Sp_ID);
 
       if (wavesurfer) {

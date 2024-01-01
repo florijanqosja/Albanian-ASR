@@ -51,12 +51,12 @@ export default function Pricing() {
         const response = await axios.get(`${process.env.REACT_APP_API_DOMAIN_PROD}dataset_insight_info`);
         const datas = response.data;
         const total = datas.total_labeled + datas.total_unlabeled;
-        datas.sumofLabeled = (datas.total_labeled / total) * 100;
-        datas.sumofUnLabeled = (datas.total_unlabeled / total) * 100;
+        datas.sumofLabeled = (datas.total_labeled / total);
+        datas.sumofUnLabeled = (datas.total_unlabeled / total);
         const totalDuration = datas.total_duration_labeled + datas.total_duration_unlabeled;
-        datas.sumofLabeledDuration = (datas.total_duration_labeled / totalDuration) * 100;
-        datas.sumofUnLabeledDuration = (datas.total_duration_unlabeled / totalDuration) * 100;
-        datas.progressPercentage = (datas.total_duration_validated / totalDuration) * 100;
+        datas.sumofLabeledDuration = (datas.total_duration_labeled / totalDuration);
+        datas.sumofUnLabeledDuration = (datas.total_duration_unlabeled / totalDuration);
+        datas.progressPercentage = (datas.total_duration_validated / totalDuration);
         setSummaryInfo(datas);
       } catch (error) {
         console.error("Error fetching summary info:", error);
