@@ -72,6 +72,7 @@ export default function Pricing() {
 
   return (
     <Box className={classes.root}>
+    <Grid container justify="center"> {/* <-- This is the wrapping Grid container */}
       <Grid item xs={12} sm={10} md={8}>
         <Typography variant="h2" className={classes.title}>THE PROJECT</Typography>
         <Typography variant="h5" className={classes.subTitle}>We love Technology</Typography>
@@ -225,6 +226,7 @@ export default function Pricing() {
             </Card>
           </Grid>
         )}
+      </Grid>
       </Grid>
     </Box>
   );
