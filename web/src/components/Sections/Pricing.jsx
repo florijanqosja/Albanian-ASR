@@ -101,7 +101,7 @@ export default function Pricing() {
                 <Card className={`${classes.card} ${classes.labeledCard}`}>
                   <CardContent align="center">
                     <Typography variant="h6" className={classes.label}>Labeled Data</Typography>
-                    <Typography variant="body2">{`${summaryInfo.total_labeled} / ${total} entries`}</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_labeled} / ${(summaryInfo.total_labeled + summaryInfo.total_unlabeled + summaryInfo.total_validated)} entries`}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
@@ -117,7 +117,7 @@ export default function Pricing() {
                 <Card className={`${classes.card} ${classes.unlabeledCard}`}>
                   <CardContent align="center">
                     <Typography variant="h6" className={classes.label}>Unlabeled Data</Typography>
-                    <Typography variant="body2">{`${summaryInfo.total_unlabeled} / ${total} entries`}</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_unlabeled} / ${(summaryInfo.total_labeled + summaryInfo.total_unlabeled + summaryInfo.total_validated)} entries`}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
@@ -133,7 +133,7 @@ export default function Pricing() {
                 <Card className={`${classes.card} ${classes.validatedCard}`}>
                   <CardContent align="center">
                     <Typography variant="h6" className={classes.label}>Validated Data</Typography>
-                    <Typography variant="body2">{`${summaryInfo.total_validated} / ${total}`}</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_validated} / ${(summaryInfo.total_labeled + summaryInfo.total_unlabeled + summaryInfo.total_validated)}`}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
