@@ -438,12 +438,14 @@ async def get_summary(db: Session = Depends(_services.get_db)):
     total_duration_unlabeled = db.query(func.sum(_models.Splice_table.Sp_DURATION.cast(_sql.Float))).scalar()
     total_labeled = db.query(func.count(_models.Labeled_splice_table.Sp_ID)).scalar()
     total_unlabeled = db.query(func.count(_models.Splice_table.Sp_ID)).scalar()
+    total_validated = db.query(func.count(_models.High_quality_labeled_splice_table.Sp_ID)).scalar()
 
     return {
         "total_duration_labeled": total_duration_labeled,
         "total_duration_validated": total_duration_validated,
         "total_duration_unlabeled": total_duration_unlabeled,
         "total_labeled": total_labeled,
+        "total_validated": total_validated,
         "total_unlabeled": total_unlabeled,
     }
 

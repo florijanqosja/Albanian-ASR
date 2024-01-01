@@ -60,13 +60,14 @@ export default function Pricing() {
       try {
         const response = await axios.get(`${process.env.REACT_APP_API_DOMAIN_PROD}dataset_insight_info`);
         const data = response.data;
-        const total = data.total_labeled + data.total_unlabeled;
-        const totalDuration = data.total_duration_labeled + data.total_duration_unlabeled;
-        data.sumofLabeled = (data.total_labeled / total) * 100;
-        data.sumofUnLabeled = (data.total_unlabeled / total) * 100;
-        data.sumofLabeledDuration = (data.total_duration_labeled / totalDuration) * 100;
-        data.sumofUnLabeledDuration = (data.total_duration_unlabeled / totalDuration) * 100;
-        data.progressPercentage = (data.total_duration_validated / totalDuration) * 100;
+        const total = data.total_labeled + data.total_unlabeled + data.total_validated;
+        const totalDuration = data.total_duration_labeled + data.total_duration_unlabeled + data.total_duration_validated;
+        data.sumofLabeled = data.total_labeled;
+        data.sumofUnLabeled = data.total_unlabeled;
+        data.sumofValidated = data.total_validated;
+        data.sumofLabeledDuration = data.total_duration_labeled;
+        data.sumofUnLabeledDuration = data.total_duration_unlabeled;
+        data.progressPercentage = data.total_duration_validated;
         setSummaryInfo(data);
       } catch (error) {
         console.error('Error fetching summary info:', error);
@@ -100,23 +101,7 @@ export default function Pricing() {
                 <Card className={`${classes.card} ${classes.labeledCard}`}>
                   <CardContent align="center">
                     <Typography variant="h6" className={classes.label}>Labeled Data</Typography>
-                    <Typography variant="body2">{`${summaryInfo.total_labeled} entries`}</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-              <Card className={`${classes.card} ${classes.unlabeledCard}`}>
-                <CardContent align="center">
-                  <Typography variant="h6" className={classes.label}>Unlabeled Data</Typography>
-                  <Typography variant="body2">{`${summaryInfo.total_unlabeled} entries`}</Typography>
-                </CardContent>
-              </Card>
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <Card className={`${classes.card} ${classes.validatedCard}`}>
-                  <CardContent align="center">
-                    <Typography variant="h6" className={classes.label}>Validated Data</Typography>
-                    <Typography variant="body2">{`${calculatePercentage(summaryInfo.total_duration_validated, summaryInfo.total_duration_labeled)}% validated`}</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_labeled} / ${total} entries`}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
@@ -131,8 +116,24 @@ export default function Pricing() {
               <Grid item xs={12} sm={6} md={4}>
                 <Card className={`${classes.card} ${classes.unlabeledCard}`}>
                   <CardContent align="center">
+                    <Typography variant="h6" className={classes.label}>Unlabeled Data</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_unlabeled} / ${total} entries`}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card className={`${classes.card} ${classes.unlabeledCard}`}>
+                  <CardContent align="center">
                     <Typography variant="h6" className={classes.label}>Unlabeled Data Duration</Typography>
                     <Typography variant="body2">{`${secondsToHours(summaryInfo.total_duration_unlabeled)} hours`}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card className={`${classes.card} ${classes.validatedCard}`}>
+                  <CardContent align="center">
+                    <Typography variant="h6" className={classes.label}>Validated Data</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_validated} / ${total}`}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
@@ -147,11 +148,18 @@ export default function Pricing() {
               <Grid item xs={12} sm={6} md={4}>
                 <Card className={`${classes.card} ${classes.unlabeledCard}`}>
                   <CardContent align="center">
-                    <Typography variant="h6" className={classes.label}>Progress Unlabeled - Labeled</Typography>
+                  <Typography variant="h6" className={classes.label}>
+                    Progress<br />
+                    Unlabeled - Labeled
+                  </Typography>
                     <div className={classes.circularProgressbar}>
                       <CircularProgressbar
-                        value={summaryInfo.sumofUnLabeled}
-                        text={`${summaryInfo.sumofUnLabeled}%`}
+                        value={calculatePercentage(
+                          summaryInfo.total_unlabeled,
+                          (summaryInfo.total_labeled + summaryInfo.total_unlabeled))}
+                        text={`${calculatePercentage(
+                          summaryInfo.total_unlabeled,
+                          (summaryInfo.total_labeled + summaryInfo.total_unlabeled))}%`}
                         styles={buildStyles({
                           strokeLinecap: 'butt',
                           textColor: '#301616',
@@ -166,11 +174,17 @@ export default function Pricing() {
               <Grid item xs={12} sm={6} md={4}>
                 <Card className={`${classes.card} ${classes.labeledCard}`}>
                   <CardContent align="center">
-                    <Typography variant="h6" className={classes.label}>Progress Labeled - Validated</Typography>
+                    <Typography variant="h6" className={classes.label}>
+                      Progress<br />
+                      Labeled - Validated</Typography>
                     <div className={classes.circularProgressbar}>
                       <CircularProgressbar
-                        value={calculatePercentage(summaryInfo.total_duration_validated, summaryInfo.total_duration_labeled)}
-                        text={`${calculatePercentage(summaryInfo.total_duration_validated, summaryInfo.total_duration_labeled)}%`}
+                        value={calculatePercentage(
+                          summaryInfo.total_labeled,
+                          (summaryInfo.total_labeled + summaryInfo.total_validated))}
+                        text={`${calculatePercentage(
+                          summaryInfo.total_labeled,
+                          (summaryInfo.total_labeled + summaryInfo.total_validated))}%`}
                         styles={buildStyles({
                           strokeLinecap: 'butt',
                           textColor: '#301616',
@@ -185,11 +199,17 @@ export default function Pricing() {
               <Grid item xs={12} sm={6} md={4}>
                 <Card className={`${classes.card} ${classes.validatedCard}`}>
                   <CardContent align="center">
-                    <Typography variant="h6" className={classes.label}>Progress Unlabeled - Validated</Typography>
+                    <Typography variant="h6" className={classes.label}>
+                      Progress<br />
+                      Unlabeled - Validated</Typography>
                     <div className={classes.circularProgressbar}>
                       <CircularProgressbar
-                        value={calculatePercentage(summaryInfo.total_duration_validated, summaryInfo.total_duration_unlabeled)}
-                        text={`${calculatePercentage(summaryInfo.total_duration_validated, summaryInfo.total_duration_unlabeled)}%`}
+                        value={calculatePercentage(
+                          summaryInfo.total_unlabeled,
+                          (summaryInfo.total_labeled + summaryInfo.total_validated + summaryInfo.total_unlabeled))}
+                        text={`${calculatePercentage(
+                          summaryInfo.total_unlabeled,
+                          (summaryInfo.total_labeled + summaryInfo.total_validated + summaryInfo.total_unlabeled))}%`}
                         styles={buildStyles({
                           strokeLinecap: 'butt',
                           textColor: '#301616',
