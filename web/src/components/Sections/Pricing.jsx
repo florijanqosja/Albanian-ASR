@@ -98,22 +98,6 @@ export default function Pricing() {
           {summaryInfo && (
             <Grid container spacing={3}>
               <Grid item xs={12} sm={6} md={4}>
-                <Card className={`${classes.card} ${classes.labeledCard}`}>
-                  <CardContent align="center">
-                    <Typography variant="h6" className={classes.label}>Labeled Data</Typography>
-                    <Typography variant="body2">{`${summaryInfo.total_labeled} / ${(summaryInfo.total_labeled + summaryInfo.total_unlabeled + summaryInfo.total_validated)} entries`}</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
-                <Card className={`${classes.card} ${classes.labeledCard}`}>
-                  <CardContent align="center">
-                    <Typography variant="h6" className={classes.label}>Labeled Data Duration</Typography>
-                    <Typography variant="body2">{`${secondsToHours(summaryInfo.total_duration_labeled)} hours`}</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} sm={6} md={4}>
                 <Card className={`${classes.card} ${classes.unlabeledCard}`}>
                   <CardContent align="center">
                     <Typography variant="h6" className={classes.label}>Unlabeled Data</Typography>
@@ -126,6 +110,22 @@ export default function Pricing() {
                   <CardContent align="center">
                     <Typography variant="h6" className={classes.label}>Unlabeled Data Duration</Typography>
                     <Typography variant="body2">{`${secondsToHours(summaryInfo.total_duration_unlabeled)} hours`}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card className={`${classes.card} ${classes.labeledCard}`}>
+                  <CardContent align="center">
+                    <Typography variant="h6" className={classes.label}>Labeled Data</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_labeled} / ${(summaryInfo.total_labeled + summaryInfo.total_unlabeled + summaryInfo.total_validated)} entries`}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={6} md={4}>
+                <Card className={`${classes.card} ${classes.labeledCard}`}>
+                  <CardContent align="center">
+                    <Typography variant="h6" className={classes.label}>Labeled Data Duration</Typography>
+                    <Typography variant="body2">{`${secondsToHours(summaryInfo.total_duration_labeled)} hours`}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
@@ -205,10 +205,10 @@ export default function Pricing() {
                     <div className={classes.circularProgressbar}>
                       <CircularProgressbar
                         value={calculatePercentage(
-                          summaryInfo.total_unlabeled,
+                          (summaryInfo.total_unlabeled + summaryInfo.total_labeled),
                           (summaryInfo.total_labeled + summaryInfo.total_validated + summaryInfo.total_unlabeled))}
                         text={`${calculatePercentage(
-                          summaryInfo.total_unlabeled,
+                          (summaryInfo.total_unlabeled + summaryInfo.total_labeled),
                           (summaryInfo.total_labeled + summaryInfo.total_validated + summaryInfo.total_unlabeled))}%`}
                         styles={buildStyles({
                           strokeLinecap: 'butt',
