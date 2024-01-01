@@ -51,12 +51,12 @@ export default function Pricing() {
         const response = await axios.get(`${process.env.REACT_APP_API_DOMAIN_PROD}dataset_insight_info`);
         const datas = response.data;
         const total = datas.total_labeled + datas.total_unlabeled;
-        datas.sumofLabeled = (datas.total_labeled / total);
-        datas.sumofUnLabeled = (datas.total_unlabeled / total);
+        datas.sumofLabeled = datas.total_labeled / total;
+        datas.sumofUnLabeled = datas.total_unlabeled / total;
         const totalDuration = datas.total_duration_labeled + datas.total_duration_unlabeled;
-        datas.sumofLabeledDuration = (datas.total_duration_labeled / totalDuration);
-        datas.sumofUnLabeledDuration = (datas.total_duration_unlabeled / totalDuration);
-        datas.progressPercentage = (datas.total_duration_validated / totalDuration);
+        datas.sumofLabeledDuration = datas.total_duration_labeled / totalDuration;
+        datas.sumofUnLabeledDuration = datas.total_duration_unlabeled / totalDuration;
+        datas.progressPercentage = datas.total_duration_validated / totalDuration;
         setSummaryInfo(datas);
       } catch (error) {
         console.error("Error fetching summary info:", error);
@@ -88,7 +88,7 @@ export default function Pricing() {
                   <CardContent align="center">
                     <div className={classes.circularProgressbar}>
                       <CircularProgressbar
-                        value={summaryInfo.sumofLabeled}
+                        value={summaryInfo.sumofLabeled.toFixed(2)}
                         text={`${summaryInfo.sumofLabeled.toFixed(2)}%`}
                         styles={buildStyles({
                           strokeLinecap: "butt",
@@ -108,7 +108,7 @@ export default function Pricing() {
                   <CardContent align="center">
                     <div className={classes.circularProgressbar}>
                       <CircularProgressbar
-                        value={summaryInfo.sumofUnLabeled}
+                        value={summaryInfo.sumofUnLabeled.toFixed(2)}
                         text={`${summaryInfo.sumofUnLabeled.toFixed(2)}%`}
                         styles={buildStyles({
                           strokeLinecap: "butt",
@@ -119,7 +119,7 @@ export default function Pricing() {
                       />
                     </div>
                     <Typography variant="h6" className={classes.label}>Unlabeled Data</Typography>
-                    <Typography variant="body2">{`${summaryInfo.total_unlabeled} / ${summaryInfo.total_labeled + summaryInfo.total_unlabeled}`}</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_unlabeled} / ${summaryInfo.total_labeled.toFixed(2) + summaryInfo.total_unlabeled.toFixed(2)}`}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
@@ -128,7 +128,7 @@ export default function Pricing() {
                   <CardContent align="center">
                     <div className={classes.circularProgressbar}>
                       <CircularProgressbar
-                        value={summaryInfo.sumofLabeledDuration}
+                        value={summaryInfo.sumofLabeledDuration.toFixed(2)}
                         text={`${summaryInfo.sumofLabeledDuration.toFixed(2)}%`}
                         styles={buildStyles({
                           strokeLinecap: "butt",
@@ -139,7 +139,7 @@ export default function Pricing() {
                       />
                     </div>
                     <Typography variant="h6" className={classes.label}>Labeled Data Duration</Typography>
-                    <Typography variant="body2">{`${summaryInfo.total_duration_labeled.toFixed(2)} / ${(summaryInfo.total_duration_labeled + summaryInfo.total_duration_unlabeled).toFixed(2)} hours`}</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_duration_labeled.toFixed(2)} / ${(summaryInfo.total_duration_labeled.toFixed(2) + summaryInfo.total_duration_unlabeled.toFixed(2)).toFixed(2)} hours`}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
@@ -148,7 +148,7 @@ export default function Pricing() {
                   <CardContent align="center">
                     <div className={classes.circularProgressbar}>
                       <CircularProgressbar
-                        value={summaryInfo.sumofUnLabeledDuration}
+                        value={summaryInfo.sumofUnLabeledDuration.toFixed(2)}
                         text={`${summaryInfo.sumofUnLabeledDuration.toFixed(2)}%`}
                         styles={buildStyles({
                           strokeLinecap: "butt",
@@ -159,7 +159,7 @@ export default function Pricing() {
                       />
                     </div>
                     <Typography variant="h6" className={classes.label}>Unlabeled Data Duration</Typography>
-                    <Typography variant="body2">{`${summaryInfo.total_duration_unlabeled.toFixed(2)} / ${(summaryInfo.total_duration_labeled + summaryInfo.total_duration_unlabeled).toFixed(2)} hours`}</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_duration_unlabeled.toFixed(2)} / ${(summaryInfo.total_duration_labeled.toFixed(2) + summaryInfo.total_duration_unlabeled.toFixed(2)).toFixed(2)} hours`}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
@@ -168,7 +168,7 @@ export default function Pricing() {
                   <CardContent align="center">
                     <div className={classes.circularProgressbar}>
                       <CircularProgressbar
-                        value={summaryInfo.progressPercentage}
+                        value={summaryInfo.progressPercentage.toFixed(2)}
                         text={`${summaryInfo.progressPercentage.toFixed(2)}%`}
                         styles={buildStyles({
                           strokeLinecap: "butt",
@@ -179,7 +179,7 @@ export default function Pricing() {
                       />
                     </div>
                     <Typography variant="h6" className={classes.label}>Progress</Typography>
-                    <Typography variant="body2">{`${summaryInfo.total_duration_validated.toFixed(2)} / ${(summaryInfo.total_duration_labeled + summaryInfo.total_duration_unlabeled).toFixed(2)} hours`}</Typography>
+                    <Typography variant="body2">{`${summaryInfo.total_duration_validated.toFixed(2)} / ${(summaryInfo.total_duration_labeled.toFixed(2) + summaryInfo.total_duration_unlabeled.toFixed(2)).toFixed(2)} hours`}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
