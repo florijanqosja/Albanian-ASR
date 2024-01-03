@@ -33,14 +33,9 @@ After all the containers are up and running you should find at:
 ## Domains
 
 ### Production
-The PRODUCTION WEB interface: [uneduashqiperine.com](http://uneduashqiperine.com/)
+The PRODUCTION WEB interface: [dibraspeaks.uneduashqiperine.com](http://dibraspeaks.uneduashqiperine.com/)
 
-The PRODUCTION API: [api.uneduashqiperine.com](http://api.uneduashqiperine.com/)
-
-### Developement
-The DEVELOPEMENT web interface: [dev.uneduashqiperine.com](http://dev.uneduashqiperine.com/)
-
-The DEVELOPEMENT API: [devapi.uneduashqiperine.com](http://devapi.uneduashqiperine.com/)
+The PRODUCTION API: [api.uneduashqiperine.com](http://api.uneduashqiperine.com/docs)
 
 ## Dataset amd Pre-trained Models Links
 
