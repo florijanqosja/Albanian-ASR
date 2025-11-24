@@ -1,118 +1,123 @@
 import datetime as _dt
-from typing import Optional
+from typing import Optional, Generic, TypeVar, Any
 import pydantic as _pydantic
 
+T = TypeVar('T')
 
-class _BaseViedo(_pydantic.BaseModel):
-    Vid_NAME: Optional[str]
-    Vid_PATH: Optional[str]
-    Vid_CATEGORY: Optional[str]
-    Vid_TO_MP3_STATUS: Optional[str]
-    Vid_SPLICE_STATUS: Optional[str]
-    mp3_path: Optional[str]
+class ResponseModel(_pydantic.BaseModel, Generic[T]):
+    status: str
+    data: Optional[T] = None
+    message: Optional[str] = None
 
-class Video(_BaseViedo):
-    Vid_ID: int
-    Vid_UPLOAD_TIME: _dt.datetime
 
-    class Config:
-        orm_mode = True
+class VideoBase(_pydantic.BaseModel):
+    name: Optional[str] = None
+    path: Optional[str] = None
+    category: Optional[str] = None
+    to_mp3_status: Optional[str] = None
+    splice_status: Optional[str] = None
+    mp3_path: Optional[str] = None
 
-class CreateVideo(_BaseViedo):
+class Video(VideoBase):
+    id: int
+    upload_time: _dt.datetime
+    model_config = _pydantic.ConfigDict(from_attributes=True)
+
+class VideoCreate(VideoBase):
     pass
 
 
+class SpliceBase(_pydantic.BaseModel):
+    name: str
+    path: str
+    label: str
+    origin: str
+    duration: str
+    validation: str
 
-class _BaseSplice(_pydantic.BaseModel):
-    Sp_ID: int
-    Sp_NAME: str
-    Sp_PATH: str
-    Sp_LABEL: str
-    Sp_ORIGIN: str
-    Sp_DURATION: str
-    Sp_VALIDATION: str
+class Splice(SpliceBase):
+    id: int
+    model_config = _pydantic.ConfigDict(from_attributes=True)
 
-class Splice_table(_BaseSplice):
-    Sp_ID: int
-
-    class Config:
-        orm_mode = True
-
-class CreateSplice(_BaseSplice):
+class SpliceCreate(SpliceBase):
     pass
 
 
+class LabeledSpliceBase(_pydantic.BaseModel):
+    name: str
+    path: str
+    label: str
+    origin: str
+    duration: str
+    validation: str
 
-class _BaseLabeledSplie(_pydantic.BaseModel):
-    Sp_ID: int
-    Sp_NAME: str
-    Sp_PATH: str
-    Sp_LABEL: str
-    Sp_ORIGIN: str
-    Sp_DURATION: str
-    Sp_VALIDATION: str
+class LabeledSplice(LabeledSpliceBase):
+    id: int
+    model_config = _pydantic.ConfigDict(from_attributes=True)
 
-class Labeled_splice_table(_BaseLabeledSplie):
-    Sp_ID: int
-
-    class Config:
-        orm_mode = True
-
-class CreateLabeledSplice(_BaseLabeledSplie):
+class LabeledSpliceCreate(LabeledSpliceBase):
     pass
 
 
+class HighQualityLabeledSpliceBase(_pydantic.BaseModel):
+    name: str
+    path: str
+    label: str
+    origin: str
+    duration: str
+    validation: str
 
-class _BaseHighQualityLabeledSplie(_pydantic.BaseModel):
-    Sp_ID: int
-    Sp_NAME: str
-    Sp_PATH: str
-    Sp_LABEL: str
-    Sp_ORIGIN: str
-    Sp_DURATION: str
-    Sp_VALIDATION: str
+class HighQualityLabeledSplice(HighQualityLabeledSpliceBase):
+    id: int
+    model_config = _pydantic.ConfigDict(from_attributes=True)
 
-class High_quality_labeled_splice_table(_BaseHighQualityLabeledSplie):
-    Sp_ID: int
-
-    class Config:
-        orm_mode = True
-
-class CreateHighQualityLabeledSplice(_BaseHighQualityLabeledSplie):
+class HighQualityLabeledSpliceCreate(HighQualityLabeledSpliceBase):
     pass
 
 
+class DeletedSpliceBase(_pydantic.BaseModel):
+    name: str
+    path: str
+    label: str
+    origin: str
+    duration: str
+    validation: str
 
-class _BaseSpliceBeeingProcessed(_pydantic.BaseModel):
-    Sp_ID: int
-    Sp_NAME: str
-    Sp_PATH: str
-    Sp_LABEL: str
-    Sp_ORIGIN: str
-    Sp_DURATION: str
-    Sp_VALIDATION: str
-    Sp_STATUS: str
+class DeletedSplice(DeletedSpliceBase):
+    id: int
+    model_config = _pydantic.ConfigDict(from_attributes=True)
 
-class Splice_beeing_processed_table(_BaseSpliceBeeingProcessed):
-    Sp_ID: int
+class DeletedSpliceCreate(DeletedSpliceBase):
+    pass
 
-    class Config:
-        orm_mode = True
 
-class CreateSpliceBeingProcessed(_BaseSpliceBeeingProcessed):
+class SpliceBeingProcessedBase(_pydantic.BaseModel):
+    name: str
+    path: str
+    label: str
+    origin: str
+    duration: str
+    validation: str
+    status: str
+
+class SpliceBeingProcessed(SpliceBeingProcessedBase):
+    id: int
+    model_config = _pydantic.ConfigDict(from_attributes=True)
+
+class SpliceBeingProcessedCreate(SpliceBeingProcessedBase):
     pass
 
 
 
 class LabelSplice(_pydantic.BaseModel):
-    Sp_ID: int
-    Sp_LABEL: str
-    Sp_VALIDATION: Optional[str]
+    id: int
+    label: str
+    validation: Optional[str] = None
 
 class ValidateSplice(_pydantic.BaseModel):
-    Sp_ID: int
-    Sp_LABEL: str
-    Sp_VALIDATION: Optional[str]
+    id: int
+    label: str
+    validation: Optional[str] = None
 
 class DeleteSplice(_pydantic.BaseModel):
-    Sp_ID: int
+    id: int

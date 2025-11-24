@@ -1,37 +1,50 @@
+version: '3.8'
+
 services:
   web:
-    container_name: "web"
-    # API service configuration
-    ports:
-      - 120:3000  # Map host port 8000 to container port 8000
+    container_name: albanian_asr_web
     build:
-      dockerfile: ./web/dockerfiles/Dockerfile
       context: .
-    
+      dockerfile: ./web/dockerfiles/Dockerfile
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      - REACT_APP_API_DOMAIN_LOCAL=${REACT_APP_API_DOMAIN_LOCAL}
+      - REACT_APP_FILE_ACCESS_DOMAIN_LOCAL=${REACT_APP_FILE_ACCESS_DOMAIN_LOCAL}
+    depends_on:
+      - api
 
   api:
-    container_name: "api"
-    # Web interface service configuration
-    ports:
-      - 140:80  # Map host port 8080 to container port 80
+    container_name: albanian_asr_api
     build:
-      dockerfile: ./api/dockerfiles/Dockerfile
       context: .
+      dockerfile: ./api/dockerfiles/Dockerfile
+    ports:
+      - "${API_PORT:-8000}:80"
     volumes:
       - ./audio_files/mp3:/code/mp3
       - ./audio_files/mp4:/code/mp4
       - ./audio_files/splices:/code/splices
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}
     depends_on:
       - db
-  
+
   db:
-    image: postgres
+    image: postgres:13
+    container_name: albanian_asr_db
     restart: always
     environment:
-      POSTGRES_USER: postgress_uneduashqiperine_local
-      POSTGRES_PASSWORD: postgress_uneduashqiperine_local
-      POSTGRES_DB: postgress_uneduashqiperine_local
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - ./data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+
+volumes:
+  postgres_data:

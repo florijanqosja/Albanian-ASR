@@ -35,14 +35,19 @@ export default function AudioValidater() {
   const fetchAudioData = async () => {
     try {
       const response = await axios.get(`${process.env.REACT_APP_API_DOMAIN_LOCAL}audio/to_validate`);
-      const { Sp_PATH, Sp_ID } = response.data;
-      const audioURL = `${process.env.REACT_APP_FILE_ACCESS_DOMAIN_LOCAL}${Sp_PATH}`;
-      setAudioPath(audioURL);
-      setAudioID(Sp_ID);
-      console.log("set the audioID to ", Sp_ID);
+      if (response.data && response.data.data) {
+        const { path, id, label } = response.data.data;
+        const audioURL = `${process.env.REACT_APP_FILE_ACCESS_DOMAIN_LOCAL}${path}`;
+        setAudioPath(audioURL);
+        setAudioID(id);
+        setLabelValue(label || "");
+        console.log("set the audioID to ", id);
 
-      if (wavesurfer) {
-        wavesurfer.load(audioURL);
+        if (wavesurfer) {
+          wavesurfer.load(audioURL);
+        }
+      } else {
+        console.log("No audio data available to validate.");
       }
     } catch (error) {
       console.error("Failed to fetch audio data:", error);
@@ -53,7 +58,7 @@ export default function AudioValidater() {
     try {
       await axios.delete(`${process.env.REACT_APP_API_DOMAIN_LOCAL}audio`, {
         data: {
-          Sp_ID: audioID,
+          id: audioID,
         },
       });
       console.log("Delete request successful");
@@ -69,8 +74,8 @@ export default function AudioValidater() {
   const handleSubmit = async () => {
     try {
       await axios.put(`${process.env.REACT_APP_API_DOMAIN_LOCAL}audio/validate`, {
-        Sp_ID: audioID,
-        Sp_LABEL: labelValue,
+        id: audioID,
+        label: labelValue,
       });
       console.log("PUT request successful");
       setPlaying(false); // Stop the audio playback

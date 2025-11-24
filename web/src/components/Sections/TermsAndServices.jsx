@@ -2065,7 +2065,7 @@ export default function Contact() {
                       />
                     </bdt>
                     We reserve the right to correct any errors or mistakes in
-                    pricing, even if we have already requested or received
+                    service details, even if we have already requested or received
                     payment.
                   </bdt>
                 </span>
@@ -2171,18 +2171,6 @@ export default function Contact() {
               </div>
               <div className="MsoNormal" style={{ lineHeight: "1.5" }}>
                 <br />
-              </div>
-              <div
-                className="MsoNormal"
-                data-custom-class="body_text"
-                style={{ lineHeight: "1.5" }}
-              >
-                <span style={{ fontSize: "15px" }}>
-                  If you are unsatisfied with our Services, please email us at{" "}
-                  <bdt className="question">__________</bdt>
-                  <bdt className="block-component" />.
-                  <bdt className="statement-end-if-in-editor" />
-                </span>
               </div>
               <div className="MsoNormal" style={{ lineHeight: "1.5" }}>
                 <bdt className="block-component" />
@@ -6288,7 +6276,7 @@ export default function Contact() {
               >
                 There may be information on the Services that contains
                 typographical errors, inaccuracies, or omissions, including
-                descriptions, pricing, availability, and various other
+                descriptions, service details, availability, and various other
                 information. We reserve the right to correct any errors,
                 inaccuracies, or omissions and to change or update the
                 information on the Services at any time, without prior notice.

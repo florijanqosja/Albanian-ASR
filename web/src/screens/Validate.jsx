@@ -1,6 +1,6 @@
 import React from "react";
 import TopNavbar from "../components/Nav/TopNavbar";
-import Pricing from "../components/Sections/Pricing";
+import Statistics from "../components/Sections/Statistics";
 import Footer from "../components/Sections/Footer"
 import AudioValidater from "../components/Sections/Audiovalidate"
 
@@ -9,7 +9,7 @@ export default function Validate() {
     <>
       <TopNavbar />
       <AudioValidater />
-      <Pricing />
+      <Statistics />
       <Footer />
     </>
   );

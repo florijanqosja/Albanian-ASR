@@ -4,65 +4,64 @@ import sqlalchemy as _sql
 from . import database as _database
 
 
-
-class Video_table(_database.Base):
-    __tablename__ = "video_table"
-    Vid_ID = _sql.Column(_sql.Integer, primary_key=True, index=True)
-    Vid_NAME = _sql.Column(_sql.String, nullable=True)
-    Vid_PATH = _sql.Column(_sql.String, nullable=True)
-    Vid_CATEGORY = _sql.Column(_sql.String, nullable=True)
-    Vid_TO_MP3_STATUS = _sql.Column(_sql.String, nullable=True)
-    Vid_SPLICE_STATUS = _sql.Column(_sql.String, nullable=True)
+class Video(_database.Base):
+    __tablename__ = "videos"
+    id = _sql.Column(_sql.Integer, primary_key=True, index=True)
+    name = _sql.Column(_sql.String, nullable=True)
+    path = _sql.Column(_sql.String, nullable=True)
+    category = _sql.Column(_sql.String, nullable=True)
+    to_mp3_status = _sql.Column(_sql.String, nullable=True)
+    splice_status = _sql.Column(_sql.String, nullable=True)
     mp3_path = _sql.Column(_sql.String, nullable=True)
-    Vid_UPLOAD_TIME = _sql.Column(_sql.DateTime, default=_dt.datetime.utcnow)
+    upload_time = _sql.Column(_sql.DateTime, default=_dt.datetime.utcnow)
 
-class Splice_table(_database.Base):
-    __tablename__ = "splice_table"
-    Sp_ID = _sql.Column(_sql.Integer, primary_key=True, index=True)
-    Sp_NAME = _sql.Column(_sql.String, nullable=True)
-    Sp_PATH = _sql.Column(_sql.String, nullable=True)
-    Sp_LABEL = _sql.Column(_sql.String, nullable=True)
-    Sp_ORIGIN = _sql.Column(_sql.String, nullable=True)
-    Sp_DURATION = _sql.Column(_sql.String, nullable=True)
-    Sp_VALIDATION = _sql.Column(_sql.String, nullable=True)
+class Splice(_database.Base):
+    __tablename__ = "splices"
+    id = _sql.Column(_sql.Integer, primary_key=True, index=True)
+    name = _sql.Column(_sql.String, nullable=True)
+    path = _sql.Column(_sql.String, nullable=True)
+    label = _sql.Column(_sql.String, nullable=True)
+    origin = _sql.Column(_sql.String, nullable=True)
+    duration = _sql.Column(_sql.String, nullable=True)
+    validation = _sql.Column(_sql.String, nullable=True)
 
-class Labeled_splice_table(_database.Base):
-    __tablename__ = "labeled_splice_table"
-    Sp_ID = _sql.Column(_sql.Integer, primary_key=True, index=True)
-    Sp_NAME = _sql.Column(_sql.String, nullable=True)
-    Sp_PATH = _sql.Column(_sql.String, nullable=True)
-    Sp_LABEL = _sql.Column(_sql.String, nullable=True)
-    Sp_ORIGIN = _sql.Column(_sql.String, nullable=True)
-    Sp_DURATION = _sql.Column(_sql.String, nullable=True)
-    Sp_VALIDATION = _sql.Column(_sql.String, nullable=True)
+class LabeledSplice(_database.Base):
+    __tablename__ = "labeled_splices"
+    id = _sql.Column(_sql.Integer, primary_key=True, index=True)
+    name = _sql.Column(_sql.String, nullable=True)
+    path = _sql.Column(_sql.String, nullable=True)
+    label = _sql.Column(_sql.String, nullable=True)
+    origin = _sql.Column(_sql.String, nullable=True)
+    duration = _sql.Column(_sql.String, nullable=True)
+    validation = _sql.Column(_sql.String, nullable=True)
 
-class High_quality_labeled_splice_table(_database.Base):
-    __tablename__ = "high_quality_labeled_splice_table"
-    Sp_ID = _sql.Column(_sql.Integer, primary_key=True, index=True)
-    Sp_NAME = _sql.Column(_sql.String, nullable=True)
-    Sp_PATH = _sql.Column(_sql.String, nullable=True)
-    Sp_LABEL = _sql.Column(_sql.String, nullable=True)
-    Sp_ORIGIN = _sql.Column(_sql.String, nullable=True)
-    Sp_DURATION = _sql.Column(_sql.String, nullable=True)
-    Sp_VALIDATION = _sql.Column(_sql.String, nullable=True)
+class HighQualityLabeledSplice(_database.Base):
+    __tablename__ = "high_quality_labeled_splices"
+    id = _sql.Column(_sql.Integer, primary_key=True, index=True)
+    name = _sql.Column(_sql.String, nullable=True)
+    path = _sql.Column(_sql.String, nullable=True)
+    label = _sql.Column(_sql.String, nullable=True)
+    origin = _sql.Column(_sql.String, nullable=True)
+    duration = _sql.Column(_sql.String, nullable=True)
+    validation = _sql.Column(_sql.String, nullable=True)
 
-class Deleted_splice_table(_database.Base):
-    __tablename__ = "deleted_splice_table"
-    Sp_ID = _sql.Column(_sql.Integer, primary_key=True, index=True)
-    Sp_NAME = _sql.Column(_sql.String, nullable=True)
-    Sp_PATH = _sql.Column(_sql.String, nullable=True)
-    Sp_LABEL = _sql.Column(_sql.String, nullable=True)
-    Sp_ORIGIN = _sql.Column(_sql.String, nullable=True)
-    Sp_DURATION = _sql.Column(_sql.String, nullable=True)
-    Sp_VALIDATION = _sql.Column(_sql.String, nullable=True)
+class DeletedSplice(_database.Base):
+    __tablename__ = "deleted_splices"
+    id = _sql.Column(_sql.Integer, primary_key=True, index=True)
+    name = _sql.Column(_sql.String, nullable=True)
+    path = _sql.Column(_sql.String, nullable=True)
+    label = _sql.Column(_sql.String, nullable=True)
+    origin = _sql.Column(_sql.String, nullable=True)
+    duration = _sql.Column(_sql.String, nullable=True)
+    validation = _sql.Column(_sql.String, nullable=True)
 
-class Splice_beeing_processed_table(_database.Base):
-    __tablename__ = "splice_beeing_processed_table"
-    Sp_ID = _sql.Column(_sql.Integer, primary_key=True, index=True)
-    Sp_NAME = _sql.Column(_sql.String, nullable=True)
-    Sp_PATH = _sql.Column(_sql.String, nullable=True)
-    Sp_LABEL = _sql.Column(_sql.String, nullable=True)
-    Sp_ORIGIN = _sql.Column(_sql.String, nullable=True)
-    Sp_DURATION = _sql.Column(_sql.String, nullable=True)
-    Sp_VALIDATION = _sql.Column(_sql.String, nullable=True)
-    Sp_STATUS = _sql.Column(_sql.String, nullable=True)
+class SpliceBeingProcessed(_database.Base):
+    __tablename__ = "splices_being_processed"
+    id = _sql.Column(_sql.Integer, primary_key=True, index=True)
+    name = _sql.Column(_sql.String, nullable=True)
+    path = _sql.Column(_sql.String, nullable=True)
+    label = _sql.Column(_sql.String, nullable=True)
+    origin = _sql.Column(_sql.String, nullable=True)
+    duration = _sql.Column(_sql.String, nullable=True)
+    validation = _sql.Column(_sql.String, nullable=True)
+    status = _sql.Column(_sql.String, nullable=True)

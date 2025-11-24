@@ -5,7 +5,7 @@ FROM python:3.9
 WORKDIR /code
 
 # 
-COPY ./requirements.txt /code/requirements.txt
+COPY ./api/requirements.txt /code/requirements.txt
 COPY ./.env /code/.env
 
 # 
@@ -16,10 +16,11 @@ RUN apt-get install -y ffmpeg
 
 # 
 COPY ./api /code/app
+COPY ./sample_perrala.mp3 /code/sample_perrala.mp3
 
-VOLUME /code/app/mp4
-VOLUME /code/app/splices
-VOLUME /code/app/mp3
+VOLUME /code/mp4
+VOLUME /code/splices
+VOLUME /code/mp3
 
 # 
 EXPOSE 80
