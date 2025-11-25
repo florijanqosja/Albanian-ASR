@@ -1,6 +1,17 @@
 "use client";
 import { createTheme } from "@mui/material/styles";
 
+declare module "@mui/material/styles" {
+  interface Palette {
+    accent: Palette["primary"];
+    border: Palette["primary"];
+  }
+  interface PaletteOptions {
+    accent?: PaletteOptions["primary"];
+    border?: PaletteOptions["primary"];
+  }
+}
+
 const theme = createTheme({
   typography: {
     fontFamily: "var(--font-khula), sans-serif",
@@ -25,8 +36,13 @@ const theme = createTheme({
     error: {
       main: "#d32f2f",
     },
-    // Custom colors can be added via module augmentation if needed, 
-    // but for now we map to standard palette slots where possible.
+    // Custom colors
+    accent: {
+      main: "#FFE4E6", // Soft Rose
+    },
+    border: {
+      main: "#FECACA", // Light Red
+    },
   },
   components: {
     MuiButton: {

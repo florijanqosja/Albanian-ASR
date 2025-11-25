@@ -10,12 +10,12 @@ function NavList() {
   
   return (
     <ul className="mb-6 mt-4 flex flex-col gap-2 lg:mb-0 lg:mt-0 lg:flex-row lg:items-center lg:gap-6">
-      <li className={`p-1 font-semibold ${pathname === "/" ? "text-primary" : "text-[#404040]"}`}>
+      <li className={`p-1 font-semibold ${pathname === "/" ? "text-primary" : "text-foreground"}`}>
         <Link href="/" className="flex items-center transition-colors hover:text-primary">
           Label
         </Link>
       </li>
-      <li className={`p-1 font-semibold ${pathname === "/validate" ? "text-primary" : "text-[#404040]"}`}>
+      <li className={`p-1 font-semibold ${pathname === "/validate" ? "text-primary" : "text-foreground"}`}>
         <Link href="/validate" className="flex items-center transition-colors hover:text-primary">
           Validate
         </Link>
@@ -30,7 +30,7 @@ function NavList() {
           Record
         </span>
       </li> */}
-      <li className="p-1 font-semibold text-[#404040]">
+      <li className="p-1 font-semibold text-foreground">
         <a href={process.env.NEXT_PUBLIC_API_DOCS_URL || "#"} target="_blank" rel="noopener noreferrer" className="flex items-center hover:text-primary transition-colors">
           Docs
         </a>
@@ -50,8 +50,8 @@ export default function TopNavbar() {
   }, []);
  
   return (
-    <nav className="mx-auto max-w-screen-xl px-4 py-3 bg-white shadow-md rounded-none lg:rounded-xl mt-2 border border-gray-200 sticky top-2 z-50">
-      <div className="flex items-center justify-between lg:grid lg:grid-cols-3 text-[#404040]">
+    <nav className="mx-auto max-w-screen-xl px-4 py-3 bg-background shadow-md rounded-none lg:rounded-xl mt-2 border border-secondary sticky top-2 z-50">
+      <div className="flex items-center justify-between lg:grid lg:grid-cols-3 text-foreground">
         <Link href="/" className="mr-4 cursor-pointer lg:ml-2 flex items-center gap-2 lg:justify-self-start">
             <div className="w-8 h-8">
                 <LogoIcon />
@@ -65,7 +65,7 @@ export default function TopNavbar() {
           <button className="px-6 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors">Log In</button>
         </div>
         <button
-          className="lg:hidden p-2 text-[#404040]"
+          className="lg:hidden p-2 text-foreground"
           onClick={() => setOpenNav(!openNav)}
         >
           {openNav ? (

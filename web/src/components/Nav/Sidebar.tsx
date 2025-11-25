@@ -21,7 +21,7 @@ export default function Sidebar({ sidebarOpen, toggleSidebar }: SidebarProps) {
             DibraSpeaks
           </h1>
         </div>
-        <CloseBtn onClick={() => toggleSidebar(!sidebarOpen)} className="cursor-pointer">
+        <CloseBtn onClick={() => toggleSidebar(!sidebarOpen)} className="cursor-pointer text-primary-foreground">
           <CloseIcon />
         </CloseBtn>
       </SidebarHeader>

@@ -11,9 +11,11 @@ import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
+import { useTheme } from "@mui/material/styles";
 import axios from "axios";
 
 export default function MainSection() {
+  const theme = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
   const regionsRef = useRef<RegionsPlugin | null>(null);
@@ -36,8 +38,8 @@ export default function MainSection() {
 
     const ws = WaveSurfer.create({
       container: containerRef.current,
-      waveColor: "#C98E8C",
-      progressColor: "#8A2624",
+      waveColor: theme.palette.border.main,
+      progressColor: theme.palette.primary.main,
       barGap: 3,
       barWidth: 2,
       barHeight: 2,

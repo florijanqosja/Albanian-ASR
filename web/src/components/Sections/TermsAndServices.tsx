@@ -76,7 +76,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   We are{" "}
@@ -95,21 +95,21 @@ export default function TermsAndServices() {
                     style={{
                       fontSize: "11.0pt",
                       lineHeight: "115%",
-                      color: "#595959",
+                      color: "#404040",
                     }}
                   >
                     <span
                       style={{
                         fontSize: "11.0pt",
                         lineHeight: "115%",
-                        color: "#595959",
+                        color: "#404040",
                       }}
                     >
                       <span
                         style={{
                           fontSize: "11.0pt",
                           lineHeight: "115%",
-                          color: "#595959",
+                          color: "#404040",
                         }}
                       >
                         <span className="question">
@@ -136,7 +136,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   We operate <span className="block-component" />
@@ -176,7 +176,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   You can contact us by{" "}
@@ -205,7 +205,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   These Legal Terms constitute a legally binding agreement made
@@ -235,7 +235,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   Supplemental terms and conditions or documents that may be
@@ -280,7 +280,7 @@ export default function TermsAndServices() {
                           fontSize: "11.0pt",
                           lineHeight: "115%",
                           fontFamily: "Arial",
-                          color: "#595959",
+                          color: "#404040",
                         }}
                       >
                         <span className="block-component" />
@@ -884,7 +884,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   We are the owner or the licensee of all intellectual property
@@ -914,7 +914,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   Our Content and Marks are protected by copyright and trademark
@@ -936,7 +936,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   The Content and Marks are provided in or through the Services{" "}
@@ -1016,7 +1016,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   solely for your <span className="block-component" />
@@ -1037,7 +1037,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   Except as set out in this section or elsewhere in our Legal
@@ -1062,7 +1062,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   If you wish to make any use of the Services, Content, or Marks
@@ -1091,7 +1091,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   We reserve all rights not expressly granted to you in and to
@@ -1111,7 +1111,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   Any breach of these Intellectual Property Rights will
@@ -1132,7 +1132,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   <strong>
@@ -1523,7 +1523,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   By using the Services, you represent and warrant that:
@@ -1900,7 +1900,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   We accept the following forms of payment:
@@ -1927,7 +1927,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   <span className="forloop-component" />
@@ -1939,7 +1939,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   <br />
@@ -1955,7 +1955,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   You agree to provide current, complete, and accurate purchase
@@ -1993,7 +1993,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   You agree to pay all charges at the prices then in effect for
@@ -2035,7 +2035,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   We reserve the right to refuse any order placed through the
@@ -6286,7 +6286,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   THE SERVICES ARE PROVIDED ON AN AS-IS AND AS-AVAILABLE BASIS.
@@ -6396,7 +6396,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   <span data-custom-class="body_text">
@@ -6493,7 +6493,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   You agree to defend, indemnify, and hold us harmless,
@@ -6613,7 +6613,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   We will maintain certain data that you transmit to the
@@ -6696,7 +6696,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   Visiting the Services, sending us emails, and completing
@@ -6790,7 +6790,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   If any complaint with us is not satisfactorily resolved, you
@@ -6875,7 +6875,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   These Legal Terms and any policies or operating rules posted
@@ -7058,7 +7058,7 @@ export default function TermsAndServices() {
                     fontSize: "11.0pt",
                     lineHeight: "115%",
                     fontFamily: "Arial",
-                    color: "#595959",
+                    color: "#404040",
                   }}
                 >
                   In order to resolve a complaint regarding the Services or to
@@ -7114,14 +7114,14 @@ export default function TermsAndServices() {
                           style={{
                             fontSize: "11.0pt",
                             lineHeight: "115%",
-                            color: "#595959",
+                            color: "#404040",
                           }}
                         >
                           <span
                             style={{
                               fontSize: "11.0pt",
                               lineHeight: "115%",
-                              color: "#595959",
+                              color: "#404040",
                             }}
                           >
                             <span style={{ fontSize: "15px" }}>
@@ -7170,14 +7170,14 @@ export default function TermsAndServices() {
                             style={{
                               fontSize: "11.0pt",
                               lineHeight: "115%",
-                              color: "#595959",
+                              color: "#404040",
                             }}
                           >
                             <span
                               style={{
                                 fontSize: "11.0pt",
                                 lineHeight: "115%",
-                                color: "#595959",
+                                color: "#404040",
                               }}
                             >
                               <span className="question">United Kingdom</span>
@@ -7204,7 +7204,7 @@ export default function TermsAndServices() {
                       fontSize: "11.0pt",
                       lineHeight: "115%",
                       fontFamily: "Arial",
-                      color: "#595959",
+                      color: "#404040",
                     }}
                   >
                     <strong>
@@ -7224,7 +7224,7 @@ export default function TermsAndServices() {
                       fontSize: "11.0pt",
                       lineHeight: "115%",
                       fontFamily: "Arial",
-                      color: "#595959",
+                      color: "#404040",
                     }}
                   >
                     <strong>
@@ -7244,7 +7244,7 @@ export default function TermsAndServices() {
                       fontSize: "11.0pt",
                       lineHeight: "115%",
                       fontFamily: "Arial",
-                      color: "#595959",
+                      color: "#404040",
                     }}
                   >
                     <strong>
@@ -7257,7 +7257,7 @@ export default function TermsAndServices() {
           </div>
           <div
             style={{
-              color: "#595959",
+              color: "#404040",
               fontSize: "14px",
               fontFamily: "Arial",
               paddingTop: "16px",
