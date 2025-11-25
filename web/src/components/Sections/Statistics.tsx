@@ -6,13 +6,13 @@ import { Card, CardContent, Typography, Grid, Box } from "@mui/material";
 import { styled } from '@mui/material/styles';
 import axios from "axios";
 
-const Root = styled(Box)(({ theme }) => ({
+const Root = styled(Box)(() => ({
   padding: '60px 0',
   backgroundColor: 'var(--muted)',
   color: 'var(--foreground)',
 }));
 
-const StyledCard = styled(Card)(({ theme }) => ({
+const StyledCard = styled(Card)(() => ({
   boxShadow: '0px 5px 15px rgba(0, 0, 0, 0.1)',
   borderRadius: '15px',
   backgroundColor: 'var(--card)',
@@ -25,7 +25,7 @@ const CircularProgressbarWrapper = styled('div')({
 });
 
 const Title = styled(Typography)({
-  fontSize: '36px',
+  fontSize: '2.25rem',
   fontWeight: 'bold',
   marginBottom: '20px',
   color: 'var(--primary)',
@@ -42,7 +42,7 @@ const Paragraph = styled(Typography)({
 });
 
 const Label = styled(Typography)({
-  fontSize: '18px',
+  fontSize: '1.125rem',
   fontWeight: '500'
 });
 

@@ -6949,7 +6949,7 @@ export default function TermsAndServices() {
                   <span style={{ fontSize: "15px" }}>
                     This project involves the collection of audio data from
                     publicly accessible YouTube videos or other platforms. The
-                    content of these videos are deemed to be "public" as they
+                    content of these videos are deemed to be &quot;public&quot; as they
                     are freely available on the internet, not hidden behind any
                     sort of access control or subscription service. As such, we
                     make no claim to any rights over the content, but instead,
@@ -7280,7 +7280,15 @@ export default function TermsAndServices() {
 
 const Wrapper = styled.div`
   width: 100%;
-  background-color: #e1dddd;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-khula), sans-serif;
+
+  /* Override inline styles for consistency */
+  & * {
+    font-family: var(--font-khula), sans-serif !important;
+    color: var(--foreground) !important;
+  }
 
   ul {
     list-style-type: square;
@@ -7290,8 +7298,5 @@ const Wrapper = styled.div`
   }
   ul > li > ul > li > ul {
     list-style-type: square;
-  }
-  ol li {
-    font-family: Arial;
   }
 `;

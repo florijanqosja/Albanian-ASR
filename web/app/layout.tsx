@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { Khula } from "next/font/google";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import InitColorSchemeScript from "@mui/material/InitColorSchemeScript";
+import { ThemeProvider } from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
 import StyledComponentsRegistry from "../lib/registry";
+import theme from "../src/theme";
 import "./globals.css";
 
 const khula = Khula({
@@ -32,7 +35,10 @@ export default function RootLayout({
             enableCssLayer: true,
           }}
         >
-          <StyledComponentsRegistry>{children}</StyledComponentsRegistry>
+          <ThemeProvider theme={theme}>
+            <CssBaseline />
+            <StyledComponentsRegistry>{children}</StyledComponentsRegistry>
+          </ThemeProvider>
         </AppRouterCacheProvider>
       </body>
     </html>

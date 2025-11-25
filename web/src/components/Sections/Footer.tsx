@@ -1,9 +1,8 @@
 "use client";
 import React from "react";
 import styled from "styled-components";
-import { Link } from "react-scroll";
 import LogoImg from "../../assets/svg/Logo";
-import { FaGithub, FaLinkedin, FaCoffee } from "react-icons/fa";
+import { FaGithub, FaLinkedin } from "react-icons/fa";
 
 export default function Contact() {
   return (
@@ -75,7 +74,7 @@ const SocialIconsWrapper = styled.div`
 const SocialIconLink = styled.a`
   display: inline-block;
   margin: 0 10px;
-  font-size: 24px;
+  font-size: 1.5rem;
   color: var(--muted);
   transition: color 0.3s ease;
 

@@ -16,8 +16,7 @@ import axios from "axios";
 export default function AudioValidate() {
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const regionsRef = useRef<any>(null);
+  const regionsRef = useRef<RegionsPlugin | null>(null);
   const regionsDragCleanupRef = useRef<(() => void) | null>(null);
   
   const [playing, setPlaying] = useState(false);
@@ -313,7 +312,7 @@ const CardBody = styled.div`
 `;
 
 const SectionHeading = styled.h2`
-  font-size: 28px;
+  font-size: 1.75rem;
   font-weight: 800;
   margin: 0;
   color: var(--foreground);
@@ -335,9 +334,9 @@ const InputSection = styled.div`
 `;
 
 const InputLabel = styled.h3`
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 600;
-  color: #000;
+  color: var(--foreground);
   margin-bottom: 10px;
 `;
 
@@ -382,7 +381,7 @@ const SubmitButton = styled(Button)`
     padding: 10px 40px;
     border-radius: 8px;
     font-weight: 600;
-    font-size: 16px;
+    font-size: 1rem;
     text-transform: none;
     height: 50px;
     &:hover {
@@ -400,9 +399,9 @@ const LabelRow = styled.div`
 `;
 
 const CutAudioLabel = styled.span`
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 600;
-  color: #000;
+  color: var(--foreground);
   font-family: inherit;
 `;
 

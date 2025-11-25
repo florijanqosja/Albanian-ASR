@@ -16,7 +16,7 @@ import axios from "axios";
 export default function MainSection() {
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
-  const regionsRef = useRef<any>(null);
+  const regionsRef = useRef<RegionsPlugin | null>(null);
   const regionsDragCleanupRef = useRef<(() => void) | null>(null);
   
   const [playing, setPlaying] = useState(false);
@@ -55,7 +55,7 @@ export default function MainSection() {
     // Region events
     wsRegions.on('region-created', (region) => {
       // Ensure only one region exists
-      wsRegions.getRegions().forEach((r: any) => {
+      wsRegions.getRegions().forEach((r) => {
         if (r.id !== region.id) {
           r.remove();
         }
@@ -168,7 +168,7 @@ export default function MainSection() {
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
-      const payload: any = {
+      const payload: { id: string | null; label: string; start?: number; end?: number } = {
         id: audioID,
         label: labelValue,
       };
@@ -312,7 +312,7 @@ const CardBody = styled.div`
 `;
 
 const SectionHeading = styled.h2`
-  font-size: 28px;
+  font-size: 1.75rem;
   font-weight: 800;
   margin: 0;
   color: var(--foreground);
@@ -334,9 +334,9 @@ const InputSection = styled.div`
 `;
 
 const InputLabel = styled.h3`
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 600;
-  color: #000;
+  color: var(--foreground);
   margin-bottom: 10px;
 `;
 
@@ -381,7 +381,7 @@ const SubmitButton = styled(Button)`
     padding: 10px 40px;
     border-radius: 8px;
     font-weight: 600;
-    font-size: 16px;
+    font-size: 1rem;
     text-transform: none;
     height: 50px;
     &:hover {
@@ -399,9 +399,9 @@ const LabelRow = styled.div`
 `;
 
 const CutAudioLabel = styled.span`
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 600;
-  color: #000;
+  color: var(--foreground);
   font-family: inherit;
 `;
 
