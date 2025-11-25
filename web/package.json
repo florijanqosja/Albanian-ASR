@@ -1,61 +1,43 @@
 {
   "name": "DibraSpeaks",
   "version": "0.1.0",
-  "private": false,
-  "dependencies": {
-    "@dschoon/react-waves": "^4.0.3",
-    "@fortawesome/fontawesome-free": "^6.4.0",
-    "@material-ui/core": "^4.12.4",
-    "@material-ui/icons": "^4.11.3",
-    "@testing-library/jest-dom": "^5.14.1",
-    "@testing-library/react": "^11.2.7",
-    "@testing-library/user-event": "^12.8.3",
-    "axios": "^1.4.0",
-    "cors": "^2.8.5",
-    "mdb-react-ui-kit": "^6.1.0",
-    "react": "^17.0.2",
-    "react-audio-player": "^0.17.0",
-    "react-audio-player-component": "^1.1.0",
-    "react-circular-progressbar": "^2.1.0",
-    "react-dom": "^17.0.2",
-    "react-helmet": "^6.1.0",
-    "react-icons": "^4.10.1",
-    "react-router-dom": "^6.14.0",
-    "react-scripts": "4.0.3",
-    "react-scroll": "^1.8.4",
-    "react-slick": "^0.28.1",
-    "react-wavesurfer": "^0.8.6",
-    "slick-carousel": "^1.8.1",
-    "styled-components": "^5.3.1",
-    "wavesurfer-react": "^2.2.2",
-    "wavesurfer.js": "^7.0.0-beta.11",
-    "web-vitals": "^1.1.2"
-  },
+  "private": true,
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "PORT=3000 react-scripts test",
-    "eject": "react-scripts eject"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ],
-    "plugins": [
-      "jest"
-    ]
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.5",
+    "@mui/material": "^7.3.5",
+    "@mui/material-nextjs": "^7",
+    "@types/styled-components": "^5.1.36",
+    "axios": "^1.13.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.542.0",
+    "next": "^15.5.0",
+    "react": "^19.1.0",
+    "react-circular-progressbar": "^2.2.0",
+    "react-dom": "^19.1.0",
+    "react-icons": "^5.5.0",
+    "styled-components": "^6.1.19",
+    "tailwind-merge": "^3.3.1",
+    "wavesurfer.js": "^7.11.1"
   },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.0",
+    "tailwindcss": "^4",
+    "tw-animate-css": "^1.3.7",
+    "typescript": "^5"
   }
 }

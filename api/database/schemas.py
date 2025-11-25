@@ -113,6 +113,8 @@ class LabelSplice(_pydantic.BaseModel):
     id: int
     label: str
     validation: Optional[str] = None
+    start: Optional[float] = None
+    end: Optional[float] = None
 
 class ValidateSplice(_pydantic.BaseModel):
     id: int

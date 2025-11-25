@@ -330,6 +330,9 @@ async def get_audio_to_validate(db: Session = Depends(_services.get_db)):
 @app.put("/audio/label", response_model=_schemas.ResponseModel)
 async def label_splice(label_splice: _schemas.LabelSplice, db: Session = Depends(_services.get_db)):
     try:
+        if label_splice.start is not None and label_splice.end is not None:
+            logger.info(f"Cutting audio from {label_splice.start} to {label_splice.end}")
+            
         splice_being_processed = await _services.get_splice_being_processed(label_splice.id, db)
         if not splice_being_processed or splice_being_processed.status != 'un_labeled':
             raise HTTPException(status_code=404, detail="Splice not found or invalid status")
@@ -365,6 +368,9 @@ async def label_splice(label_splice: _schemas.LabelSplice, db: Session = Depends
 @app.put("/audio/validate", response_model=_schemas.ResponseModel)
 async def validate_splice(validate_splice: _schemas.LabelSplice, db: Session = Depends(_services.get_db)):
     try:
+        if validate_splice.start is not None and validate_splice.end is not None:
+            logger.info(f"Cutting audio from {validate_splice.start} to {validate_splice.end}")
+
         splice_being_processed = await _services.get_splice_being_processed(validate_splice.id, db)
         if not splice_being_processed or splice_being_processed.status != 'labeled':
             raise HTTPException(status_code=404, detail="Splice not found or invalid status")

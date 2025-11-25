@@ -8,9 +8,12 @@ services:
       dockerfile: ./web/dockerfiles/Dockerfile
     ports:
       - "${WEB_PORT:-3000}:3000"
+    volumes:
+      - ./web:/app
+      - /app/node_modules
     environment:
-      - REACT_APP_API_DOMAIN_LOCAL=${REACT_APP_API_DOMAIN_LOCAL}
-      - REACT_APP_FILE_ACCESS_DOMAIN_LOCAL=${REACT_APP_FILE_ACCESS_DOMAIN_LOCAL}
+      - NEXT_PUBLIC_API_DOMAIN_LOCAL=${NEXT_PUBLIC_API_DOMAIN_LOCAL}
+      - NEXT_PUBLIC_FILE_ACCESS_DOMAIN_LOCAL=${NEXT_PUBLIC_FILE_ACCESS_DOMAIN_LOCAL}
     depends_on:
       - api
 
