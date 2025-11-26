@@ -1,88 +1,81 @@
 "use client";
 import React from "react";
-import styled from "styled-components";
+import Link from "next/link";
 import LogoImg from "../../assets/svg/Logo";
-import { FaGithub, FaLinkedin } from "react-icons/fa";
+import { Github, Linkedin, ArrowUp } from "lucide-react";
+import { Container, Grid, Typography, IconButton, Box, Divider } from "@mui/material";
 
-export default function Contact() {
+export default function Footer() {
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
-    <Wrapper>
-      <div className="container mx-auto">
-        <InnerWrapper className="flex justify-between items-center" style={{ padding: "30px 0" }}>
-          <div className="flex items-center cursor-pointer" onClick={() => window.scrollTo(0, 0)}>
-            <LogoContainer>
-              <LogoImg />
-            </LogoContainer>
-            <h1 className="font-bold text-background text-lg" style={{ marginLeft: "15px" }}>
-              DibraSpeaks
-            </h1>
-          </div>
-          <SocialIconsAndTermsWrapper>
-            <SocialIconsWrapper>
-              <SocialIconLink href="https://github.com/florijanqosja" target="_blank" rel="noopener noreferrer">
-                <FaGithub />
-              </SocialIconLink>
-              <SocialIconLink href="https://www.linkedin.com/in/florijan-qosja/" target="_blank" rel="noopener noreferrer">
-                <FaLinkedin />
-              </SocialIconLink>
-            </SocialIconsWrapper>
-            <TermsLink href="/termsandservices" className="text-background cursor-pointer text-sm mt-2 hover:text-primary transition-colors">
+    <Box component="footer" sx={{ bgcolor: '#1F2937', color: 'white', py: 6, mt: 'auto' }}>
+      <Container maxWidth="lg">
+        <Grid container spacing={4} alignItems="center" justifyContent="space-between">
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <Box sx={{ width: 40, height: 40, color: 'primary.main' }}>
+                <LogoImg />
+              </Box>
+              <Typography variant="h5" fontWeight={700} sx={{ background: 'linear-gradient(45deg, #A64D4A, #FF8E53)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                DibraSpeaks
+              </Typography>
+            </Box>
+            <Typography variant="body2" sx={{ color: 'grey.400', maxWidth: 300 }}>
+              Building the future of Albanian speech technology, one voice at a time.
+            </Typography>
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 4 }} sx={{ textAlign: { xs: 'left', md: 'center' } }}>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: { xs: 'flex-start', md: 'center' }, mb: 2 }}>
+              <IconButton 
+                component="a" 
+                href="https://github.com/florijanqosja" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                sx={{ color: 'grey.400', '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.1)' } }}
+              >
+                <Github size={24} />
+              </IconButton>
+              <IconButton 
+                component="a" 
+                href="https://www.linkedin.com/in/florijan-qosja/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                sx={{ color: 'grey.400', '&:hover': { color: '#0077b5', bgcolor: 'rgba(0,119,181,0.1)' } }}
+              >
+                <Linkedin size={24} />
+              </IconButton>
+            </Box>
+            <Link href="/termsandservices" className="text-gray-400 hover:text-white text-sm transition-colors">
               Terms and Conditions
-            </TermsLink>
-          </SocialIconsAndTermsWrapper>
-          <div 
-            className="text-background cursor-pointer text-sm hover:text-primary transition-colors duration-300" 
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          >
-            Back to top
-          </div>
-        </InnerWrapper>
-      </div>
-    </Wrapper>
+            </Link>
+            <Typography variant="body2" sx={{ color: 'grey.500', mt: 1 }}>
+              © 2025 DibraSpeaks. All rights reserved.
+            </Typography>
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 4 }} sx={{ textAlign: { xs: 'left', md: 'right' } }}>
+            <Box 
+              onClick={scrollToTop}
+              sx={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: 1, 
+                cursor: 'pointer', 
+                color: 'grey.400', 
+                '&:hover': { color: 'primary.main' },
+                transition: 'color 0.2s'
+              }}
+            >
+              <Typography variant="button" sx={{ textTransform: 'none', color: 'inherit' }}>Back to top</Typography>
+              <ArrowUp size={16} />
+            </Box>
+          </Grid>
+        </Grid>
+      </Container>
+    </Box>
   );
 }
-
-const Wrapper = styled.div`
-  width: 100%;
-  background-color: var(--foreground);
-`;
-
-const InnerWrapper = styled.div`
-  @media (max-width: 550px) {
-    flex-direction: column;
-  }
-`;
-
-const LogoContainer = styled.div`
-  display: flex;
-  align-items: center;
-`;
-
-const SocialIconsAndTermsWrapper = styled.div`
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-`;
-
-const SocialIconsWrapper = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-`;
-
-const SocialIconLink = styled.a`
-  display: inline-block;
-  margin: 0 10px;
-  font-size: 1.5rem;
-  color: var(--muted);
-  transition: color 0.3s ease;
-
-  &:hover {
-    color: var(--primary);
-  }
-`;
-
-const TermsLink = styled.a`
-  text-decoration: none;
-`;

@@ -46,12 +46,15 @@ Refer to `STANDARDS.md` for detailed rules.
 ## UI & Design Guidelines
 - **Design System**:
   - **Framework**: Material UI (v7) + Tailwind CSS.
-  - **Directive**: Use MUI components for complex interactive elements and Tailwind CSS for layout and spacing.
+  - **Icons**: `lucide-react` is the standard icon library.
+  - **Directive**: Use MUI components for complex interactive elements (Inputs, Buttons, Grids) and Tailwind CSS for layout and spacing.
+- **MUI v7 Specifics**:
+  - **Grid**: Use the `size` prop (e.g., `size={{ xs: 12 }}`) instead of the deprecated `item` and `xs/md` props.
 - **Styling Strategy**:
   - **Colors**: NEVER hardcode hex values. Use the centralized theme.
-    - **MUI**: Access via `useTheme()` hook (e.g., `theme.palette.primary.main`).
+    - **MUI**: Access via `useTheme()` hook (e.g., `theme.palette.primary.main`) or `sx` prop.
     - **Tailwind**: Use utility classes (e.g., `text-primary`, `bg-background`, `border-border`).
-  - **Custom Styling**: Use `styled-components` when necessary, but prefer Tailwind utilities for standard spacing/sizing.
+  - **Modern Look**: Prefer `Paper` with `elevation={0}`, `border: 1px solid borderColor`, and soft custom shadows over default Material elevation.
 - **Global Theme**:
   - **Source of Truth**: `web/src/theme.ts` (MUI) and `web/app/globals.css` (Tailwind variables).
   - **Palette**:

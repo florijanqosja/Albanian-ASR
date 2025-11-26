@@ -25,3 +25,4 @@ ENV/
 *.swp
 .DS_Store
 .env
+.env.example

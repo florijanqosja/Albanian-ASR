@@ -34,6 +34,8 @@ class SpliceBase(_pydantic.BaseModel):
     origin: str
     duration: str
     validation: str
+    user_id: str
+
 
 class Splice(SpliceBase):
     id: int
@@ -50,6 +52,8 @@ class LabeledSpliceBase(_pydantic.BaseModel):
     origin: str
     duration: str
     validation: str
+    user_id: str
+
 
 class LabeledSplice(LabeledSpliceBase):
     id: int
@@ -66,6 +70,9 @@ class HighQualityLabeledSpliceBase(_pydantic.BaseModel):
     origin: str
     duration: str
     validation: str
+    user_id: str
+    labeler_id: Optional[str] = None
+
 
 class HighQualityLabeledSplice(HighQualityLabeledSpliceBase):
     id: int
@@ -82,6 +89,8 @@ class DeletedSpliceBase(_pydantic.BaseModel):
     origin: str
     duration: str
     validation: str
+    user_id: str
+
 
 class DeletedSplice(DeletedSpliceBase):
     id: int
@@ -98,6 +107,9 @@ class SpliceBeingProcessedBase(_pydantic.BaseModel):
     origin: str
     duration: str
     validation: str
+    user_id: str
+    labeler_id: Optional[str] = None
+
     status: str
 
 class SpliceBeingProcessed(SpliceBeingProcessedBase):
@@ -123,3 +135,68 @@ class ValidateSplice(_pydantic.BaseModel):
 
 class DeleteSplice(_pydantic.BaseModel):
     id: int
+
+
+class UserBase(_pydantic.BaseModel):
+    name: Optional[str] = None
+    surname: Optional[str] = None
+    email: Optional[str] = None
+    phone_number: Optional[str] = None
+    age: Optional[int] = None
+    nationality: Optional[str] = None
+    accent: Optional[str] = None
+    region: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+class UserCreate(UserBase):
+    password: str
+    provider: Optional[str] = "local"
+
+class User(UserBase):
+    id: str
+    created_at: _dt.datetime
+    modified_at: _dt.datetime
+    provider: str
+    is_verified: bool = False
+    profile_completed: bool = False
+    model_config = _pydantic.ConfigDict(from_attributes=True)
+
+
+# Profile completion schema (for Google users)
+class CompleteProfileRequest(_pydantic.BaseModel):
+    phone_number: Optional[str] = None
+    age: Optional[int] = None
+    nationality: Optional[str] = None
+    accent: Optional[str] = None
+    region: Optional[str] = None
+
+class Token(_pydantic.BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(_pydantic.BaseModel):
+    email: Optional[str] = None
+    user_id: Optional[str] = None
+
+
+# Email verification schemas
+class VerifyEmailRequest(_pydantic.BaseModel):
+    email: str
+    code: str
+
+class ResendVerificationRequest(_pydantic.BaseModel):
+    email: str
+
+# Password reset schemas
+class ForgotPasswordRequest(_pydantic.BaseModel):
+    email: str
+
+class ResetPasswordRequest(_pydantic.BaseModel):
+    email: str
+    code: str
+    new_password: str
+
+# Registration response
+class RegisterResponse(_pydantic.BaseModel):
+    message: str
+    email: str

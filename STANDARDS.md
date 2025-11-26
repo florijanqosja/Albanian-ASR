@@ -70,3 +70,30 @@ All API endpoints should return a standardized JSON structure to ensure consiste
 ## 5. Documentation
 - All API endpoints should be documented using FastAPI's automatic docs (Swagger UI).
 - All functions and classes must include docstrings describing behavior, arguments, and return values.
+
+## 6. UI & Design Patterns (Frontend)
+
+### Frameworks & Libraries
+- **Core**: Next.js 15 (App Router), React 18+.
+- **UI Components**: Material UI (MUI) v7.
+- **Styling**: Tailwind CSS (utility classes) + MUI `sx` prop (theme-aware styles).
+- **Icons**: `lucide-react` (Standard). Avoid `react-icons` unless necessary for specific brand logos (e.g., Google).
+
+### Component Implementation
+- **MUI Grid (v7)**: Use the `size` prop instead of `item/xs/md`.
+  - *Correct*: `<Grid size={{ xs: 12, md: 6 }}>`
+  - *Incorrect*: `<Grid item xs={12} md={6}>`
+- **Layouts**: Use `Box`, `Container`, and `Stack` for structural layout.
+- **Cards/Surfaces**: Use `Paper` with `elevation={0}`, custom borders, and soft shadows for a modern, clean look.
+  - *Example*: `sx={{ borderRadius: 4, border: '1px solid', borderColor: 'divider', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.05)' }}`
+
+### Styling Guidelines
+- **Colors**: Use theme tokens (`primary.main`, `text.secondary`, `grey.50`) via `sx` prop or `useTheme()`. Avoid hardcoded hex values.
+- **Typography**: Use MUI `Typography` component. Font family is `Khula`. Use `fontWeight` (e.g., 600, 800) to establish hierarchy.
+- **Spacing**: Use MUI spacing units in `sx` (e.g., `p: 4` = 32px) or Tailwind classes (e.g., `p-8`).
+
+### Modernization Checklist
+- [ ] Replace `<img>` with `next/image`.
+- [ ] Replace `<a>` with `next/link`.
+- [ ] Ensure all inputs have proper labels and icons (`InputAdornment`).
+- [ ] Use "Glassmorphism" or flat design with subtle borders instead of heavy material shadows.

@@ -5,7 +5,10 @@ import InitColorSchemeScript from "@mui/material/InitColorSchemeScript";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import StyledComponentsRegistry from "../lib/registry";
+import AuthContext from "../src/context/AuthContext";
+import ProfileCompletionWrapper from "../src/context/ProfileCompletionWrapper";
 import theme from "../src/theme";
+import TopNavbar from "../src/components/Nav/TopNavbar";
 import "./globals.css";
 
 const khula = Khula({
@@ -27,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${khula.variable} antialiased`}
+        className={`${khula.variable} antialiased bg-gray-50`}
       >
         <InitColorSchemeScript attribute="class" />
         <AppRouterCacheProvider
@@ -37,7 +40,16 @@ export default function RootLayout({
         >
           <ThemeProvider theme={theme}>
             <CssBaseline />
-            <StyledComponentsRegistry>{children}</StyledComponentsRegistry>
+            <AuthContext>
+              <ProfileCompletionWrapper>
+                <StyledComponentsRegistry>
+                  <TopNavbar />
+                  <main className="min-h-screen pt-4">
+                    {children}
+                  </main>
+                </StyledComponentsRegistry>
+              </ProfileCompletionWrapper>
+            </AuthContext>
           </ThemeProvider>
         </AppRouterCacheProvider>
       </body>

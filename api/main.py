@@ -18,6 +18,7 @@ import sqlalchemy as _sql
 from .database import schemas as _schemas
 from .database import services as _services
 from .database import models as _models
+from .routers import auth, users
 
 # Configure Logging
 logging.basicConfig(
@@ -92,7 +93,8 @@ async def _process_video_upload(
     video_category: str,
     file_content: bytes,
     filename: str,
-    db: Session
+    db: Session,
+    user_id: str
 ) -> _schemas.Video:
     """
     Handles the core logic for processing a video upload:
@@ -166,6 +168,7 @@ async def _process_video_upload(
                 duration=str(duration),
                 validation="0",
                 label="",
+                user_id=user_id
             )
             await _services.create_splice(splice=create_splice_data, db=db)
 
@@ -186,6 +189,34 @@ async def lifespan(app: FastAPI):
     
     db = _services.SessionLocal()
     try:
+        # Seed Users
+        import uuid
+        system_user = _services.get_user_by_email(db, "system@albaniansr.com")
+        if not system_user:
+            system_user_create = _schemas.UserCreate(
+                email="system@albaniansr.com",
+                name="System",
+                surname="Admin",
+                password="password",
+                provider="system"
+            )
+            system_hash = auth.get_password_hash("password")
+            system_user = _services.create_user(db, system_user_create, hashed_password=system_hash)
+            logger.info("Seeded System User")
+
+        anon_user = _services.get_user_by_email(db, "anonymous@albaniansr.com")
+        if not anon_user:
+            anon_user_create = _schemas.UserCreate(
+                email="anonymous@albaniansr.com",
+                name="Anonymous",
+                surname="User",
+                password="password",
+                provider="system"
+            )
+            anon_hash = auth.get_password_hash("password")
+            _services.create_user(db, anon_user_create, hashed_password=anon_hash)
+            logger.info("Seeded Anonymous User")
+
         # Seed database if empty
         existing_video = db.query(_models.Video).first()
         if not existing_video:
@@ -208,7 +239,8 @@ async def lifespan(app: FastAPI):
                         video_category="Story",
                         file_content=file_content,
                         filename="sample_perrala.mp3",
-                        db=db
+                        db=db,
+                        user_id=system_user.id
                     )
                     logger.info("Successfully seeded database with sample video.")
                 except Exception as e:
@@ -238,6 +270,9 @@ app.add_middleware(
 
 app.mount("/splices", StaticFiles(directory=SPLICES_DIR), name="splices")
 
+app.include_router(auth.router)
+app.include_router(users.router)
+
 @app.post("/video/add", response_model=_schemas.ResponseModel)
 async def create_video(
     video_name: str,
@@ -252,13 +287,18 @@ async def create_video(
         raise HTTPException(status_code=400, detail="Invalid document type. Only .mp4 and .mp3 are supported.")
     
     try:
+        system_user = _services.get_user_by_email(db, "system@albaniansr.com")
+        if not system_user:
+             raise HTTPException(status_code=500, detail="System user not found")
+
         file_content = await video_file.read()
         updated_video = await _process_video_upload(
             video_name=video_name,
             video_category=video_category,
             file_content=file_content,
             filename=filename,
-            db=db
+            db=db,
+            user_id=system_user.id
         )
         
         return _schemas.ResponseModel(
@@ -286,6 +326,7 @@ async def get_audio_to_label(db: Session = Depends(_services.get_db)):
             duration=first_splice.duration,
             validation=first_splice.validation,
             status='un_labeled',
+            user_id=first_splice.user_id
         )
         processed_splice = await _services.create_splice_being_processed(splice_being_processed_data, db)
         await _services.delete_splice(first_splice.id, db)
@@ -314,6 +355,8 @@ async def get_audio_to_validate(db: Session = Depends(_services.get_db)):
             duration=first_splice.duration,
             validation=first_splice.validation,
             status='labeled',
+            user_id=first_splice.user_id,
+            labeler_id=first_splice.user_id
         )
         processed_splice = await _services.create_splice_being_processed(splice_being_processed_data, db)
         await _services.delete_labeled_splice(first_splice.id, db)
@@ -327,75 +370,119 @@ async def get_audio_to_validate(db: Session = Depends(_services.get_db)):
         logger.error(f"Error retrieving audio to validate: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve audio for validation")
 
-@app.put("/audio/label", response_model=_schemas.ResponseModel)
-async def label_splice(label_splice: _schemas.LabelSplice, db: Session = Depends(_services.get_db)):
-    try:
-        if label_splice.start is not None and label_splice.end is not None:
-            logger.info(f"Cutting audio from {label_splice.start} to {label_splice.end}")
-            
-        splice_being_processed = await _services.get_splice_being_processed(label_splice.id, db)
-        if not splice_being_processed or splice_being_processed.status != 'un_labeled':
-            raise HTTPException(status_code=404, detail="Splice not found or invalid status")
+async def _label_splice_logic(label_splice: _schemas.LabelSplice, db: Session, user_id: str):
+    if label_splice.start is not None and label_splice.end is not None:
+        logger.info(f"Cutting audio from {label_splice.start} to {label_splice.end}")
         
-        # Update status in processing table (optional step if we are moving it immediately, but kept for consistency)
-        update_data = {
-            "id": label_splice.id,
-            "label": label_splice.label,
-            "validation": label_splice.validation or '0.95',
-        }
-        await _services.update_splice_being_processed(splice_id=label_splice.id, data=update_data, db=db)
+    splice_being_processed = await _services.get_splice_being_processed(label_splice.id, db)
+    if not splice_being_processed or splice_being_processed.status != 'un_labeled':
+        raise HTTPException(status_code=404, detail="Splice not found or invalid status")
+    
+    update_data = {
+        "id": label_splice.id,
+        "label": label_splice.label,
+        "validation": label_splice.validation or '0.95',
+    }
+    await _services.update_splice_being_processed(splice_id=label_splice.id, data=update_data, db=db)
 
-        # Move to LabeledSplice
-        labeled_splice_data = _schemas.LabeledSpliceCreate(
-            name=splice_being_processed.name,
-            path=splice_being_processed.path,
-            label=label_splice.label, # Use the new label
-            origin=splice_being_processed.origin,
-            duration=splice_being_processed.duration,
-            validation=label_splice.validation or '0.95',
-        )
-        await _services.create_labeled_splice(labeled_splice_data, db)
-        await _services.delete_splice_being_processed(splice_being_processed, db)
+    labeled_splice_data = _schemas.LabeledSpliceCreate(
+        name=splice_being_processed.name,
+        path=splice_being_processed.path,
+        label=label_splice.label,
+        origin=splice_being_processed.origin,
+        duration=splice_being_processed.duration,
+        validation=label_splice.validation or '0.95',
+        user_id=user_id
+    )
+    await _services.create_labeled_splice(labeled_splice_data, db)
+    await _services.delete_splice_being_processed(splice_being_processed, db)
 
-        return _schemas.ResponseModel(status="success", message="Splice labeled and moved successfully")
+    return _schemas.ResponseModel(status="success", message="Splice labeled and moved successfully")
 
+@app.put("/audio/label", response_model=_schemas.ResponseModel)
+async def label_splice(
+    label_splice: _schemas.LabelSplice, 
+    db: Session = Depends(_services.get_db),
+    current_user: _schemas.User = Depends(auth.get_current_user)
+):
+    try:
+        return await _label_splice_logic(label_splice, db, current_user.id)
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error labeling splice: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.put("/audio/validate", response_model=_schemas.ResponseModel)
-async def validate_splice(validate_splice: _schemas.LabelSplice, db: Session = Depends(_services.get_db)):
+@app.put("/audio/label/anonymous", response_model=_schemas.ResponseModel)
+async def label_splice_anonymous(
+    label_splice: _schemas.LabelSplice, 
+    db: Session = Depends(_services.get_db)
+):
     try:
-        if validate_splice.start is not None and validate_splice.end is not None:
-            logger.info(f"Cutting audio from {validate_splice.start} to {validate_splice.end}")
+        anon_user = _services.get_user_by_email(db, "anonymous@albaniansr.com")
+        if not anon_user:
+             raise HTTPException(status_code=500, detail="Anonymous user not found")
+        return await _label_splice_logic(label_splice, db, anon_user.id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error labeling splice: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-        splice_being_processed = await _services.get_splice_being_processed(validate_splice.id, db)
-        if not splice_being_processed or splice_being_processed.status != 'labeled':
-            raise HTTPException(status_code=404, detail="Splice not found or invalid status")
-        
-        update_data = {
-            "id": validate_splice.id,
-            "label": validate_splice.label,
-            "validation": validate_splice.validation or '1.0',
-        }
-        await _services.update_splice_being_processed(splice_id=validate_splice.id, data=update_data, db=db)
+async def _validate_splice_logic(validate_splice: _schemas.LabelSplice, db: Session, user_id: str):
+    if validate_splice.start is not None and validate_splice.end is not None:
+        logger.info(f"Cutting audio from {validate_splice.start} to {validate_splice.end}")
 
-        # Move to HighQualityLabeledSplice
-        hq_splice_data = _schemas.HighQualityLabeledSpliceCreate(
-            name=splice_being_processed.name,
-            path=splice_being_processed.path,
-            label=validate_splice.label,
-            origin=splice_being_processed.origin,
-            duration=splice_being_processed.duration,
-            validation=validate_splice.validation or '1.0',
-        )
-        await _services.create_high_quality_labeled_splice(hq_splice_data, db)
-        await _services.delete_splice_being_processed(splice_being_processed, db)
+    splice_being_processed = await _services.get_splice_being_processed(validate_splice.id, db)
+    if not splice_being_processed or splice_being_processed.status != 'labeled':
+        raise HTTPException(status_code=404, detail="Splice not found or invalid status")
+    
+    update_data = {
+        "id": validate_splice.id,
+        "label": validate_splice.label,
+        "validation": validate_splice.validation or '1.0',
+    }
+    await _services.update_splice_being_processed(splice_id=validate_splice.id, data=update_data, db=db)
 
-        return _schemas.ResponseModel(status="success", message="Splice validated and moved successfully")
+    hq_splice_data = _schemas.HighQualityLabeledSpliceCreate(
+        name=splice_being_processed.name,
+        path=splice_being_processed.path,
+        label=validate_splice.label,
+        origin=splice_being_processed.origin,
+        duration=splice_being_processed.duration,
+        validation=validate_splice.validation or '1.0',
+        user_id=user_id,
+        labeler_id=splice_being_processed.labeler_id
+    )
+    await _services.create_high_quality_labeled_splice(hq_splice_data, db)
+    await _services.delete_splice_being_processed(splice_being_processed, db)
 
+    return _schemas.ResponseModel(status="success", message="Splice validated and moved successfully")
+
+@app.put("/audio/validate", response_model=_schemas.ResponseModel)
+async def validate_splice(
+    validate_splice: _schemas.LabelSplice, 
+    db: Session = Depends(_services.get_db),
+    current_user: _schemas.User = Depends(auth.get_current_user)
+):
+    try:
+        return await _validate_splice_logic(validate_splice, db, current_user.id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error validating splice: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/audio/validate/anonymous", response_model=_schemas.ResponseModel)
+async def validate_splice_anonymous(
+    validate_splice: _schemas.LabelSplice, 
+    db: Session = Depends(_services.get_db)
+):
+    try:
+        anon_user = _services.get_user_by_email(db, "anonymous@albaniansr.com")
+        if not anon_user:
+             raise HTTPException(status_code=500, detail="Anonymous user not found")
+        return await _validate_splice_logic(validate_splice, db, anon_user.id)
     except HTTPException:
         raise
     except Exception as e:
@@ -417,6 +504,7 @@ async def delete_splice(delete_splice: _schemas.DeleteSplice, db: Session = Depe
             origin=splice_being_processed.origin,
             duration=splice_being_processed.duration,
             validation=splice_being_processed.validation or "0",
+            user_id=splice_being_processed.user_id
         )
         await _services.create_deleted_splice(deleted_splice_data, db)
 
@@ -479,6 +567,7 @@ async def get_summary(db: Session = Depends(_services.get_db)):
         "total_duration_validated": get_sum(_models.HighQualityLabeledSplice, _models.HighQualityLabeledSplice.duration),
         "total_duration_unlabeled": get_sum(_models.Splice, _models.Splice.duration),
         "total_labeled": get_count(_models.LabeledSplice),
+        "total_validated": get_count(_models.HighQualityLabeledSplice),
         "total_unlabeled": get_count(_models.Splice),
     }
 

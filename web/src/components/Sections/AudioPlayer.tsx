@@ -12,6 +12,9 @@ import IconButton from "@mui/material/IconButton";
 import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import { useTheme } from "@mui/material/styles";
+import { useSession } from "next-auth/react";
+import { Dialog, DialogTitle, DialogContent, DialogActions, Typography } from "@mui/material";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 
 export default function MainSection() {
@@ -31,6 +34,10 @@ export default function MainSection() {
   const [startTime, setStartTime] = useState<number | null>(null);
   const [endTime, setEndTime] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const { data: session } = useSession();
+  const router = useRouter();
+  const [openAuthDialog, setOpenAuthDialog] = useState(false);
 
   // Initialize WaveSurfer when container is ready
   useEffect(() => {
@@ -168,6 +175,19 @@ export default function MainSection() {
   };
 
   const handleSubmit = async () => {
+    if (!session) {
+        setOpenAuthDialog(true);
+        return;
+    }
+    await submitData(true);
+  };
+
+  const handleSkip = async () => {
+    setOpenAuthDialog(false);
+    await submitData(false);
+  };
+
+  const submitData = async (isAuthenticated: boolean) => {
     setIsLoading(true);
     try {
       const payload: { id: string | null; label: string; start?: number; end?: number } = {
@@ -180,7 +200,10 @@ export default function MainSection() {
         payload.end = endTime;
       }
 
-      await axios.put(`${process.env.NEXT_PUBLIC_API_DOMAIN_LOCAL}audio/label`, payload);
+      const endpoint = isAuthenticated ? "audio/label" : "audio/label/anonymous";
+      const headers = isAuthenticated ? { Authorization: `Bearer ${(session as any).accessToken}` } : {};
+
+      await axios.put(`${process.env.NEXT_PUBLIC_API_DOMAIN_LOCAL}${endpoint}`, payload, { headers });
       console.log("PUT request successful");
       if (wavesurferRef.current) {
           wavesurferRef.current.stop();
@@ -278,6 +301,16 @@ export default function MainSection() {
           </ControlsRow>
         </CardBody>
       </CardContainer>
+      <Dialog open={openAuthDialog} onClose={() => setOpenAuthDialog(false)}>
+        <DialogTitle>Authentication Required</DialogTitle>
+        <DialogContent>
+            <Typography>Please register or log in to track your contributions. You can also continue anonymously.</Typography>
+        </DialogContent>
+        <DialogActions>
+            <Button onClick={handleSkip}>Skip (Anonymous)</Button>
+            <Button onClick={() => router.push("/login")} variant="contained">Register / Log In</Button>
+        </DialogActions>
+      </Dialog>
     </Wrapper>
   );
 }

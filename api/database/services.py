@@ -118,4 +118,90 @@ async def create_deleted_splice(
     db.refresh(splice_db)
     return _schemas.DeletedSplice.model_validate(splice_db)
 
+def get_user(db: "Session", user_id: str):
+    return db.query(_models.User).filter(_models.User.id == user_id).first()
+
+def get_user_by_email(db: "Session", email: str):
+    return db.query(_models.User).filter(_models.User.email == email).first()
+
+def create_user(
+    db: "Session", 
+    user: _schemas.UserCreate, 
+    hashed_password: str = None,
+    verification_code: str = None,
+    verification_code_expires = None
+):
+    user_dict = user.model_dump()
+    if 'password' in user_dict:
+        del user_dict['password']
+    
+    # Generate UUID if not provided (though usually we let the DB or caller handle it, 
+    # but here I'll generate it if I can import uuid, or rely on the caller)
+    # The model defines id as String.
+    import uuid
+    if 'id' not in user_dict:
+        user_dict['id'] = str(uuid.uuid4())
+    
+    # Determine if this is a local or Google user
+    is_google_user = user_dict.get('provider') == 'google'
+    
+    # Handle verification and profile completion fields
+    user_db = _models.User(
+        **user_dict, 
+        hashed_password=hashed_password,
+        verification_code=verification_code,
+        verification_code_expires=verification_code_expires,
+        is_verified=False if verification_code else True,  # Google users are auto-verified
+        profile_completed=not is_google_user  # Local users have completed profile, Google users need to complete it
+    )
+    db.add(user_db)
+    db.commit()
+    db.refresh(user_db)
+    return _schemas.User.model_validate(user_db)
+
+def get_user_stats(db: "Session", user_id: str):
+    # Labeled count: In LabeledSplice (user_id) + In HighQuality (labeler_id)
+    labeled_count = db.query(_models.LabeledSplice).filter(_models.LabeledSplice.user_id == user_id).count()
+    labeled_count += db.query(_models.HighQualityLabeledSplice).filter(_models.HighQualityLabeledSplice.labeler_id == user_id).count()
+    
+    # Validated count: In HighQuality (user_id)
+    validated_count = db.query(_models.HighQualityLabeledSplice).filter(_models.HighQualityLabeledSplice.user_id == user_id).count()
+    
+    # Calculate hours (simplified, assuming duration is float string)
+    # This is inefficient for large datasets, should be done with SQL sum cast
+    # But for now:
+    
+    def sum_duration(query):
+        total = 0.0
+        for row in query:
+            try:
+                total += float(row.duration)
+            except (ValueError, TypeError):
+                pass
+        return total
+
+    labeled_q1 = db.query(_models.LabeledSplice.duration).filter(_models.LabeledSplice.user_id == user_id)
+    labeled_q2 = db.query(_models.HighQualityLabeledSplice.duration).filter(_models.HighQualityLabeledSplice.labeler_id == user_id)
+    
+    hours_labeled = (sum_duration(labeled_q1) + sum_duration(labeled_q2)) / 3600.0
+    
+    validated_q = db.query(_models.HighQualityLabeledSplice.duration).filter(_models.HighQualityLabeledSplice.user_id == user_id)
+    hours_validated = sum_duration(validated_q) / 3600.0
+    
+    return {
+        "labeled_count": labeled_count,
+        "validated_count": validated_count,
+        "hours_labeled": round(hours_labeled, 2),
+        "hours_validated": round(hours_validated, 2)
+    }
+
+def get_user_activity(db: "Session", user_id: str, limit: int = 10):
+    # Fetch recent activity from HighQualityLabeledSplice (completed items)
+    # We could also include LabeledSplice (pending items) but let's start with completed.
+    items = db.query(_models.HighQualityLabeledSplice).filter(
+        (_models.HighQualityLabeledSplice.user_id == user_id) | 
+        (_models.HighQualityLabeledSplice.labeler_id == user_id)
+    ).order_by(_models.HighQualityLabeledSplice.id.desc()).limit(limit).all()
+    return items
+
 
