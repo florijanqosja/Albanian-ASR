@@ -1,0 +1,147 @@
+# ============================================
+# Albanian-ASR (DibraSpeaks) - Production Stack
+# Secure Deployment with Cloudflare Tunnel
+# ============================================
+# 
+# This compose file is designed for secure production deployments:
+# - No exposed ports to the host (Zero Trust architecture)
+# - All traffic flows through Cloudflare Tunnel
+# - Internal network isolation for services
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Required environment variables (set in .env or via CI/CD):
+#   - CLOUDFLARE_TUNNEL_TOKEN
+#   - POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
+#   - JWT_SECRET_KEY
+#   - NEXTAUTH_SECRET
+#   - GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+#   - MAIL_API_KEY, MAIL_FROM_EMAIL, MAIL_FROM_NAME
+# ============================================
+
+services:
+  # ============================================
+  # PostgreSQL Database
+  # ============================================
+  db:
+    image: postgres:15-alpine
+    container_name: albanian_asr_db_prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    networks:
+      - app_network
+    # No ports exposed - only accessible within Docker network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # FastAPI Backend
+  # ============================================
+  api:
+    container_name: albanian_asr_api_prod
+    build:
+      context: .
+      dockerfile: ./api/dockerfiles/Dockerfile.prod
+    restart: always
+    volumes:
+      - ./audio_files/mp3:/code/mp3
+      - ./audio_files/mp4:/code/mp4
+      - ./audio_files/splices:/code/splices
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - MAIL_API_KEY=${MAIL_API_KEY}
+      - MAIL_API_URL=${MAIL_API_URL:-https://api.ahasend.com}
+      - MAIL_FROM_EMAIL=${MAIL_FROM_EMAIL}
+      - MAIL_FROM_NAME=${MAIL_FROM_NAME}
+      - AHASEND_ACCOUNT_ID=${AHASEND_ACCOUNT_ID}
+      - ENVIRONMENT=production
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app_network
+    # No ports exposed - only accessible within Docker network
+
+  # ============================================
+  # Next.js Frontend
+  # ============================================
+  web:
+    container_name: albanian_asr_web_prod
+    build:
+      context: .
+      dockerfile: ./web/dockerfiles/Dockerfile.prod
+      args:
+        - NEXT_PUBLIC_API_DOMAIN_LOCAL=https://uneduashqiperine.com/api/
+        - NEXT_PUBLIC_FILE_ACCESS_DOMAIN_LOCAL=https://uneduashqiperine.com/api/
+        - NEXT_PUBLIC_API_URL=https://uneduashqiperine.com/api
+        - NEXT_PUBLIC_ENVIRONMENT=production
+        - NEXT_PUBLIC_API_DOCS_URL=https://uneduashqiperine.com/api/docs
+    restart: always
+    environment:
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=https://uneduashqiperine.com
+      - API_URL=http://api:80
+    depends_on:
+      - api
+    networks:
+      - app_network
+    # No ports exposed - only accessible within Docker network
+
+  # ============================================
+  # Nginx Reverse Proxy
+  # ============================================
+  nginx:
+    image: nginx:alpine
+    container_name: albanian_asr_nginx_prod
+    restart: always
+    volumes:
+      - ./infrastructure/nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - web
+      - api
+    networks:
+      - app_network
+    # No ports exposed - Cloudflare Tunnel connects to this service
+
+  # ============================================
+  # Cloudflare Tunnel (Secure Access Gateway)
+  # ============================================
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: albanian_asr_tunnel_prod
+    restart: always
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - app_network
+    depends_on:
+      - nginx
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  app_network:
+    driver: bridge
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  postgres_data_prod:
