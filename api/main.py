@@ -27,16 +27,22 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Constants
-UPLOAD_DIR_MP4 = "mp4"
-UPLOAD_DIR_MP3 = "mp3"
-SPLICES_DIR = "splices"
+# Constants - Use absolute paths in production (Docker), relative in development
+IS_PRODUCTION = os.getenv("ENVIRONMENT") == "production"
+BASE_DIR = "/code" if IS_PRODUCTION else "."
+
+UPLOAD_DIR_MP4 = os.path.join(BASE_DIR, "mp4")
+UPLOAD_DIR_MP3 = os.path.join(BASE_DIR, "mp3")
+SPLICES_DIR = os.path.join(BASE_DIR, "splices")
 SAMPLE_FILE_PATH = "sample_perrala.mp3"
 DOCKER_SAMPLE_PATH = "/code/sample_perrala.mp3"
 
 # Ensure directories exist
 for directory in [UPLOAD_DIR_MP4, UPLOAD_DIR_MP3, SPLICES_DIR]:
     os.makedirs(directory, exist_ok=True)
+
+logger.info(f"Running in {'production' if IS_PRODUCTION else 'development'} mode")
+logger.info(f"Static file directories: mp4={UPLOAD_DIR_MP4}, mp3={UPLOAD_DIR_MP3}, splices={SPLICES_DIR}")
 
 def _get_wav_duration(wav_path: str) -> float:
     """Calculates the duration of a WAV file in seconds."""
@@ -189,33 +195,50 @@ async def lifespan(app: FastAPI):
     
     db = _services.SessionLocal()
     try:
-        # Seed Users
-        import uuid
+        # Seed Users - use get_or_create pattern to handle race conditions
         system_user = _services.get_user_by_email(db, "system@albaniansr.com")
         if not system_user:
-            system_user_create = _schemas.UserCreate(
-                email="system@albaniansr.com",
-                name="System",
-                surname="Admin",
-                password="password",
-                provider="system"
-            )
-            system_hash = auth.get_password_hash("password")
-            system_user = _services.create_user(db, system_user_create, hashed_password=system_hash)
-            logger.info("Seeded System User")
+            try:
+                system_user_create = _schemas.UserCreate(
+                    email="system@albaniansr.com",
+                    name="System",
+                    surname="Admin",
+                    password="password",
+                    provider="system"
+                )
+                system_hash = auth.get_password_hash("password")
+                system_user = _services.create_user(db, system_user_create, hashed_password=system_hash)
+                logger.info("Seeded System User")
+            except Exception as e:
+                db.rollback()
+                # Another worker might have created it, try to get it again
+                system_user = _services.get_user_by_email(db, "system@albaniansr.com")
+                if system_user:
+                    logger.info("System User already exists (created by another worker)")
+                else:
+                    raise e
 
         anon_user = _services.get_user_by_email(db, "anonymous@albaniansr.com")
         if not anon_user:
-            anon_user_create = _schemas.UserCreate(
-                email="anonymous@albaniansr.com",
-                name="Anonymous",
-                surname="User",
-                password="password",
-                provider="system"
-            )
-            anon_hash = auth.get_password_hash("password")
-            _services.create_user(db, anon_user_create, hashed_password=anon_hash)
-            logger.info("Seeded Anonymous User")
+            try:
+                anon_user_create = _schemas.UserCreate(
+                    email="anonymous@albaniansr.com",
+                    name="Anonymous",
+                    surname="User",
+                    password="password",
+                    provider="system"
+                )
+                anon_hash = auth.get_password_hash("password")
+                _services.create_user(db, anon_user_create, hashed_password=anon_hash)
+                logger.info("Seeded Anonymous User")
+            except Exception as e:
+                db.rollback()
+                # Another worker might have created it
+                anon_user = _services.get_user_by_email(db, "anonymous@albaniansr.com")
+                if anon_user:
+                    logger.info("Anonymous User already exists (created by another worker)")
+                else:
+                    raise e
 
         # Seed database if empty
         existing_video = db.query(_models.Video).first()
