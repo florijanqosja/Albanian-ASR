@@ -240,12 +240,27 @@ async def lifespan(app: FastAPI):
                 else:
                     raise e
 
-        # Seed database if empty
+        # Seed database if empty OR if splice files are missing
         existing_video = db.query(_models.Video).first()
-        if existing_video:
-            logger.info(f"Database already has videos (found: {existing_video.name}). Skipping seed.")
+        splice_dir = os.path.join(SPLICES_DIR, "Sample_Perrala")
+        splice_files_exist = os.path.exists(splice_dir) and len(os.listdir(splice_dir)) > 0
+        
+        if existing_video and splice_files_exist:
+            logger.info(f"Database has videos (found: {existing_video.name}) and splice files exist. Skipping seed.")
         else:
-            logger.info("Database is empty. Attempting to seed...")
+            if existing_video and not splice_files_exist:
+                logger.warning(f"Database has video record but splice files are missing at {splice_dir}. Re-seeding files...")
+                # Delete orphaned database records so we can recreate everything
+                try:
+                    db.query(_models.Splice).delete()
+                    db.query(_models.Video).delete()
+                    db.commit()
+                    logger.info("Cleared orphaned database records.")
+                except Exception as e:
+                    db.rollback()
+                    logger.error(f"Failed to clear orphaned records: {e}")
+            else:
+                logger.info("Database is empty. Attempting to seed...")
             
             seed_file_path = None
             logger.info(f"Checking for sample file at: {DOCKER_SAMPLE_PATH}")
