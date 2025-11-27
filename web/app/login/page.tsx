@@ -1,7 +1,8 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { signIn } from "next-auth/react"
-import { Box, Button, TextField, Typography, Container, Paper, Divider, InputAdornment, IconButton } from "@mui/material"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Box, Button, TextField, Typography, Container, Paper, Divider, InputAdornment, IconButton, Alert } from "@mui/material"
 import { FcGoogle } from "react-icons/fc"
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react"
 import Link from "next/link"
@@ -10,17 +11,49 @@ import Footer from "@/components/Sections/Footer"
 
 const isProduction = process.env.NEXT_PUBLIC_ENVIRONMENT === "production"
 
-export default function LoginPage() {
-  const [email, setEmail] = useState("")
+function LoginPageContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const verified = searchParams.get("verified")
+  const emailParam = searchParams.get("email")
+  
+  const [email, setEmail] = useState(emailParam || "")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(verified ? "Email verified successfully! Please sign in." : null)
+
+  useEffect(() => {
+    if (emailParam) {
+      setEmail(emailParam)
+    }
+  }, [emailParam])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    await signIn("credentials", { email, password, callbackUrl: "/" })
-    setLoading(false)
+    setError(null)
+    setSuccess(null)
+    
+    try {
+      const result = await signIn("credentials", { 
+        email, 
+        password, 
+        redirect: false 
+      })
+      
+      if (result?.error) {
+        setError("Invalid email or password. Please try again.")
+      } else if (result?.ok) {
+        router.push("/")
+        router.refresh()
+      }
+    } catch {
+      setError("An error occurred. Please try again.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -70,6 +103,16 @@ export default function LoginPage() {
           )}
 
           <Box component="form" onSubmit={handleSubmit} noValidate sx={{ width: '100%' }}>
+            {success && (
+              <Alert severity="success" sx={{ mb: 2, borderRadius: 2 }}>
+                {success}
+              </Alert>
+            )}
+            {error && (
+              <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+                {error}
+              </Alert>
+            )}
             <TextField
               margin="normal"
               required
@@ -160,5 +203,17 @@ export default function LoginPage() {
     </Box>
     <Footer />
     </>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Typography>Loading...</Typography>
+      </Box>
+    }>
+      <LoginPageContent />
+    </Suspense>
   )
 }

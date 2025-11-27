@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect, useRef, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { signIn } from "next-auth/react"
 import { 
   Box, 
   Button, 
@@ -102,11 +103,13 @@ function VerifyPageContent() {
         throw new Error(data.detail || "Verification failed")
       }
 
-      // Store the token
-      localStorage.setItem("access_token", data.access_token)
+      // Verification successful - show success and redirect to login
+      setSuccess("Email verified successfully! Redirecting to login...")
       
-      // Redirect to home or dashboard
-      router.push("/")
+      // Redirect to login page after a short delay
+      setTimeout(() => {
+        router.push(`/login?verified=true&email=${encodeURIComponent(email)}`)
+      }, 1500)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed")
       setCode(["", "", "", "", "", ""])
