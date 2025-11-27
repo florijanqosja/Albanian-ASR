@@ -5,6 +5,7 @@ import axios from "axios"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
+  trustHost: true,  // Required for reverse proxy (nginx/Cloudflare)
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
