@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
-import { Card, CardContent, Typography, Grid, Box, Container, Paper } from "@mui/material";
-import { Activity, Database, CheckCircle, Clock, ClipboardCheck } from "lucide-react";
+import { Typography, Grid, Box, Container, Paper } from "@mui/material";
+import { Database, CheckCircle, Clock, ClipboardCheck } from "lucide-react";
 import axios from "axios";
 
 interface SummaryInfo {

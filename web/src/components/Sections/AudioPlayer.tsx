@@ -201,7 +201,7 @@ export default function MainSection() {
       }
 
       const endpoint = isAuthenticated ? "audio/label" : "audio/label/anonymous";
-      const headers = isAuthenticated ? { Authorization: `Bearer ${(session as any).accessToken}` } : {};
+      const headers = isAuthenticated ? { Authorization: `Bearer ${(session as { accessToken?: string }).accessToken}` } : {};
 
       await axios.put(`${process.env.NEXT_PUBLIC_API_DOMAIN_LOCAL}${endpoint}`, payload, { headers });
       console.log("PUT request successful");

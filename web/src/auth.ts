@@ -33,7 +33,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
              return { ...userRes.data, accessToken: res.data.access_token }
           }
           return null
-        } catch (e) {
+        } catch {
           return null
         }
       },
@@ -43,8 +43,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user, account }) {
       const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       if (user) {
-        token.accessToken = (user as any).accessToken
-        token.id = (user as any).id
+        token.accessToken = (user as { accessToken?: string }).accessToken
+        token.id = (user as { id?: string }).id
       }
       if (account?.provider === "google") {
         try {
@@ -67,9 +67,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token
     },
     async session({ session, token }) {
-      (session as any).accessToken = token.accessToken as string
+      (session as { accessToken?: string }).accessToken = token.accessToken as string
       if (session.user) {
-          (session.user as any).id = token.id as string
+          (session.user as { id?: string }).id = token.id as string
           session.user.image = token.picture as string
       }
       return session
