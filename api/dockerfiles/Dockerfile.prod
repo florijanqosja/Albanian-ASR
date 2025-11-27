@@ -18,6 +18,9 @@ RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 # Copy application code
 COPY ./api /code/app
 
+# Copy sample file for seeding (optional)
+COPY ./sample_perrala.mp3 /code/sample_perrala.mp3
+
 # Create directories for audio files
 RUN mkdir -p /code/mp3 /code/mp4 /code/splices
 
