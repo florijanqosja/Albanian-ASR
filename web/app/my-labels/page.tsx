@@ -27,7 +27,7 @@ export default function MyLabelsPage() {
     if (session?.user) {
         const fetchData = async () => {
             try {
-                const token = (session as any).accessToken
+                const token = (session as { accessToken?: string }).accessToken
                 const statsRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/users/stats`, {
                     headers: { Authorization: `Bearer ${token}` }
                 })

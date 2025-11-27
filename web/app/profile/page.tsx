@@ -25,7 +25,7 @@ export default function ProfilePage() {
         const fetchUser = async () => {
             try {
                 const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/users/me`, {
-                    headers: { Authorization: `Bearer ${(session as any).accessToken}` }
+                    headers: { Authorization: `Bearer ${(session as { accessToken?: string }).accessToken}` }
                 })
                 setFormData(res.data)
             } catch (e) {
@@ -45,10 +45,10 @@ export default function ProfilePage() {
     setLoading(true)
     try {
         await axios.put(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/users/me`, formData, {
-            headers: { Authorization: `Bearer ${(session as any).accessToken}` }
+            headers: { Authorization: `Bearer ${(session as { accessToken?: string }).accessToken}` }
         })
         alert("Profile updated successfully!")
-    } catch (e) {
+    } catch {
         alert("Error updating profile")
     } finally {
         setLoading(false)

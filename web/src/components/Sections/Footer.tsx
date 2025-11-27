@@ -3,7 +3,7 @@ import React from "react";
 import Link from "next/link";
 import LogoImg from "../../assets/svg/Logo";
 import { Github, Linkedin, ArrowUp } from "lucide-react";
-import { Container, Grid, Typography, IconButton, Box, Divider } from "@mui/material";
+import { Container, Grid, Typography, IconButton, Box } from "@mui/material";
 
 export default function Footer() {
   const scrollToTop = () => {

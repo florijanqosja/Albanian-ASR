@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, LogOut, User, BarChart2 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
-import { Avatar, Menu as MuiMenu, MenuItem, IconButton, Divider, ListItemIcon, Box, Container, Button } from "@mui/material";
+import { Avatar, Menu as MuiMenu, MenuItem, IconButton, Divider, ListItemIcon, Box } from "@mui/material";
 import LogoIcon from "../../assets/svg/Logo";
 
 function NavList() {
@@ -98,7 +98,7 @@ export default function TopNavbar() {
                     }}
                 >
                     <Avatar 
-                        src={session.user?.image!} 
+                        src={session.user?.image ?? undefined} 
                         alt={session.user?.name || "User"}
                         sx={{ width: 38, height: 38, bgcolor: 'primary.main' }}
                     >
