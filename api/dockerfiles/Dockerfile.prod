@@ -21,17 +21,22 @@ COPY ./api /code/app
 # Copy sample file for seeding (optional)
 COPY ./sample_perrala.mp3 /code/sample_perrala.mp3
 
-# Create directories for audio files
-RUN mkdir -p /code/mp3 /code/mp4 /code/splices
+# Create directories for audio files and cache
+RUN mkdir -p /code/mp3 /code/mp4 /code/splices /code/.cache /code/.config
 
-# Create non-root user for security
+# Create non-root user for security with a home directory
 RUN addgroup --system --gid 1001 appgroup && \
-    adduser --system --uid 1001 --gid 1001 appuser && \
+    adduser --system --uid 1001 --gid 1001 --home /code appuser && \
     chown -R appuser:appgroup /code
+
+# Set environment variables for cache directories
+ENV HOME=/code
+ENV MPLCONFIGDIR=/code/.cache/matplotlib
+ENV FONTCONFIG_CACHE=/code/.cache/fontconfig
 
 USER appuser
 
 EXPOSE 80
 
-# Use gunicorn for production with uvicorn workers
+# Use uvicorn with workers for production
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80", "--workers", "4"]

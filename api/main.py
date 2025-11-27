@@ -219,21 +219,29 @@ async def lifespan(app: FastAPI):
 
         # Seed database if empty
         existing_video = db.query(_models.Video).first()
-        if not existing_video:
+        if existing_video:
+            logger.info(f"Database already has videos (found: {existing_video.name}). Skipping seed.")
+        else:
             logger.info("Database is empty. Attempting to seed...")
             
             seed_file_path = None
+            logger.info(f"Checking for sample file at: {DOCKER_SAMPLE_PATH}")
             if os.path.exists(DOCKER_SAMPLE_PATH):
                 seed_file_path = DOCKER_SAMPLE_PATH
+                logger.info(f"Found sample file at: {DOCKER_SAMPLE_PATH}")
             elif os.path.exists(SAMPLE_FILE_PATH):
                 seed_file_path = SAMPLE_FILE_PATH
+                logger.info(f"Found sample file at: {SAMPLE_FILE_PATH}")
             
             if seed_file_path:
                 try:
+                    logger.info(f"Reading sample file from: {seed_file_path}")
                     with open(seed_file_path, "rb") as f:
                         file_content = f.read()
+                    logger.info(f"Sample file size: {len(file_content)} bytes")
                     
                     # We use the processing function to ensure the seed data is fully functional
+                    logger.info("Starting video processing...")
                     await _process_video_upload(
                         video_name="Sample Perrala",
                         video_category="Story",
@@ -243,12 +251,20 @@ async def lifespan(app: FastAPI):
                         user_id=system_user.id
                     )
                     logger.info("Successfully seeded database with sample video.")
+                    
+                    # Verify splices were created
+                    splice_dir = os.path.join(SPLICES_DIR, "Sample_Perrala")
+                    if os.path.exists(splice_dir):
+                        splice_files = os.listdir(splice_dir)
+                        logger.info(f"Created {len(splice_files)} splice files in {splice_dir}")
+                    else:
+                        logger.warning(f"Splice directory not found: {splice_dir}")
                 except Exception as e:
-                    logger.error(f"Failed to seed database: {e}")
+                    logger.error(f"Failed to seed database: {e}", exc_info=True)
             else:
-                logger.warning("Sample file not found. Skipping seed.")
+                logger.warning(f"Sample file not found at {DOCKER_SAMPLE_PATH} or {SAMPLE_FILE_PATH}. Skipping seed.")
     except Exception as e:
-        logger.error(f"Error during startup seeding: {e}")
+        logger.error(f"Error during startup seeding: {e}", exc_info=True)
     finally:
         db.close()
     yield
