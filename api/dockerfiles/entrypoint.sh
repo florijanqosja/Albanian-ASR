@@ -6,10 +6,15 @@
 
 set -e
 
-# Fix permissions on mounted volumes (runs as root initially)
-echo "Setting permissions on mounted volumes..."
-chown -R appuser:appgroup /code/mp3 /code/mp4 /code/splices 2>/dev/null || true
-chmod -R 755 /code/mp3 /code/mp4 /code/splices 2>/dev/null || true
+# Ensure mounted volume directories exist and have correct permissions
+echo "Setting up mounted volume directories..."
+mkdir -p /code/mp3 /code/mp4 /code/splices
+chown -R appuser:appgroup /code/mp3 /code/mp4 /code/splices
+chmod -R 755 /code/mp3 /code/mp4 /code/splices
+
+# Debug: show what we have
+echo "Volume contents:"
+ls -la /code/mp3 /code/mp4 /code/splices
 
 echo "Starting application as appuser..."
 # Drop privileges and run the application

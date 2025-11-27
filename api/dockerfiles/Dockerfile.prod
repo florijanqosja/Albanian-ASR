@@ -25,8 +25,9 @@ COPY ./sample_perrala.mp3 /code/sample_perrala.mp3
 COPY ./api/dockerfiles/entrypoint.sh /code/entrypoint.sh
 RUN chmod +x /code/entrypoint.sh
 
-# Create directories for audio files and cache
-RUN mkdir -p /code/mp3 /code/mp4 /code/splices /code/.cache /code/.config
+# Create cache directories only (NOT the volume mount points - those come from host)
+# The mp3, mp4, splices directories are mounted as volumes and should not be created here
+RUN mkdir -p /code/.cache /code/.config
 
 # Create non-root user for security with a home directory
 RUN addgroup --system --gid 1001 appgroup && \
