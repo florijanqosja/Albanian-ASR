@@ -37,9 +37,10 @@ SPLICES_DIR = os.path.join(BASE_DIR, "splices")
 SAMPLE_FILE_PATH = "sample_perrala.mp3"
 DOCKER_SAMPLE_PATH = "/code/sample_perrala.mp3"
 
-# Ensure directories exist
-for directory in [UPLOAD_DIR_MP4, UPLOAD_DIR_MP3, SPLICES_DIR]:
-    os.makedirs(directory, exist_ok=True)
+# In development, ensure directories exist. In production, entrypoint.sh handles this.
+if not IS_PRODUCTION:
+    for directory in [UPLOAD_DIR_MP4, UPLOAD_DIR_MP3, SPLICES_DIR]:
+        os.makedirs(directory, exist_ok=True)
 
 logger.info(f"Running in {'production' if IS_PRODUCTION else 'development'} mode")
 logger.info(f"Static file directories: mp4={UPLOAD_DIR_MP4}, mp3={UPLOAD_DIR_MP3}, splices={SPLICES_DIR}")
