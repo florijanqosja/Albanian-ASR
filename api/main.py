@@ -217,9 +217,10 @@ async def lifespan(app: FastAPI):
             _services.create_user(db, anon_user_create, hashed_password=anon_hash)
             logger.info("Seeded Anonymous User")
 
-        # Seed database if empty
+        # Seed database if empty (only in development)
+        is_production = os.getenv("ENVIRONMENT", "local") == "production"
         existing_video = db.query(_models.Video).first()
-        if not existing_video:
+        if not existing_video and not is_production:
             logger.info("Database is empty. Attempting to seed...")
             
             seed_file_path = None
