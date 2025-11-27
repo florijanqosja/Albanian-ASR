@@ -257,7 +257,8 @@ app = FastAPI(
     title="Albanian ASR API",
     description="Backend API for Albanian Automatic Speech Recognition dataset collection.",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    root_path="/api" if os.getenv("ENVIRONMENT") == "production" else ""
 )
 
 app.add_middleware(
