@@ -270,6 +270,8 @@ app.add_middleware(
 )
 
 app.mount("/splices", StaticFiles(directory=SPLICES_DIR), name="splices")
+app.mount("/mp3", StaticFiles(directory=UPLOAD_DIR_MP3), name="mp3")
+app.mount("/mp4", StaticFiles(directory=UPLOAD_DIR_MP4), name="mp4")
 
 app.include_router(auth.router)
 app.include_router(users.router)
