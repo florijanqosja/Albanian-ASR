@@ -1,0 +1,109 @@
+@layer theme, base, mui, components, utilities;
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme inline {
+  --font-sans: var(--font-khula), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --radius-md: calc(var(--radius) - 2px);
+
+  --radius-lg: var(--radius);
+
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+
+  --color-border: var(--border);
+
+  --color-input: var(--input);
+
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  body {
+    font-family: var(--font-khula), sans-serif;
+  }
+}
+
+:root {
+  --radius: 0.625rem;
+
+  --background: #ffffff;
+
+  --foreground: #404040;
+
+  --card: #ffffff;
+
+  --card-foreground: #404040;
+
+  --popover: #ffffff;
+
+  --popover-foreground: #404040;
+
+  --primary: #A64D4A;
+
+  --primary-foreground: #ffffff;
+
+  --secondary: #F3F4F6;
+
+  --secondary-foreground: #404040;
+
+  --muted: #F3F4F6;
+
+  --muted-foreground: #6b7280;
+
+  --accent: #FFE4E6;
+
+  --accent-foreground: #A64D4A;
+
+  --destructive: #ef4444;
+
+  --destructive-foreground: #ffffff;
+
+  --border: #FECACA;
+
+  --input: #FECACA;
+
+  --ring: #A64D4A;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-white text-black;
+  }
+}
