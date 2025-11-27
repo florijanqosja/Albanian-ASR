@@ -1,22 +1,13 @@
-# Base image
-FROM node:14-alpine
+FROM node:22-slim
 
-# Set the working directory
-WORKDIR /code
+WORKDIR /app
 
-# Copy package.json and package-lock.json
-COPY ./web/package.json ./
-COPY ./web/package-lock.json ./
-
-# Install dependencies
+COPY web/package*.json ./
 
 RUN npm install
 
-# Copy the entire project
-COPY ./web ./
-RUN npx browserslist@latest --update-db
-# Expose port 3000
+COPY web/ .
+
 EXPOSE 3000
 
-# Run the React app
-CMD ["npm", "start"]
+CMD ["npm", "run", "dev"]
