@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 # Constants - Use absolute paths in production (Docker), relative in development
 IS_PRODUCTION = os.getenv("ENVIRONMENT") == "production"
 BASE_DIR = "/code" if IS_PRODUCTION else "."
+API_ROOT_PATH = os.getenv("API_ROOT_PATH", "")
 
 UPLOAD_DIR_MP4 = os.path.join(BASE_DIR, "mp4")
 UPLOAD_DIR_MP3 = os.path.join(BASE_DIR, "mp3")
@@ -313,7 +314,7 @@ app = FastAPI(
     description="Backend API for Albanian Automatic Speech Recognition dataset collection.",
     version="1.0.0",
     lifespan=lifespan,
-    root_path="/api" if os.getenv("ENVIRONMENT") == "production" else ""
+    root_path=API_ROOT_PATH
 )
 
 app.add_middleware(
