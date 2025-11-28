@@ -84,8 +84,8 @@ services:
       context: .
       dockerfile: ./web/dockerfiles/Dockerfile.prod
       args:
-        - NEXT_PUBLIC_API_DOMAIN_LOCAL=https://uneduashqiperine.com/api
-        - NEXT_PUBLIC_FILE_ACCESS_DOMAIN_LOCAL=https://uneduashqiperine.com/api
+        - NEXT_PUBLIC_API_DOMAIN_LOCAL=https://uneduashqiperine.com/api/
+        - NEXT_PUBLIC_FILE_ACCESS_DOMAIN_LOCAL=https://uneduashqiperine.com/api/
         - NEXT_PUBLIC_API_URL=https://uneduashqiperine.com/api
         - NEXT_PUBLIC_ENVIRONMENT=production
         - NEXT_PUBLIC_API_DOCS_URL=https://uneduashqiperine.com/api/docs
