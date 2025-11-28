@@ -16,6 +16,7 @@ import { useSession } from "next-auth/react";
 import { Dialog, DialogTitle, DialogContent, DialogActions, Typography } from "@mui/material";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { buildFileAccessUrl } from "@/lib/utils";
 
 export default function MainSection() {
   const theme = useTheme();
@@ -139,7 +140,7 @@ export default function MainSection() {
       const response = await axios.get(`${process.env.NEXT_PUBLIC_API_DOMAIN_LOCAL}audio/to_label`);
       if (response.data && response.data.data) {
         const { path, id } = response.data.data;
-        const audioURL = `${process.env.NEXT_PUBLIC_FILE_ACCESS_DOMAIN_LOCAL}${path}`;
+        const audioURL = buildFileAccessUrl(process.env.NEXT_PUBLIC_FILE_ACCESS_DOMAIN_LOCAL, path);
         setAudioPath(audioURL);
         setAudioID(id);
         console.log("set the audioID to ", id);
