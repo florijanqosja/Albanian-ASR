@@ -368,6 +368,39 @@ async def create_video(
         logger.error(f"Error creating video: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+def _get_public_path(file_path: str) -> str:
+    """
+    Converts an absolute file system path to a public URL path.
+    Example: /code/splices/Sample_Perrala/file.wav -> /splices/Sample_Perrala/file.wav
+    """
+    if not file_path:
+        return file_path
+        
+    # If path starts with SPLICES_DIR, replace it with /splices
+    if file_path.startswith(SPLICES_DIR):
+        # Remove SPLICES_DIR prefix
+        relative_path = file_path[len(SPLICES_DIR):]
+        # Ensure leading slash
+        if not relative_path.startswith("/"):
+            relative_path = "/" + relative_path
+        return f"/splices{relative_path}"
+        
+    # If path starts with UPLOAD_DIR_MP3, replace it with /mp3
+    if file_path.startswith(UPLOAD_DIR_MP3):
+        relative_path = file_path[len(UPLOAD_DIR_MP3):]
+        if not relative_path.startswith("/"):
+            relative_path = "/" + relative_path
+        return f"/mp3{relative_path}"
+        
+    # If path starts with UPLOAD_DIR_MP4, replace it with /mp4
+    if file_path.startswith(UPLOAD_DIR_MP4):
+        relative_path = file_path[len(UPLOAD_DIR_MP4):]
+        if not relative_path.startswith("/"):
+            relative_path = "/" + relative_path
+        return f"/mp4{relative_path}"
+        
+    return file_path
+
 @app.get("/audio/to_label", response_model=_schemas.ResponseModel)
 async def get_audio_to_label(db: Session = Depends(_services.get_db)):
     first_splice = await _services.get_first_splice(db)
@@ -388,10 +421,15 @@ async def get_audio_to_label(db: Session = Depends(_services.get_db)):
         )
         processed_splice = await _services.create_splice_being_processed(splice_being_processed_data, db)
         await _services.delete_splice(first_splice.id, db)
+        
+        # Convert absolute path to public URL path for the response
+        # We create a copy of the data to avoid modifying the DB object if it's attached to session
+        response_data = processed_splice.model_dump()
+        response_data['path'] = _get_public_path(response_data['path'])
 
         return _schemas.ResponseModel(
             status="success",
-            data=processed_splice,
+            data=response_data,
             message="Audio retrieved for labeling"
         )
     except Exception as e:
