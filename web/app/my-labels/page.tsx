@@ -5,6 +5,7 @@ import { Container, Typography, Paper, Grid, Card, CardContent, Table, TableBody
 import { CheckCircle, Mic, Clock, Activity } from "lucide-react"
 import axios from "axios"
 import Footer from "@/components/Sections/Footer"
+import { buildFileAccessUrl } from "@/lib/utils"
 
 interface ActivityItem {
     id: number;
@@ -115,7 +116,11 @@ export default function MyLabelsPage() {
                   <TableRow key={row.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                       <TableCell>{index + 1}</TableCell>
                       <TableCell>
-                          <audio controls src={`${process.env.NEXT_PUBLIC_FILE_ACCESS_DOMAIN_LOCAL || 'http://localhost:8000/'}${row.path}`} style={{ height: 32, borderRadius: 20 }} />
+                          <audio
+                            controls
+                            src={buildFileAccessUrl(process.env.NEXT_PUBLIC_FILE_ACCESS_DOMAIN_LOCAL || "http://localhost:8000", row.path)}
+                            style={{ height: 32, borderRadius: 20 }}
+                          />
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontFamily: 'monospace', bgcolor: 'grey.50', p: 1, borderRadius: 1 }}>
