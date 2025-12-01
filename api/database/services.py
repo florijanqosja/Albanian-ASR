@@ -160,12 +160,12 @@ def create_user(
     return _schemas.User.model_validate(user_db)
 
 def get_user_stats(db: "Session", user_id: str):
-    # Labeled count: In LabeledSplice (user_id) + In HighQuality (labeler_id)
-    labeled_count = db.query(_models.LabeledSplice).filter(_models.LabeledSplice.user_id == user_id).count()
+    # Labeled count: In LabeledSplice (labeler_id) + In HighQuality (labeler_id)
+    labeled_count = db.query(_models.LabeledSplice).filter(_models.LabeledSplice.labeler_id == user_id).count()
     labeled_count += db.query(_models.HighQualityLabeledSplice).filter(_models.HighQualityLabeledSplice.labeler_id == user_id).count()
     
-    # Validated count: In HighQuality (user_id)
-    validated_count = db.query(_models.HighQualityLabeledSplice).filter(_models.HighQualityLabeledSplice.user_id == user_id).count()
+    # Validated count: In HighQuality (validator_id)
+    validated_count = db.query(_models.HighQualityLabeledSplice).filter(_models.HighQualityLabeledSplice.validator_id == user_id).count()
     
     # Calculate hours (simplified, assuming duration is float string)
     # This is inefficient for large datasets, should be done with SQL sum cast
@@ -180,12 +180,12 @@ def get_user_stats(db: "Session", user_id: str):
                 pass
         return total
 
-    labeled_q1 = db.query(_models.LabeledSplice.duration).filter(_models.LabeledSplice.user_id == user_id)
+    labeled_q1 = db.query(_models.LabeledSplice.duration).filter(_models.LabeledSplice.labeler_id == user_id)
     labeled_q2 = db.query(_models.HighQualityLabeledSplice.duration).filter(_models.HighQualityLabeledSplice.labeler_id == user_id)
     
     hours_labeled = (sum_duration(labeled_q1) + sum_duration(labeled_q2)) / 3600.0
     
-    validated_q = db.query(_models.HighQualityLabeledSplice.duration).filter(_models.HighQualityLabeledSplice.user_id == user_id)
+    validated_q = db.query(_models.HighQualityLabeledSplice.duration).filter(_models.HighQualityLabeledSplice.validator_id == user_id)
     hours_validated = sum_duration(validated_q) / 3600.0
     
     return {
@@ -199,7 +199,7 @@ def get_user_activity(db: "Session", user_id: str, limit: int = 10):
     # Fetch recent activity from HighQualityLabeledSplice (completed items)
     # We could also include LabeledSplice (pending items) but let's start with completed.
     items = db.query(_models.HighQualityLabeledSplice).filter(
-        (_models.HighQualityLabeledSplice.user_id == user_id) | 
+        (_models.HighQualityLabeledSplice.validator_id == user_id) | 
         (_models.HighQualityLabeledSplice.labeler_id == user_id)
     ).order_by(_models.HighQualityLabeledSplice.id.desc()).limit(limit).all()
     return items
