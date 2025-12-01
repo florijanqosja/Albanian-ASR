@@ -11,15 +11,18 @@ import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
-import { useTheme } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 import { useSession } from "next-auth/react";
-import { Dialog, DialogTitle, DialogContent, DialogActions, Typography } from "@mui/material";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { buildFileAccessUrl } from "@/lib/utils";
+import { useSpliceQueue } from "@/hooks/useSpliceQueue";
+import AuthRequiredDialog from "@/components/Elements/AuthRequiredDialog";
 
 export default function MainSection() {
   const theme = useTheme();
+  const waveColor = theme.palette.border.main;
+  const progressColor = theme.palette.primary.main;
+  const regionSelectionColor = alpha(theme.palette.primary.main, 0.25);
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
   const regionsRef = useRef<RegionsPlugin | null>(null);
@@ -27,18 +30,27 @@ export default function MainSection() {
   
   const [playing, setPlaying] = useState(false);
   const [labelValue, setLabelValue] = useState("");
-  const [audioID, setAudioID] = useState<string | null>(null);
-  const [audioPath, setAudioPath] = useState("");
-  
-  // Cut functionality state
   const [cutMode, setCutMode] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [endTime, setEndTime] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
+  const { clip, isLoading, statusMessage, error, fetchNextClip, submitClip, deleteClip } = useSpliceQueue("label");
+  const hasClip = Boolean(clip);
   const { data: session } = useSession();
   const router = useRouter();
+  const DEFAULT_AUTH_MESSAGE = "Please register or log in to keep track of your contributions. You can also continue anonymously if you prefer.";
   const [openAuthDialog, setOpenAuthDialog] = useState(false);
+  const [authDialogMessage, setAuthDialogMessage] = useState(DEFAULT_AUTH_MESSAGE);
+  const accessToken = (session as { accessToken?: string } | null)?.accessToken;
+
+  const showAuthDialog = (message?: string) => {
+    setAuthDialogMessage(message ?? DEFAULT_AUTH_MESSAGE);
+    setOpenAuthDialog(true);
+  };
+
+  const closeAuthDialog = () => {
+    setAuthDialogMessage(DEFAULT_AUTH_MESSAGE);
+    setOpenAuthDialog(false);
+  };
 
   // Initialize WaveSurfer when container is ready
   useEffect(() => {
@@ -46,8 +58,8 @@ export default function MainSection() {
 
     const ws = WaveSurfer.create({
       container: containerRef.current,
-      waveColor: theme.palette.border.main,
-      progressColor: theme.palette.primary.main,
+      waveColor,
+      progressColor,
       barGap: 3,
       barWidth: 2,
       barHeight: 2,
@@ -90,7 +102,7 @@ export default function MainSection() {
       ws.destroy();
       wavesurferRef.current = null;
     };
-  }, []);
+  }, [progressColor, waveColor]);
 
   // Handle Cut Mode Toggle
   useEffect(() => {
@@ -98,7 +110,7 @@ export default function MainSection() {
     
     if (cutMode) {
       regionsDragCleanupRef.current = regionsRef.current.enableDragSelection({
-        color: 'rgba(189, 62, 58, 0.3)',
+        color: regionSelectionColor,
       });
     } else {
       if (regionsDragCleanupRef.current) {
@@ -109,119 +121,109 @@ export default function MainSection() {
       setStartTime(null);
       setEndTime(null);
     }
-  }, [cutMode]);
+  }, [cutMode, regionSelectionColor]);
 
-  // Load audio when path changes
+  // Load audio when clip changes
   useEffect(() => {
-    if (wavesurferRef.current && audioPath) {
-      wavesurferRef.current.load(audioPath).catch((err) => {
+    if (!wavesurferRef.current) {
+      return;
+    }
+
+    if (clip?.audioUrl) {
+      wavesurferRef.current.load(clip.audioUrl).catch((err) => {
         if (err.name === 'AbortError') {
           console.log('WaveSurfer load aborted');
         } else {
           console.error('WaveSurfer load error', err);
         }
       });
-      // Reset regions when new audio loads
-      if (regionsRef.current) {
-        regionsRef.current.clearRegions();
-      }
-      setStartTime(null);
-      setEndTime(null);
+      regionsRef.current?.clearRegions();
+    } else if (typeof wavesurferRef.current.empty === "function") {
+      wavesurferRef.current.empty();
     }
-  }, [audioPath]);
+
+    setStartTime(null);
+    setEndTime(null);
+  }, [clip?.audioUrl, clip?.id]);
 
   useEffect(() => {
-    fetchAudioData();
-  }, []);
+    fetchNextClip();
+  }, [fetchNextClip]);
 
-  const fetchAudioData = async () => {
-    setIsLoading(true);
-    try {
-      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_DOMAIN_LOCAL}audio/to_label`);
-      if (response.data && response.data.data) {
-        const { path, id } = response.data.data;
-        const audioURL = buildFileAccessUrl(process.env.NEXT_PUBLIC_FILE_ACCESS_DOMAIN_LOCAL, path);
-        setAudioPath(audioURL);
-        setAudioID(id);
-        console.log("set the audioID to ", id);
-      } else {
-        console.log("No audio data available to label.");
-      }
-    } catch (error) {
-      console.error("Failed to fetch audio data:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  useEffect(() => {
+    setLabelValue("");
+  }, [clip?.id]);
 
   const deleteAudio = async () => {
-    setIsLoading(true);
+    if (!deleteClip || !clip) {
+      return;
+    }
     try {
-      await axios.delete(`${process.env.NEXT_PUBLIC_API_DOMAIN_LOCAL}audio`, {
-        data: {
-          id: audioID,
-        },
-      });
-      console.log("Delete request successful");
-      if (wavesurferRef.current) {
-          wavesurferRef.current.stop();
-          // wavesurferRef.current.empty(); // empty() is not in v7, load('') or similar might work but usually just stop is enough or load new
-      }
-      setLabelValue(""); 
-      await fetchAudioData();
+      wavesurferRef.current?.stop();
+      setLabelValue("");
+      setCutMode(false);
+      await deleteClip();
     } catch (error) {
-      console.error("Failed to perform DELETE request:", error);
-      setIsLoading(false);
+      console.error("Failed to delete audio", error);
     }
   };
 
   const handleSubmit = async () => {
-    if (!session) {
-        setOpenAuthDialog(true);
-        return;
+    if (!accessToken) {
+      showAuthDialog();
+      return;
     }
     await submitData(true);
   };
 
   const handleSkip = async () => {
-    setOpenAuthDialog(false);
+    closeAuthDialog();
     await submitData(false);
   };
 
   const submitData = async (isAuthenticated: boolean) => {
-    setIsLoading(true);
+    if (!clip) return;
     try {
-      const payload: { id: string | null; label: string; start?: number; end?: number } = {
-        id: audioID,
+      let start: number | undefined;
+      let end: number | undefined;
+
+      const shouldSendTrim =
+        cutMode &&
+        startTime !== null &&
+        endTime !== null &&
+        startTime !== endTime;
+
+      if (shouldSendTrim) {
+        const trimStart = Math.min(startTime as number, endTime as number);
+        const trimEnd = Math.max(startTime as number, endTime as number);
+        start = Number(trimStart.toFixed(3));
+        end = Number(trimEnd.toFixed(3));
+      }
+
+      await submitClip({
         label: labelValue,
-      };
+        start,
+        end,
+        isAuthenticated,
+        accessToken,
+      });
 
-      if (cutMode && startTime !== null && endTime !== null) {
-        payload.start = startTime;
-        payload.end = endTime;
-      }
-
-      const endpoint = isAuthenticated ? "audio/label" : "audio/label/anonymous";
-      const headers = isAuthenticated ? { Authorization: `Bearer ${(session as { accessToken?: string }).accessToken}` } : {};
-
-      await axios.put(`${process.env.NEXT_PUBLIC_API_DOMAIN_LOCAL}${endpoint}`, payload, { headers });
-      console.log("PUT request successful");
-      if (wavesurferRef.current) {
-          wavesurferRef.current.stop();
-      }
-      setLabelValue(""); 
-      // Reset cut mode
+      wavesurferRef.current?.stop();
+      setLabelValue("");
       setCutMode(false);
-      setTimeout(() => {
-        fetchAudioData(); 
-      }, 500);
     } catch (error) {
-      console.error("Failed to perform PUT request:", error);
-      setIsLoading(false);
+      if (axios.isAxiosError(error) && error.response?.status === 401 && isAuthenticated) {
+        showAuthDialog("Your session expired. Please sign in again to continue labeling.");
+      } else {
+        console.error("Failed to perform PUT request:", error);
+      }
     }
   };
 
   const handlePlayPause = () => {
+    if (!clip) {
+      return;
+    }
     if (wavesurferRef.current) {
       if (cutMode && startTime !== null && endTime !== null && regionsRef.current) {
         const regions = regionsRef.current.getRegions();
@@ -255,6 +257,9 @@ export default function MainSection() {
         <CardBody>
           <WaveformContainer>
             <div ref={containerRef} style={{ width: "100%" }} />
+            {!clip && (statusMessage || error) && (
+              <EmptyState>{statusMessage ?? error}</EmptyState>
+            )}
           </WaveformContainer>
           
           <InputSection>
@@ -266,9 +271,11 @@ export default function MainSection() {
                     checked={cutMode}
                     onChange={(e) => setCutMode(e.target.checked)}
                     name="cutMode"
+                    disabled={!hasClip}
                   />
                 }
                 label={<CutAudioLabel>Cut Audio</CutAudioLabel>}
+                disabled={!hasClip}
               />
             </LabelRow>
             <StyledTextField
@@ -278,6 +285,7 @@ export default function MainSection() {
               value={labelValue}
               onChange={(event) => setLabelValue(event.target.value)}
               fullWidth
+              disabled={!hasClip}
               InputProps={{
                 style: { backgroundColor: 'var(--accent)', borderRadius: '8px' }
               }}
@@ -285,33 +293,31 @@ export default function MainSection() {
           </InputSection>
 
           <ControlsRow>
-            <CircleButton onClick={handlePlayPause}>
+            <CircleButton onClick={handlePlayPause} disabled={!hasClip}>
               {playing ? <PauseIcon style={{ color: 'var(--foreground)' }} /> : <PlayArrowIcon style={{ color: 'var(--foreground)' }} />}
             </CircleButton>
             
             <SubmitButton
               variant="contained"
               onClick={handleSubmit}
+              disabled={!hasClip}
             >
               Submit
             </SubmitButton>
 
-            <CircleButton onClick={deleteAudio}>
+            <CircleButton onClick={deleteAudio} disabled={!hasClip}>
               <DeleteIcon style={{ color: 'var(--foreground)' }} />
             </CircleButton>
           </ControlsRow>
         </CardBody>
       </CardContainer>
-      <Dialog open={openAuthDialog} onClose={() => setOpenAuthDialog(false)}>
-        <DialogTitle>Authentication Required</DialogTitle>
-        <DialogContent>
-            <Typography>Please register or log in to track your contributions. You can also continue anonymously.</Typography>
-        </DialogContent>
-        <DialogActions>
-            <Button onClick={handleSkip}>Skip (Anonymous)</Button>
-            <Button onClick={() => router.push("/login")} variant="contained">Register / Log In</Button>
-        </DialogActions>
-      </Dialog>
+      <AuthRequiredDialog
+        open={openAuthDialog}
+        onClose={closeAuthDialog}
+        onSkip={handleSkip}
+        onAuthenticate={() => router.push("/login")}
+        message={authDialogMessage}
+      />
     </Wrapper>
   );
 }
@@ -362,6 +368,19 @@ const WaveformContainer = styled.div`
   border-radius: 50px;
   padding: 20px 40px;
   margin-bottom: 30px;
+  position: relative;
+  min-height: 120px;
+`;
+
+const EmptyState = styled.div`
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: var(--foreground);
+  text-align: center;
 `;
 
 const InputSection = styled.div`

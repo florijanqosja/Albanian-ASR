@@ -68,6 +68,7 @@ services:
       - MAIL_FROM_NAME=${MAIL_FROM_NAME}
       - AHASEND_ACCOUNT_ID=${AHASEND_ACCOUNT_ID}
       - ENVIRONMENT=production
+      - API_ROOT_PATH=/api
     depends_on:
       db:
         condition: service_healthy

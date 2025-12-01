@@ -34,7 +34,7 @@ class SpliceBase(_pydantic.BaseModel):
     origin: str
     duration: str
     validation: str
-    user_id: str
+    owner_id: str
 
 
 class Splice(SpliceBase):
@@ -52,7 +52,8 @@ class LabeledSpliceBase(_pydantic.BaseModel):
     origin: str
     duration: str
     validation: str
-    user_id: str
+    owner_id: str
+    labeler_id: Optional[str] = None
 
 
 class LabeledSplice(LabeledSpliceBase):
@@ -70,7 +71,8 @@ class HighQualityLabeledSpliceBase(_pydantic.BaseModel):
     origin: str
     duration: str
     validation: str
-    user_id: str
+    owner_id: str
+    validator_id: str
     labeler_id: Optional[str] = None
 
 
@@ -89,7 +91,9 @@ class DeletedSpliceBase(_pydantic.BaseModel):
     origin: str
     duration: str
     validation: str
-    user_id: str
+    owner_id: str
+    labeler_id: Optional[str] = None
+    validator_id: Optional[str] = None
 
 
 class DeletedSplice(DeletedSpliceBase):
@@ -107,8 +111,9 @@ class SpliceBeingProcessedBase(_pydantic.BaseModel):
     origin: str
     duration: str
     validation: str
-    user_id: str
+    owner_id: str
     labeler_id: Optional[str] = None
+    validator_id: Optional[str] = None
 
     status: str
 
@@ -121,17 +126,18 @@ class SpliceBeingProcessedCreate(SpliceBeingProcessedBase):
 
 
 
-class LabelSplice(_pydantic.BaseModel):
+class BaseSpliceAction(_pydantic.BaseModel):
     id: int
     label: str
     validation: Optional[str] = None
     start: Optional[float] = None
     end: Optional[float] = None
 
-class ValidateSplice(_pydantic.BaseModel):
-    id: int
-    label: str
-    validation: Optional[str] = None
+class LabelSplice(BaseSpliceAction):
+    pass
+
+class ValidateSplice(BaseSpliceAction):
+    validator_id: Optional[str] = None
 
 class DeleteSplice(_pydantic.BaseModel):
     id: int
@@ -172,11 +178,17 @@ class CompleteProfileRequest(_pydantic.BaseModel):
 
 class Token(_pydantic.BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str
+    expires_in: int
 
 class TokenData(_pydantic.BaseModel):
     email: Optional[str] = None
     user_id: Optional[str] = None
+
+
+class RefreshTokenRequest(_pydantic.BaseModel):
+    refresh_token: str
 
 
 # Email verification schemas

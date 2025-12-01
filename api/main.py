@@ -2,7 +2,7 @@ import logging
 import os
 import wave
 from contextlib import asynccontextmanager
-from typing import Optional
+from typing import Optional, Tuple
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.concurrency import run_in_threadpool
@@ -35,6 +35,10 @@ API_ROOT_PATH = os.getenv("API_ROOT_PATH", "")
 UPLOAD_DIR_MP4 = os.path.join(BASE_DIR, "mp4")
 UPLOAD_DIR_MP3 = os.path.join(BASE_DIR, "mp3")
 SPLICES_DIR = os.path.join(BASE_DIR, "splices")
+
+UPLOAD_DIR_MP4_ABS = os.path.abspath(UPLOAD_DIR_MP4)
+UPLOAD_DIR_MP3_ABS = os.path.abspath(UPLOAD_DIR_MP3)
+SPLICES_DIR_ABS = os.path.abspath(SPLICES_DIR)
 SAMPLE_FILE_PATH = "sample_perrala.mp3"
 DOCKER_SAMPLE_PATH = "/code/sample_perrala.mp3"
 
@@ -176,7 +180,7 @@ async def _process_video_upload(
                 duration=str(duration),
                 validation="0",
                 label="",
-                user_id=user_id
+                owner_id=user_id
             )
             await _services.create_splice(splice=create_splice_data, db=db)
 
@@ -369,38 +373,95 @@ async def create_video(
         logger.error(f"Error creating video: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-def _get_public_path(file_path: str) -> str:
-    """
-    Converts an absolute file system path to a public URL path.
-    Example: /code/splices/Sample_Perrala/file.wav -> /splices/Sample_Perrala/file.wav
-    """
+def _prepare_trim_window(start: Optional[float], end: Optional[float]) -> Optional[Tuple[float, float]]:
+    """Validates and orders trimming boundaries."""
+    if start is None and end is None:
+        return None
+    if start is None or end is None:
+        raise HTTPException(status_code=400, detail="Both start and end times are required when trimming")
+    if start < 0 or end < 0:
+        raise HTTPException(status_code=400, detail="Start and end times must be non-negative")
+    if start == end:
+        return None
+    ordered_start = min(start, end)
+    ordered_end = max(start, end)
+    return ordered_start, ordered_end
+
+
+def _trim_audio_segment(file_path: str, start: float, end: float) -> Optional[float]:
+    """Trims the provided audio file in-place and returns the new duration in seconds."""
+    if start == end:
+        logger.info("Start and end times are identical; skipping trim for %s", file_path)
+        return None
+
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Audio file for splice not found")
+
+    try:
+        audio = AudioSegment.from_file(file_path)
+        audio_length_ms = len(audio)
+        start_ms = max(0, int(start * 1000))
+        end_ms = min(audio_length_ms, int(end * 1000))
+
+        if start_ms >= end_ms:
+            logger.info("Computed trim window is empty for %s; skipping trim", file_path)
+            return None
+
+        trimmed_segment = audio[start_ms:end_ms]
+        audio_format = os.path.splitext(file_path)[1].lstrip('.').lower() or 'wav'
+        trimmed_segment.export(file_path, format=audio_format)
+        new_duration = len(trimmed_segment) / 1000.0
+        logger.info(
+            "Trimmed %s from %.3fs-%.3fs; new duration %.3fs",
+            file_path,
+            start_ms / 1000.0,
+            end_ms / 1000.0,
+            new_duration,
+        )
+        return new_duration
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Failed to trim audio file %s: %s", file_path, exc)
+        raise HTTPException(status_code=500, detail="Failed to trim audio file")
+
+def _get_public_path(file_path: str, include_version: bool = True) -> str:
+    """Converts a filesystem path into the mounted static path and busts caches."""
     if not file_path:
         return file_path
-        
-    # If path starts with SPLICES_DIR, replace it with /splices
-    if file_path.startswith(SPLICES_DIR):
-        # Remove SPLICES_DIR prefix
-        relative_path = file_path[len(SPLICES_DIR):]
-        # Ensure leading slash
-        if not relative_path.startswith("/"):
-            relative_path = "/" + relative_path
-        return f"/splices{relative_path}"
-        
-    # If path starts with UPLOAD_DIR_MP3, replace it with /mp3
-    if file_path.startswith(UPLOAD_DIR_MP3):
-        relative_path = file_path[len(UPLOAD_DIR_MP3):]
-        if not relative_path.startswith("/"):
-            relative_path = "/" + relative_path
-        return f"/mp3{relative_path}"
-        
-    # If path starts with UPLOAD_DIR_MP4, replace it with /mp4
-    if file_path.startswith(UPLOAD_DIR_MP4):
-        relative_path = file_path[len(UPLOAD_DIR_MP4):]
-        if not relative_path.startswith("/"):
-            relative_path = "/" + relative_path
-        return f"/mp4{relative_path}"
-        
-    return file_path
+
+    normalized_path = os.path.abspath(file_path)
+
+    def _relativize(base_dir: str, mount_point: str) -> Optional[str]:
+        if normalized_path.startswith(base_dir):
+            relative_path = normalized_path[len(base_dir):]
+            if not relative_path.startswith("/"):
+                relative_path = "/" + relative_path
+            return f"{mount_point}{relative_path}"
+        return None
+
+    public_path = None
+    for directory, mount_point in (
+        (SPLICES_DIR_ABS, "/splices"),
+        (UPLOAD_DIR_MP3_ABS, "/mp3"),
+        (UPLOAD_DIR_MP4_ABS, "/mp4"),
+    ):
+        public_path = _relativize(directory, mount_point)
+        if public_path:
+            break
+
+    if not public_path:
+        return normalized_path
+
+    if include_version:
+        try:
+            version = int(os.path.getmtime(normalized_path))
+            separator = "&" if "?" in public_path else "?"
+            return f"{public_path}{separator}v={version}"
+        except OSError as exc:
+            logger.warning("Could not read modification time for %s: %s", normalized_path, exc)
+
+    return public_path
 
 @app.get("/audio/to_label", response_model=_schemas.ResponseModel)
 async def get_audio_to_label(db: Session = Depends(_services.get_db)):
@@ -418,15 +479,14 @@ async def get_audio_to_label(db: Session = Depends(_services.get_db)):
             duration=first_splice.duration,
             validation=first_splice.validation,
             status='un_labeled',
-            user_id=first_splice.user_id
+            owner_id=first_splice.owner_id
         )
         processed_splice = await _services.create_splice_being_processed(splice_being_processed_data, db)
         await _services.delete_splice(first_splice.id, db)
-        
-        # Convert absolute path to public URL path for the response
-        # We create a copy of the data to avoid modifying the DB object if it's attached to session
-        response_data = processed_splice.model_dump()
-        response_data['path'] = _get_public_path(response_data['path'])
+
+        response_data = processed_splice.model_copy(update={
+            "path": _get_public_path(processed_splice.path)
+        })
 
         return _schemas.ResponseModel(
             status="success",
@@ -452,15 +512,19 @@ async def get_audio_to_validate(db: Session = Depends(_services.get_db)):
             duration=first_splice.duration,
             validation=first_splice.validation,
             status='labeled',
-            user_id=first_splice.user_id,
-            labeler_id=first_splice.user_id
+            owner_id=first_splice.owner_id,
+            labeler_id=first_splice.labeler_id
         )
         processed_splice = await _services.create_splice_being_processed(splice_being_processed_data, db)
         await _services.delete_labeled_splice(first_splice.id, db)
 
+        response_data = processed_splice.model_copy(update={
+            "path": _get_public_path(processed_splice.path)
+        })
+
         return _schemas.ResponseModel(
             status="success",
-            data=processed_splice,
+            data=response_data,
             message="Audio retrieved for validation"
         )
     except Exception as e:
@@ -468,28 +532,34 @@ async def get_audio_to_validate(db: Session = Depends(_services.get_db)):
         raise HTTPException(status_code=500, detail="Failed to retrieve audio for validation")
 
 async def _label_splice_logic(label_splice: _schemas.LabelSplice, db: Session, user_id: str):
-    if label_splice.start is not None and label_splice.end is not None:
-        logger.info(f"Cutting audio from {label_splice.start} to {label_splice.end}")
-        
     splice_being_processed = await _services.get_splice_being_processed(label_splice.id, db)
     if not splice_being_processed or splice_being_processed.status != 'un_labeled':
         raise HTTPException(status_code=404, detail="Splice not found or invalid status")
+    
+    trim_window = _prepare_trim_window(label_splice.start, label_splice.end)
+    new_duration = None
+    if trim_window:
+        new_duration = _trim_audio_segment(splice_being_processed.path, *trim_window)
     
     update_data = {
         "id": label_splice.id,
         "label": label_splice.label,
         "validation": label_splice.validation or '0.95',
+        "labeler_id": user_id,
     }
-    await _services.update_splice_being_processed(splice_id=label_splice.id, data=update_data, db=db)
+    if new_duration is not None:
+        update_data["duration"] = str(round(new_duration, 3))
+    updated_splice = await _services.update_splice_being_processed(splice_id=label_splice.id, data=update_data, db=db)
 
     labeled_splice_data = _schemas.LabeledSpliceCreate(
-        name=splice_being_processed.name,
-        path=splice_being_processed.path,
+        name=updated_splice.name,
+        path=updated_splice.path,
         label=label_splice.label,
-        origin=splice_being_processed.origin,
-        duration=splice_being_processed.duration,
+        origin=updated_splice.origin,
+        duration=updated_splice.duration,
         validation=label_splice.validation or '0.95',
-        user_id=user_id
+        owner_id=updated_splice.owner_id,
+        labeler_id=user_id
     )
     await _services.create_labeled_splice(labeled_splice_data, db)
     await _services.delete_splice_being_processed(splice_being_processed, db)
@@ -526,30 +596,48 @@ async def label_splice_anonymous(
         logger.error(f"Error labeling splice: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-async def _validate_splice_logic(validate_splice: _schemas.LabelSplice, db: Session, user_id: str):
-    if validate_splice.start is not None and validate_splice.end is not None:
-        logger.info(f"Cutting audio from {validate_splice.start} to {validate_splice.end}")
-
+async def _validate_splice_logic(
+    validate_splice: _schemas.ValidateSplice,
+    db: Session,
+    fallback_validator_id: Optional[str],
+):
     splice_being_processed = await _services.get_splice_being_processed(validate_splice.id, db)
     if not splice_being_processed or splice_being_processed.status != 'labeled':
         raise HTTPException(status_code=404, detail="Splice not found or invalid status")
+    validator_id = validate_splice.validator_id or fallback_validator_id
+    if not validator_id:
+        raise HTTPException(status_code=400, detail="Validator id is required to finalize a splice")
+    
+    trim_window = _prepare_trim_window(validate_splice.start, validate_splice.end)
+    new_duration = None
+    if trim_window:
+        new_duration = _trim_audio_segment(splice_being_processed.path, *trim_window)
     
     update_data = {
         "id": validate_splice.id,
         "label": validate_splice.label,
         "validation": validate_splice.validation or '1.0',
+        "validator_id": validator_id,
     }
-    await _services.update_splice_being_processed(splice_id=validate_splice.id, data=update_data, db=db)
+    if new_duration is not None:
+        update_data["duration"] = str(round(new_duration, 3))
+
+    updated_splice = await _services.update_splice_being_processed(
+        splice_id=validate_splice.id,
+        data=update_data,
+        db=db
+    )
 
     hq_splice_data = _schemas.HighQualityLabeledSpliceCreate(
-        name=splice_being_processed.name,
-        path=splice_being_processed.path,
+        name=updated_splice.name,
+        path=updated_splice.path,
         label=validate_splice.label,
-        origin=splice_being_processed.origin,
-        duration=splice_being_processed.duration,
+        origin=updated_splice.origin,
+        duration=updated_splice.duration,
         validation=validate_splice.validation or '1.0',
-        user_id=user_id,
-        labeler_id=splice_being_processed.labeler_id
+        owner_id=updated_splice.owner_id,
+        validator_id=validator_id,
+        labeler_id=updated_splice.labeler_id
     )
     await _services.create_high_quality_labeled_splice(hq_splice_data, db)
     await _services.delete_splice_being_processed(splice_being_processed, db)
@@ -558,12 +646,15 @@ async def _validate_splice_logic(validate_splice: _schemas.LabelSplice, db: Sess
 
 @app.put("/audio/validate", response_model=_schemas.ResponseModel)
 async def validate_splice(
-    validate_splice: _schemas.LabelSplice, 
+    validate_splice: _schemas.ValidateSplice, 
     db: Session = Depends(_services.get_db),
     current_user: _schemas.User = Depends(auth.get_current_user)
 ):
     try:
-        return await _validate_splice_logic(validate_splice, db, current_user.id)
+        if validate_splice.validator_id and validate_splice.validator_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Validator mismatch")
+        payload = validate_splice.model_copy(update={"validator_id": current_user.id})
+        return await _validate_splice_logic(payload, db, current_user.id)
     except HTTPException:
         raise
     except Exception as e:
@@ -572,14 +663,15 @@ async def validate_splice(
 
 @app.put("/audio/validate/anonymous", response_model=_schemas.ResponseModel)
 async def validate_splice_anonymous(
-    validate_splice: _schemas.LabelSplice, 
+    validate_splice: _schemas.ValidateSplice, 
     db: Session = Depends(_services.get_db)
 ):
     try:
         anon_user = _services.get_user_by_email(db, "anonymous@albaniansr.com")
         if not anon_user:
              raise HTTPException(status_code=500, detail="Anonymous user not found")
-        return await _validate_splice_logic(validate_splice, db, anon_user.id)
+        payload = validate_splice.model_copy(update={"validator_id": anon_user.id})
+        return await _validate_splice_logic(payload, db, anon_user.id)
     except HTTPException:
         raise
     except Exception as e:
@@ -601,7 +693,9 @@ async def delete_splice(delete_splice: _schemas.DeleteSplice, db: Session = Depe
             origin=splice_being_processed.origin,
             duration=splice_being_processed.duration,
             validation=splice_being_processed.validation or "0",
-            user_id=splice_being_processed.user_id
+            owner_id=splice_being_processed.owner_id,
+            labeler_id=splice_being_processed.labeler_id,
+            validator_id=splice_being_processed.validator_id
         )
         await _services.create_deleted_splice(deleted_splice_data, db)
 

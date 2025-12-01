@@ -31,6 +31,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 VERIFICATION_CODE_EXPIRE_MINUTES = 15
 RESET_CODE_EXPIRE_MINUTES = 15
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "14"))
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
@@ -41,15 +42,36 @@ def verify_password(plain_password, hashed_password):
 def get_password_hash(password):
     return pwd_context.hash(password)
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+def _create_token(data: dict, expires_delta: timedelta, token_type: str):
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
+    expire = datetime.utcnow() + expires_delta
+    to_encode.update({
+        "exp": expire,
+        "token_type": token_type
+    })
     encoded_jwt = jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    return encoded_jwt, int(expires_delta.total_seconds())
+
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    expires = expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    return _create_token(data, expires, "access")
+
+
+def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None):
+    expires = expires_delta or timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    return _create_token(data, expires, "refresh")
+
+
+def _token_pair_response(user: models.User) -> schemas.Token:
+    access_token, expires_in = create_access_token({"sub": user.email, "id": user.id})
+    refresh_token, _ = create_refresh_token({"sub": user.email, "id": user.id})
+    return schemas.Token(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
+        expires_in=expires_in
+    )
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
@@ -61,7 +83,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         user_id: str = payload.get("id")
-        if email is None or user_id is None:
+        token_type: str = payload.get("token_type")
+        if email is None or user_id is None or token_type != "access":
             raise credentials_exception
         token_data = schemas.TokenData(email=email, user_id=user_id)
     except JWTError:
@@ -144,11 +167,7 @@ def verify_email(request: schemas.VerifyEmailRequest, db: Session = Depends(get_
         logging.getLogger(__name__).error(f"Failed to send welcome email: {e}")
     
     # Generate access token
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.email, "id": user.id}, expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return _token_pair_response(user)
 
 
 @router.post("/resend-verification")
@@ -251,14 +270,39 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
             detail="Email not verified. Please check your email for the verification code.",
         )
     
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.email, "id": user.id}, expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return _token_pair_response(user)
 
 class GoogleLoginRequest(BaseModel):
     token: str
+
+
+@router.post("/refresh", response_model=schemas.Token)
+def refresh_access_token(
+    request: schemas.RefreshTokenRequest,
+    db: Session = Depends(get_db)
+):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    try:
+        payload = jwt.decode(request.refresh_token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("token_type") != "refresh":
+            raise credentials_exception
+        user_id: Optional[str] = payload.get("id")
+        if not user_id:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    user = services.get_user(db, user_id=user_id)
+    if not user:
+        raise credentials_exception
+
+    return _token_pair_response(user)
+
 
 @router.post("/google", response_model=schemas.Token)
 def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db)):
@@ -317,11 +361,7 @@ def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db)):
                 db.commit()
                 db.refresh(user)
 
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={"sub": user.email, "id": user.id}, expires_delta=access_token_expires
-        )
-        return {"access_token": access_token, "token_type": "bearer"}
+        return _token_pair_response(user)
 
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid Google token")

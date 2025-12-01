@@ -52,7 +52,7 @@ class Splice(_database.Base):
     origin = _sql.Column(_sql.String, nullable=True)
     duration = _sql.Column(_sql.String, nullable=True)
     validation = _sql.Column(_sql.String, nullable=True)
-    user_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=False)
+    owner_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=False)
 
 
 class LabeledSplice(_database.Base):
@@ -64,7 +64,8 @@ class LabeledSplice(_database.Base):
     origin = _sql.Column(_sql.String, nullable=True)
     duration = _sql.Column(_sql.String, nullable=True)
     validation = _sql.Column(_sql.String, nullable=True)
-    user_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=False)
+    owner_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=False)
+    labeler_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=True)
 
 
 class HighQualityLabeledSplice(_database.Base):
@@ -76,7 +77,8 @@ class HighQualityLabeledSplice(_database.Base):
     origin = _sql.Column(_sql.String, nullable=True)
     duration = _sql.Column(_sql.String, nullable=True)
     validation = _sql.Column(_sql.String, nullable=True)
-    user_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=False) # Validator
+    owner_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=False)
+    validator_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=False)
     labeler_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=True) # Original Labeler
 
 
@@ -89,7 +91,9 @@ class DeletedSplice(_database.Base):
     origin = _sql.Column(_sql.String, nullable=True)
     duration = _sql.Column(_sql.String, nullable=True)
     validation = _sql.Column(_sql.String, nullable=True)
-    user_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=False)
+    owner_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=False)
+    labeler_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=True)
+    validator_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=True)
 
 
 class SpliceBeingProcessed(_database.Base):
@@ -102,6 +106,7 @@ class SpliceBeingProcessed(_database.Base):
     duration = _sql.Column(_sql.String, nullable=True)
     validation = _sql.Column(_sql.String, nullable=True)
     status = _sql.Column(_sql.String, nullable=True)
-    user_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=False)
+    owner_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=False)
     labeler_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=True)
+    validator_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=True)
 
