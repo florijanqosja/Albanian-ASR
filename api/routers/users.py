@@ -6,7 +6,7 @@ from .auth import get_current_user
 
 router = APIRouter(
     prefix="/users",
-    tags=["users"]
+    tags=["Users"]
 )
 
 @router.get("/me", response_model=schemas.User)
