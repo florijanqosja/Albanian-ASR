@@ -19,6 +19,16 @@ from .database import schemas as _schemas
 from .database import services as _services
 from .database import models as _models
 from .routers import auth, users
+from .docs import (
+    API_DESCRIPTION,
+    API_TITLE,
+    API_VERSION,
+    CONTACT_INFO,
+    LICENSE_INFO,
+    TAGS_METADATA,
+    TERMS_OF_SERVICE,
+    configure_documentation,
+)
 
 # Configure Logging
 logging.basicConfig(
@@ -314,12 +324,20 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(
-    title="Albanian ASR API",
-    description="Backend API for Albanian Automatic Speech Recognition dataset collection.",
-    version="1.0.0",
+    title=API_TITLE,
+    description=API_DESCRIPTION,
+    version=API_VERSION,
     lifespan=lifespan,
-    root_path=API_ROOT_PATH
+    root_path=API_ROOT_PATH,
+    docs_url=None,
+    redoc_url=None,
+    contact=CONTACT_INFO,
+    license_info=LICENSE_INFO,
+    terms_of_service=TERMS_OF_SERVICE,
+    openapi_tags=TAGS_METADATA,
 )
+
+configure_documentation(app)
 
 app.add_middleware(
     CORSMiddleware,
@@ -336,7 +354,16 @@ app.mount("/mp4", StaticFiles(directory=UPLOAD_DIR_MP4), name="mp4")
 app.include_router(auth.router)
 app.include_router(users.router)
 
-@app.post("/video/add", response_model=_schemas.ResponseModel)
+@app.post(
+    "/video/add",
+    response_model=_schemas.ResponseModel,
+    tags=["Video Intake"],
+    summary="Upload and preprocess a new media asset",
+    description=(
+        "Accepts MP4 or MP3 files, stores the raw asset, converts video to audio, "
+        "generates splice waveforms, and seeds the labeling queue in a single transaction."
+    ),
+)
 async def create_video(
     video_name: str,
     video_category: str,
@@ -463,7 +490,16 @@ def _get_public_path(file_path: str, include_version: bool = True) -> str:
 
     return public_path
 
-@app.get("/audio/to_label", response_model=_schemas.ResponseModel)
+@app.get(
+    "/audio/to_label",
+    response_model=_schemas.ResponseModel,
+    tags=["Labeling Queue"],
+    summary="Reserve the next splice for labeling",
+    description=(
+        "Moves the oldest unfinished splice into the processing bucket, converts the filesystem path into "
+        "a public `/splices` URL, and returns the payload ready for transcription clients."
+    ),
+)
 async def get_audio_to_label(db: Session = Depends(_services.get_db)):
     first_splice = await _services.get_first_splice(db)
     if not first_splice:
@@ -497,7 +533,16 @@ async def get_audio_to_label(db: Session = Depends(_services.get_db)):
         logger.error(f"Error retrieving audio to label: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve audio for labeling")
 
-@app.get("/audio/to_validate", response_model=_schemas.ResponseModel)
+@app.get(
+    "/audio/to_validate",
+    response_model=_schemas.ResponseModel,
+    tags=["Labeling Queue"],
+    summary="Reserve the next splice for validation",
+    description=(
+        "Transitions the next labeled splice into the processing table, ensuring validators always receive "
+        "cache-busted media URLs and up-to-date metadata."
+    ),
+)
 async def get_audio_to_validate(db: Session = Depends(_services.get_db)):
     first_splice = await _services.get_first_labeled_splice(db)
     if not first_splice:
@@ -566,7 +611,16 @@ async def _label_splice_logic(label_splice: _schemas.LabelSplice, db: Session, u
 
     return _schemas.ResponseModel(status="success", message="Splice labeled and moved successfully")
 
-@app.put("/audio/label", response_model=_schemas.ResponseModel)
+@app.put(
+    "/audio/label",
+    response_model=_schemas.ResponseModel,
+    tags=["Labeling Actions"],
+    summary="Submit a labeled splice as an authenticated contributor",
+    description=(
+        "Applies optional trimming, persists the transcript, stamps the labeler ID, and promotes the clip "
+        "to the labeled queue while clearing the processing lock."
+    ),
+)
 async def label_splice(
     label_splice: _schemas.LabelSplice, 
     db: Session = Depends(_services.get_db),
@@ -580,7 +634,13 @@ async def label_splice(
         logger.error(f"Error labeling splice: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.put("/audio/label/anonymous", response_model=_schemas.ResponseModel)
+@app.put(
+    "/audio/label/anonymous",
+    response_model=_schemas.ResponseModel,
+    tags=["Labeling Actions"],
+    summary="Submit a labeled splice without authentication",
+    description="Identical to `/audio/label` but automatically attributes the work to the anonymous user.",
+)
 async def label_splice_anonymous(
     label_splice: _schemas.LabelSplice, 
     db: Session = Depends(_services.get_db)
@@ -644,7 +704,16 @@ async def _validate_splice_logic(
 
     return _schemas.ResponseModel(status="success", message="Splice validated and moved successfully")
 
-@app.put("/audio/validate", response_model=_schemas.ResponseModel)
+@app.put(
+    "/audio/validate",
+    response_model=_schemas.ResponseModel,
+    tags=["Validation Actions"],
+    summary="Approve a labeled splice as an authenticated validator",
+    description=(
+        "Confirms the transcript, optionally trims audio, persists validator identity, and upgrades the clip "
+        "into the high-quality dataset."
+    ),
+)
 async def validate_splice(
     validate_splice: _schemas.ValidateSplice, 
     db: Session = Depends(_services.get_db),
@@ -661,7 +730,13 @@ async def validate_splice(
         logger.error(f"Error validating splice: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.put("/audio/validate/anonymous", response_model=_schemas.ResponseModel)
+@app.put(
+    "/audio/validate/anonymous",
+    response_model=_schemas.ResponseModel,
+    tags=["Validation Actions"],
+    summary="Approve a labeled splice without authentication",
+    description="Anonymous reviewers can finalize splices when authenticated validators are not required.",
+)
 async def validate_splice_anonymous(
     validate_splice: _schemas.ValidateSplice, 
     db: Session = Depends(_services.get_db)
@@ -678,7 +753,13 @@ async def validate_splice_anonymous(
         logger.error(f"Error validating splice: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.delete("/audio", response_model=_schemas.ResponseModel)
+@app.delete(
+    "/audio",
+    response_model=_schemas.ResponseModel,
+    tags=["Operational Utilities"],
+    summary="Remove a splice from the processing queue",
+    description="Moves the clip into the deleted archive and frees up the processing slot for the next task.",
+)
 async def delete_splice(delete_splice: _schemas.DeleteSplice, db: Session = Depends(_services.get_db)):
     try:
         splice_being_processed = await _services.get_splice_being_processed(delete_splice.id, db)
@@ -712,7 +793,13 @@ async def delete_splice(delete_splice: _schemas.DeleteSplice, db: Session = Depe
         logger.error(f"Error deleting splice: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/audio/getsa", response_model=_schemas.ResponseModel)
+@app.get(
+    "/audio/getsa",
+    response_model=_schemas.ResponseModel,
+    tags=["Operational Utilities"],
+    summary="Fetch a sample splice path",
+    description="Returns the oldest splice path for health checks or preview players.",
+)
 async def get_audio_sample(db: Session = Depends(_services.get_db)):
     # Optimized query using ORM
     path = db.query(_models.Splice.path).order_by(_models.Splice.id).scalar()
@@ -720,28 +807,52 @@ async def get_audio_sample(db: Session = Depends(_services.get_db)):
         return _schemas.ResponseModel(status="success", data=[], message="No audio sample found")
     return _schemas.ResponseModel(status="success", data=path, message="Audio sample retrieved")
 
-@app.get("/audio/get_validation_audio_link", response_model=_schemas.ResponseModel)
+@app.get(
+    "/audio/get_validation_audio_link",
+    response_model=_schemas.ResponseModel,
+    tags=["Operational Utilities"],
+    summary="Peek at the next labeled splice",
+    description="Returns the next labeled splice without reserving it, primarily for monitoring tools.",
+)
 async def next_validation_data(db: Session = Depends(_services.get_db)):
     first_splice = db.query(_models.LabeledSplice).order_by(_models.LabeledSplice.id).first()
     if not first_splice:
         return _schemas.ResponseModel(status="success", message="No validation audio found")
     return _schemas.ResponseModel(status="success", data=first_splice, message="Validation audio retrieved")
 
-@app.get("/audio/get_clip_id/", response_model=_schemas.ResponseModel)
+@app.get(
+    "/audio/get_clip_id/",
+    response_model=_schemas.ResponseModel,
+    tags=["Operational Utilities"],
+    summary="Fetch the next splice identifier",
+    description="Provides the ID of the first pending splice to aid lightweight dashboards.",
+)
 async def get_clip_id(db: Session = Depends(_services.get_db)):
     first_splice_id = db.query(_models.Splice.id).order_by(_models.Splice.id).scalar()
     if not first_splice_id:
         return _schemas.ResponseModel(status="success", message="No clip ID found")
     return _schemas.ResponseModel(status="success", data=first_splice_id, message="Clip ID retrieved")
 
-@app.get("/audio/get_validation_audio_link_plus", response_model=_schemas.ResponseModel)
+@app.get(
+    "/audio/get_validation_audio_link_plus",
+    response_model=_schemas.ResponseModel,
+    tags=["Operational Utilities"],
+    summary="Fetch the next unlabeled splice path",
+    description="Returns only the media path for consumers that need minimal payloads.",
+)
 async def get_validation_audio_link_plus(db: Session = Depends(_services.get_db)):
     first_splice_path = db.query(_models.Splice.path).order_by(_models.Splice.id).scalar()
     if not first_splice_path:
         return _schemas.ResponseModel(status="success", data=[], message="No validation audio link found")
     return _schemas.ResponseModel(status="success", data=first_splice_path, message="Validation audio link retrieved")
 
-@app.get("/dataset_insight_info", response_model=_schemas.ResponseModel)
+@app.get(
+    "/dataset_insight_info",
+    response_model=_schemas.ResponseModel,
+    tags=["Dataset Insights"],
+    summary="Aggregate dataset progress metrics",
+    description="Returns durations and record counts for unlabeled, labeled, and validated corpora.",
+)
 async def get_summary(db: Session = Depends(_services.get_db)):
     # Use a single query or parallel execution if possible, but SQLAlchemy session is synchronous usually.
     # We can just execute them.

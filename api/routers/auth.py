@@ -21,7 +21,7 @@ from ..services.mail import (
 
 router = APIRouter(
     prefix="/auth",
-    tags=["authentication"]
+    tags=["Authentication"]
 )
 
 # Configuration
