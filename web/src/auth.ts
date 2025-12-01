@@ -60,13 +60,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       authorize: async (credentials) => {
-        if (!credentials?.email || !credentials?.password) {
+        const email = credentials?.email
+        const password = credentials?.password
+
+        if (typeof email !== "string" || typeof password !== "string") {
           return null
         }
         try {
           const formData = new URLSearchParams()
-          formData.append("username", credentials.email)
-          formData.append("password", credentials.password)
+          formData.append("username", email)
+          formData.append("password", password)
 
           const res = await axios.post<BackendTokenResponse>(`${apiUrl}/auth/login`, formData, {
             headers: { "Content-Type": "application/x-www-form-urlencoded" }
