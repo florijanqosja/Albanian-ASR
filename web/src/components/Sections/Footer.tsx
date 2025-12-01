@@ -6,6 +6,7 @@ import { Github, Linkedin, ArrowUp } from "lucide-react";
 import { Container, Grid, Typography, IconButton, Box } from "@mui/material";
 
 export default function Footer() {
+  const docsUrl = process.env.NEXT_PUBLIC_API_DOCS_URL || "http://localhost:8000/docs";
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -52,6 +53,16 @@ export default function Footer() {
             <Link href="/termsandservices" className="text-gray-400 hover:text-white text-sm transition-colors">
               Terms and Conditions
             </Link>
+            {docsUrl && (
+              <a
+                href={docsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-gray-400 hover:text-white text-sm transition-colors mt-1"
+              >
+                API Docs
+              </a>
+            )}
             <Typography variant="body2" sx={{ color: 'grey.500', mt: 1 }}>
               © 2025 DibraSpeaks. All rights reserved.
             </Typography>

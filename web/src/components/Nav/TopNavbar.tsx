@@ -10,11 +10,10 @@ import LogoIcon from "../../assets/svg/Logo";
 function NavList() {
   const pathname = usePathname();
   
-  const navItems = [
-    { name: "Label", path: "/" },
-    { name: "Validate", path: "/validate" },
-    { name: "Docs", path: process.env.NEXT_PUBLIC_API_DOCS_URL || "#", external: true }
-  ];
+    const navItems = [
+        { name: "Label", path: "/" },
+        { name: "Validate", path: "/validate" }
+    ];
 
   return (
     <ul className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-8 mb-0 mt-0">

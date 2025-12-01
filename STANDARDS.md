@@ -97,3 +97,10 @@ All API endpoints should return a standardized JSON structure to ensure consiste
 - [ ] Replace `<a>` with `next/link`.
 - [ ] Ensure all inputs have proper labels and icons (`InputAdornment`).
 - [ ] Use "Glassmorphism" or flat design with subtle borders instead of heavy material shadows.
+
+## 7. Quality Expectations
+- **No quick fixes**: Every bug fix or feature must trace the full flow (frontend, backend, data layers) before changing code. Partial patches that only treat symptoms are not allowed.
+- **End-to-end validation**: Confirm how a change affects each stage of the splice pipeline (creation → labeling → validation → high quality) and document any assumptions.
+- **Path & asset handling**: Never expose raw filesystem paths to clients; convert to the correct static mount (`/splices`, `/mp3`, `/mp4`) before returning data.
+- **Shared logic first**: Reuse or extend common utilities (e.g., `useSpliceQueue`, service helpers) rather than duplicating request/response handling across components.
+- **Fail gracefully**: When the API reports "no data", UI components must surface a clear empty state instead of leaving stale content onscreen.

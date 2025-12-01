@@ -1,7 +1,6 @@
 "use client"
 import { useState, useEffect, useRef, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { signIn } from "next-auth/react"
 import { 
   Box, 
   Button, 

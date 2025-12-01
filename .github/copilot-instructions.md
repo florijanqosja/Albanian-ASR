@@ -8,6 +8,16 @@ This is an AI-based transcription tool for the Albanian language, consisting of 
 - **Backend (`api/`)**: FastAPI service handling audio/video processing (`moviepy`, `pydub`, `librosa`), database interactions, and file management.
 - **Database**: PostgreSQL storing metadata about videos, splices, and validations.
 - **File Storage**: Audio/video files are stored in `audio_files/` (mounted as volumes in Docker) and processed into `mp3`, `mp4`, and `splices` directories.
+- **Splice Journey**:
+  1. `POST /video/add` creates a `Video` plus many `Splice` rows with absolute filesystem paths pointing inside `/code/splices/<video>`.
+  2. `GET /audio/to_label` removes the oldest `Splice`, inserts a `SpliceBeingProcessed` row (status `un_labeled`), deletes the original, converts the path to the public `/splices/...` URL, and returns it to the frontend.
+  3. `PUT /audio/label` (or `/audio/label/anonymous`) trims if needed, updates the processing row, copies it into `LabeledSplice`, then deletes the processing row. Immediately after, the next unlabeled item will be fetched and moved into `SpliceBeingProcessed` when the client asks for it.
+  4. `GET /audio/to_validate` mirrors step 2 but starts from `LabeledSplice`, marks the processing row as `labeled`, and again responds with the normalized `/splices/...` path.
+  5. `PUT /audio/validate` (or anonymous variant) trims if requested, promotes the clip into `HighQualityLabeledSplice`, deletes the processing record, and the next labeled clip becomes available through the fetch endpoint.
+  6. When no clips remain for a stage the API still returns `status: "success"` with `data: null` plus a descriptive `message`. UI components must treat this as an empty state rather than an error.
+  7. Static assets are served via `app.mount("/splices")`, so any API response containing a path must already be translated into `/splices/...` before leaving the backend.
+
+Frontend sections `AudioPlayer.tsx` (labeling) and `AudioValidate.tsx` share data-access concerns through the `useSpliceQueue` hook. Use that hook when building new queue-aware UI so we keep fetch/delete/submit logic centralized and the empty-state UX consistent.
 
 ## Development Workflow
 - **Primary Run Command**: `docker-compose up --build` (starts Web on :3000, API on :8000, DB on :5432).
@@ -42,6 +52,10 @@ Refer to `STANDARDS.md` for detailed rules.
   - Modify `api/database/models.py`. Note: No Alembic detected; schema changes may require manual DB updates or container resets in dev.
 - **Audio Processing**:
   - Logic for splitting/converting audio resides in `api/main.py` or `scripts/`. Ensure `audio_files/` directory structure is respected.
+- **Label & Validate UI Updates**:
+  - Always go through `useSpliceQueue` for fetching, submitting, or deleting clips so both stages remain in sync.
+  - When the hook reports `clip === null`, show a friendly "no audio available" state rather than leaving stale waveform data visible.
+  - After submit/delete actions, rely on the hook to fetch the next clip; avoid duplicating request logic inside components.
 
 ## UI & Design Guidelines
 - **Design System**:
