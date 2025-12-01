@@ -38,6 +38,7 @@ Refer to `STANDARDS.md` for detailed rules.
 
 ## Key Files & Directories
 - **`api/main.py`**: Application entry point, API routes, and static file configuration.
+- **`api/docs.py`**: Centralized OpenAPI metadata (branding, tags, Swagger/Redoc customization).
 - **`api/database/`**: Contains `models.py` (DB tables), `schemas.py` (Pydantic models), and `services.py` (business logic).
 - **`web/app/layout.tsx`**: Main frontend layout and theme provider.
 - **`web/src/components/Sections/`**: Core UI sections like `AudioPlayer.tsx` and `AudioValidate.tsx`.
@@ -48,11 +49,18 @@ Refer to `STANDARDS.md` for detailed rules.
   1. Define the Pydantic schema in `api/database/schemas.py`.
   2. Add the CRUD logic in `api/database/services.py`.
   3. Create the route in `api/main.py`.
+  4. Annotate the route with `tags`, `summary`, and `description` so it renders correctly in the custom docs.
+  5. If you introduce a brand-new capability that needs its own grouping, extend the `TAGS_METADATA` list in `api/docs.py` (keep descriptions short and marketing friendly).
 - **Database Changes**:
   - Modify `api/database/models.py`. Note: No Alembic detected; schema changes may require manual DB updates or container resets in dev.
 - **Audio Processing**:
   - Logic for splitting/converting audio resides in `api/main.py` or `scripts/`. Ensure `audio_files/` directory structure is respected.
 - **Label & Validate UI Updates**:
+  ## API Documentation Expectations
+  - The branded Swagger/Redoc experience pulls its metadata from `api/docs.py`. Keep tone “commercial grade” and update hero copy/contact when product messaging shifts.
+  - OpenAPI schema is generated automatically; only touch `api/docs.py` when adjusting branding, server listings, or tag descriptions.
+  - Any new public endpoint must specify `tags`, `summary`, and `description` arguments and follow the shared response envelope from `STANDARDS.md`.
+
   - Always go through `useSpliceQueue` for fetching, submitting, or deleting clips so both stages remain in sync.
   - When the hook reports `clip === null`, show a friendly "no audio available" state rather than leaving stale waveform data visible.
   - After submit/delete actions, rely on the hook to fetch the next clip; avoid duplicating request logic inside components.

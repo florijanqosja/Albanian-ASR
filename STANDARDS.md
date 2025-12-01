@@ -68,7 +68,8 @@ All API endpoints should return a standardized JSON structure to ensure consiste
 - **Commits**: Conventional Commits (e.g., `feat: add audio player`, `fix: resolve upload error`)
 
 ## 5. Documentation
-- All API endpoints should be documented using FastAPI's automatic docs (Swagger UI).
+- All API endpoints are rendered through the branded explorer defined in `api/docs.py`. Update that module when refreshing hero copy, tag descriptions, contact info, or server listings.
+- Every routed function must include `tags`, `summary`, and `description` arguments so it displays correctly in Swagger/Redoc. Reuse the existing tag buckets; if a new capability emerges, extend `TAGS_METADATA` in `api/docs.py` with concise, commercial-grade copy.
 - All functions and classes must include docstrings describing behavior, arguments, and return values.
 
 ## 6. UI & Design Patterns (Frontend)
