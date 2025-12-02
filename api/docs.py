@@ -210,6 +210,14 @@ def _inject_branding(original: HTMLResponse, hero_markup: str, extra_head: str) 
 def configure_documentation(app: FastAPI) -> None:
     """Attach OpenAPI metadata and register branded documentation routes."""
 
+    root_path = (app.root_path or "").rstrip("/")
+
+    def _with_root(path: str) -> str:
+        """Prefix absolute paths with the app's root_path when defined."""
+        if not path.startswith("/"):
+            return path
+        return f"{root_path}{path}" if root_path else path
+
     def custom_openapi() -> dict[str, Any]:
         if app.openapi_schema:
             return app.openapi_schema
@@ -236,10 +244,11 @@ def configure_documentation(app: FastAPI) -> None:
 
     @app.get("/docs", include_in_schema=False)
     async def custom_swagger_ui() -> HTMLResponse:  # pragma: no cover - UI route
+        openapi_url = _with_root(app.openapi_url)
         html = get_swagger_ui_html(
-            openapi_url=app.openapi_url,
+            openapi_url=openapi_url,
             title=f"{API_TITLE} Explorer",
-            oauth2_redirect_url="/docs/oauth2-redirect",
+            oauth2_redirect_url=_with_root("/docs/oauth2-redirect"),
             swagger_js_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js",
             swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css",
             swagger_ui_parameters=SWAGGER_UI_PARAMETERS,
@@ -252,8 +261,9 @@ def configure_documentation(app: FastAPI) -> None:
 
     @app.get("/redoc", include_in_schema=False)
     async def redoc_ui() -> HTMLResponse:  # pragma: no cover - UI route
+        openapi_url = _with_root(app.openapi_url)
         html = get_redoc_html(
-            openapi_url=app.openapi_url,
+            openapi_url=openapi_url,
             title=f"{API_TITLE} Reference",
             redoc_js_url="https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js",
             with_google_fonts=False,
