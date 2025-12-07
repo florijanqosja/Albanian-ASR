@@ -16,34 +16,9 @@ import {
 } from "@mui/material"
 import { Phone, MapPin, Globe, User, ArrowRight } from "lucide-react"
 import LogoIcon from "../../assets/svg/Logo"
+import { ALBANIAN_REGIONS, ALBANIAN_ACCENTS, ACCENT_OTHER_VALUE } from "@/constants/profileOptions"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-
-// Albanian regions for the dropdown
-const ALBANIAN_REGIONS = [
-  "Berat",
-  "Dibër",
-  "Durrës",
-  "Elbasan",
-  "Fier",
-  "Gjirokastër",
-  "Korçë",
-  "Kukës",
-  "Lezhë",
-  "Shkodër",
-  "Tiranë",
-  "Vlorë",
-  "Diaspora"
-]
-
-// Common Albanian accents/dialects
-const ALBANIAN_ACCENTS = [
-  "Gheg (Northern)",
-  "Tosk (Southern)",
-  "Arbëresh",
-  "Arvanitika",
-  "Other"
-]
 
 interface ProfileCompletionModalProps {
   open: boolean
@@ -67,6 +42,8 @@ export default function ProfileCompletionModal({
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [accentSelection, setAccentSelection] = useState<string>("")
+  const [customAccent, setCustomAccent] = useState("")
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -76,11 +53,35 @@ export default function ProfileCompletionModal({
     setError(null)
   }
 
+  const handleAccentSelection = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const value = event.target.value
+    setAccentSelection(value)
+    if (value === ACCENT_OTHER_VALUE) {
+      setFormData(prev => ({ ...prev, accent: customAccent }))
+    } else {
+      setCustomAccent("")
+      setFormData(prev => ({ ...prev, accent: value }))
+    }
+    setError(null)
+  }
+
+  const handleCustomAccentChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value
+    setCustomAccent(value)
+    if (accentSelection === ACCENT_OTHER_VALUE) {
+      setFormData(prev => ({ ...prev, accent: value }))
+    }
+  }
+
   const handleSubmit = async () => {
     setLoading(true)
     setError(null)
 
     try {
+      if (accentSelection === ACCENT_OTHER_VALUE && !formData.accent?.trim()) {
+        throw new Error("Please specify your dialect when choosing Other")
+      }
+
       const response = await fetch(`${API_URL}/users/complete-profile`, {
         method: "POST",
         headers: {
@@ -229,8 +230,8 @@ export default function ProfileCompletionModal({
             fullWidth
             label="Albanian Dialect/Accent"
             name="accent"
-            value={formData.accent}
-            onChange={handleChange}
+            value={accentSelection}
+            onChange={handleAccentSelection}
             helperText="This helps us improve speech recognition for different dialects"
             InputProps={{
               sx: { borderRadius: 2 }
@@ -244,7 +245,20 @@ export default function ProfileCompletionModal({
                 {accent}
               </MenuItem>
             ))}
+            <MenuItem value={ACCENT_OTHER_VALUE}>Other / Custom</MenuItem>
           </TextField>
+
+          {accentSelection === ACCENT_OTHER_VALUE && (
+            <TextField
+              fullWidth
+              label="Custom Dialect"
+              value={customAccent}
+              onChange={handleCustomAccentChange}
+              placeholder="Describe your dialect"
+              InputProps={{ sx: { borderRadius: 2 } }}
+              helperText="Please specify your dialect"
+            />
+          )}
         </Box>
 
         <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 2, textAlign: 'center' }}>

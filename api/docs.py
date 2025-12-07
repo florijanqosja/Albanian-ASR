@@ -31,6 +31,7 @@ LICENSE_INFO = {
 }
 TERMS_OF_SERVICE = "https://uneduashqiperine.com/terms"
 LOGO_URL = "https://raw.githubusercontent.com/florijanqosja/Albanian-ASR/master/web/public/logo.png"
+FAVICON_URL = LOGO_URL
 
 TAGS_METADATA = [
     {
@@ -52,6 +53,10 @@ TAGS_METADATA = [
     {
         "name": "Labeling Actions",
         "description": "Submit transcripts, optional trims, and route clips through the labeling pipeline.",
+    },
+    {
+        "name": "Recording",
+        "description": "Capture scripted speech directly from contributors and inject recordings into the labeled queue.",
     },
     {
         "name": "Validation Actions",
@@ -94,6 +99,7 @@ REDOC_HERO = ""
 
 CUSTOM_STYLE = dedent(
     """
+    <link rel="icon" type="image/png" href="{favicon_url}" />
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Khula:wght@400;600;700&display=swap');
         :root {
@@ -162,10 +168,11 @@ CUSTOM_STYLE = dedent(
         }
     </style>
     """
-)
+).replace("{favicon_url}", FAVICON_URL)
 
 REDOC_STYLE = dedent(
     """
+    <link rel="icon" type="image/png" href="{favicon_url}" />
     <style>
         body {
             font-family: 'Khula', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -176,7 +183,7 @@ REDOC_STYLE = dedent(
         }
     </style>
     """
-)
+).replace("{favicon_url}", FAVICON_URL)
 
 
 def _inject_branding(original: HTMLResponse, hero_markup: str, extra_head: str) -> HTMLResponse:

@@ -14,10 +14,12 @@ import { alpha, useTheme } from "@mui/material/styles";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { useTranslations } from "next-intl";
 import { useSpliceQueue } from "@/hooks/useSpliceQueue";
 import AuthRequiredDialog from "@/components/Elements/AuthRequiredDialog";
 
 export default function AudioValidate() {
+  const t = useTranslations();
   const theme = useTheme();
   const waveColor = theme.palette.border.main;
   const progressColor = theme.palette.primary.main;
@@ -32,15 +34,23 @@ export default function AudioValidate() {
   const [cutMode, setCutMode] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [endTime, setEndTime] = useState<number | null>(null);
-  const { clip, isLoading, statusMessage, error, fetchNextClip, submitClip } = useSpliceQueue("validate");
+  const { clip, isLoading, statusMessage, error, fetchNextClip, submitClip } = useSpliceQueue("validate", {
+    noAudio: t("queue.noAudio"),
+    fetchError: t("queue.fetchError"),
+    submitError: t("queue.submitError"),
+  });
   
   const { data: session } = useSession();
   const router = useRouter();
-  const DEFAULT_AUTH_MESSAGE = "Please register or log in to keep track of your contributions. You can also continue anonymously if you prefer.";
+  const DEFAULT_AUTH_MESSAGE = t("authDialog.default");
   const [openAuthDialog, setOpenAuthDialog] = useState(false);
   const [authDialogMessage, setAuthDialogMessage] = useState(DEFAULT_AUTH_MESSAGE);
   const accessToken = (session as { accessToken?: string } | null)?.accessToken;
   const currentValidatorId = (session?.user as { id?: string } | null)?.id;
+
+  useEffect(() => {
+    setAuthDialogMessage(DEFAULT_AUTH_MESSAGE);
+  }, [DEFAULT_AUTH_MESSAGE]);
 
   const showAuthDialog = (message?: string) => {
     setAuthDialogMessage(message ?? DEFAULT_AUTH_MESSAGE);
@@ -198,7 +208,7 @@ export default function AudioValidate() {
       setCutMode(false);
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 401 && isAuthenticated) {
-        showAuthDialog("Your session expired. Please sign in again to continue validating.");
+        showAuthDialog(t("authDialog.validateSessionExpired"));
       } else {
         console.error("Failed to perform PUT request:", error);
       }
@@ -237,7 +247,7 @@ export default function AudioValidate() {
           </LoadingOverlay>
         )}
         <CardHeader>
-          <SectionHeading>LABELED AUDIO VALIDATING</SectionHeading>
+          <SectionHeading>{t("validate.title")}</SectionHeading>
         </CardHeader>
         <CardBody>
           <WaveformContainer>
@@ -249,7 +259,7 @@ export default function AudioValidate() {
           
           <InputSection>
             <LabelRow>
-              <InputLabel style={{ marginBottom: 0 }}>Transcript</InputLabel>
+              <InputLabel style={{ marginBottom: 0 }}>{t("validate.transcript")}</InputLabel>
               <FormControlLabel
                 control={
                   <StyledSwitch
@@ -258,13 +268,13 @@ export default function AudioValidate() {
                     name="cutMode"
                   />
                 }
-                label={<CutAudioLabel>Cut Audio</CutAudioLabel>}
+                label={<CutAudioLabel>{t("validate.cutAudio")}</CutAudioLabel>}
               />
             </LabelRow>
             <StyledTextField
               id="transcript-input"
               variant="outlined"
-              placeholder="Enter the content of the audio"
+              placeholder={t("validate.placeholder")}
               value={labelValue}
               onChange={(event) => setLabelValue(event.target.value)}
               fullWidth
@@ -284,7 +294,7 @@ export default function AudioValidate() {
               onClick={handleSubmit}
               disabled={!clip}
             >
-              Submit
+              {t("validate.submit")}
             </SubmitButton>
           </ControlsRow>
         </CardBody>

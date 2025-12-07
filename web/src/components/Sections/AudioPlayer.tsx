@@ -15,10 +15,12 @@ import { alpha, useTheme } from "@mui/material/styles";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { useTranslations } from "next-intl";
 import { useSpliceQueue } from "@/hooks/useSpliceQueue";
 import AuthRequiredDialog from "@/components/Elements/AuthRequiredDialog";
 
 export default function MainSection() {
+  const t = useTranslations();
   const theme = useTheme();
   const waveColor = theme.palette.border.main;
   const progressColor = theme.palette.primary.main;
@@ -33,14 +35,23 @@ export default function MainSection() {
   const [cutMode, setCutMode] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [endTime, setEndTime] = useState<number | null>(null);
-  const { clip, isLoading, statusMessage, error, fetchNextClip, submitClip, deleteClip } = useSpliceQueue("label");
+  const { clip, isLoading, statusMessage, error, fetchNextClip, submitClip, deleteClip } = useSpliceQueue("label", {
+    noAudio: t("queue.noAudio"),
+    fetchError: t("queue.fetchError"),
+    submitError: t("queue.submitError"),
+    deleteError: t("queue.deleteError"),
+  });
   const hasClip = Boolean(clip);
   const { data: session } = useSession();
   const router = useRouter();
-  const DEFAULT_AUTH_MESSAGE = "Please register or log in to keep track of your contributions. You can also continue anonymously if you prefer.";
+  const DEFAULT_AUTH_MESSAGE = t("authDialog.default");
   const [openAuthDialog, setOpenAuthDialog] = useState(false);
   const [authDialogMessage, setAuthDialogMessage] = useState(DEFAULT_AUTH_MESSAGE);
   const accessToken = (session as { accessToken?: string } | null)?.accessToken;
+
+  useEffect(() => {
+    setAuthDialogMessage(DEFAULT_AUTH_MESSAGE);
+  }, [DEFAULT_AUTH_MESSAGE]);
 
   const showAuthDialog = (message?: string) => {
     setAuthDialogMessage(message ?? DEFAULT_AUTH_MESSAGE);
@@ -213,7 +224,7 @@ export default function MainSection() {
       setCutMode(false);
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 401 && isAuthenticated) {
-        showAuthDialog("Your session expired. Please sign in again to continue labeling.");
+        showAuthDialog(t("authDialog.labelSessionExpired"));
       } else {
         console.error("Failed to perform PUT request:", error);
       }
@@ -252,7 +263,7 @@ export default function MainSection() {
           </LoadingOverlay>
         )}
         <CardHeader>
-          <SectionHeading>AUDIO LABELING</SectionHeading>
+          <SectionHeading>{t("label.title")}</SectionHeading>
         </CardHeader>
         <CardBody>
           <WaveformContainer>
@@ -264,7 +275,7 @@ export default function MainSection() {
           
           <InputSection>
             <LabelRow>
-              <InputLabel style={{ marginBottom: 0 }}>Transcript</InputLabel>
+              <InputLabel style={{ marginBottom: 0 }}>{t("label.transcript")}</InputLabel>
               <FormControlLabel
                 control={
                   <StyledSwitch
@@ -274,14 +285,14 @@ export default function MainSection() {
                     disabled={!hasClip}
                   />
                 }
-                label={<CutAudioLabel>Cut Audio</CutAudioLabel>}
+                label={<CutAudioLabel>{t("label.cutAudio")}</CutAudioLabel>}
                 disabled={!hasClip}
               />
             </LabelRow>
             <StyledTextField
               id="transcript-input"
               variant="outlined"
-              placeholder="Enter the content of the audio"
+              placeholder={t("label.placeholder")}
               value={labelValue}
               onChange={(event) => setLabelValue(event.target.value)}
               fullWidth
@@ -302,7 +313,7 @@ export default function MainSection() {
               onClick={handleSubmit}
               disabled={!hasClip}
             >
-              Submit
+              {t("label.submit")}
             </SubmitButton>
 
             <CircleButton onClick={deleteAudio} disabled={!hasClip}>

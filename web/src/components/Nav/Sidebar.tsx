@@ -1,7 +1,8 @@
 "use client";
 import React from "react";
 import styled from "styled-components";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "../../../i18n/routing";
 // Assets
 import CloseIcon from "../../assets/svg/CloseIcon";
 import LogoIcon from "../../assets/svg/Logo";
@@ -12,13 +13,14 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ sidebarOpen, toggleSidebar }: SidebarProps) {
+  const t = useTranslations();
   return (
     <Wrapper className="bg-foreground transition-all duration-300" $sidebarOpen={sidebarOpen}>
       <SidebarHeader className="flex justify-between items-center">
         <div className="flex items-center">
           <LogoIcon />
           <h1 className="text-primary-foreground text-xl font-bold" style={{ marginLeft: "15px" }}>
-            DibraSpeaks
+            {t("common.appName")}
           </h1>
         </div>
         <CloseBtn onClick={() => toggleSidebar(!sidebarOpen)} className="cursor-pointer text-primary-foreground">
@@ -32,7 +34,7 @@ export default function Sidebar({ sidebarOpen, toggleSidebar }: SidebarProps) {
             className="text-primary-foreground p-4"
             href="/"
           >
-            Label
+            {t("nav.label")}
           </Link>
         </li>
         <li className="font-semibold text-lg cursor-pointer my-4">
@@ -41,7 +43,16 @@ export default function Sidebar({ sidebarOpen, toggleSidebar }: SidebarProps) {
             className="text-primary-foreground p-4"
             href="/validate"
           >
-            Validate
+            {t("nav.validate")}
+          </Link>
+        </li>
+        <li className="font-semibold text-lg cursor-pointer my-4">
+          <Link
+            onClick={() => toggleSidebar(!sidebarOpen)}
+            className="text-primary-foreground p-4"
+            href="/record"
+          >
+            {t("nav.record")}
           </Link>
         </li>
       </UlStyle>

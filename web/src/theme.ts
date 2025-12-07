@@ -14,7 +14,7 @@ declare module "@mui/material/styles" {
 
 const theme = createTheme({
   typography: {
-    fontFamily: "var(--font-khula), sans-serif",
+    fontFamily: "var(--font-inter), sans-serif",
     allVariants: {
       color: "#404040", // Neutral Dark Gray
     },

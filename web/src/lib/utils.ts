@@ -10,6 +10,11 @@ export function buildFileAccessUrl(baseUrl: string | undefined, filePath: string
     return filePath
   }
 
+  // Return absolute URLs as-is so we don't double-prefix
+  if (/^https?:\/\//i.test(filePath)) {
+    return filePath
+  }
+
   const normalizedBase = (baseUrl ?? "").replace(/\/+$/, "")
   const normalizedPath = filePath.startsWith("/") ? filePath : `/${filePath}`
 

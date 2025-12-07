@@ -1,6 +1,5 @@
-"use client"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+"use client";
+import { useState, useEffect } from "react";
 import { 
   Box, 
   Button, 
@@ -13,60 +12,88 @@ import {
   IconButton,
   Alert,
   CircularProgress
-} from "@mui/material"
-import { FcGoogle } from "react-icons/fc"
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight } from "lucide-react"
-import Link from "next/link"
-import { signIn } from "next-auth/react"
-import LogoIcon from "../../src/assets/svg/Logo"
-import Footer from "@/components/Sections/Footer"
+} from "@mui/material";
+import { FcGoogle } from "react-icons/fc";
+import { Eye, EyeOff, Mail, Lock, User, ArrowRight } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Link, useRouter } from "../../i18n/routing";
+import { signIn, useSession } from "next-auth/react";
+import LogoIcon from "../../src/assets/svg/Logo";
+import Footer from "@/components/Sections/Footer";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function RegisterPage() {
-  const router = useRouter()
+  const router = useRouter();
+  const { data: session, status } = useSession();
+  const t = useTranslations("register");
   const [formData, setFormData] = useState({
     name: "",
     surname: "",
     email: "",
     password: "",
     confirmPassword: ""
-  })
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (status === "authenticated" && session) {
+      router.push("/");
+      router.refresh();
+    }
+  }, [status, session, router]);
+
+  // Show loading state while checking authentication
+  if (status === "loading") {
+    return (
+      <>
+        <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.50' }}>
+          <CircularProgress size={40} />
+        </Box>
+        <Footer />
+      </>
+    );
+  }
+
+  // Don't render register form if already authenticated
+  if (status === "authenticated") {
+    return null;
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
-    }))
-    setError(null)
-  }
+    }));
+    setError(null);
+  };
 
   const validateForm = () => {
     if (!formData.email || !formData.password) {
-      setError("Email and password are required")
-      return false
+      setError(t("errorRequired"));
+      return false;
     }
     if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters")
-      return false
+      setError(t("errorLength"));
+      return false;
     }
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match")
-      return false
+      setError(t("errorMismatch"));
+      return false;
     }
-    return true
-  }
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!validateForm()) return
+    e.preventDefault();
+    if (!validateForm()) return;
     
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
 
     try {
       const response = await fetch(`${API_URL}/auth/register`, {
@@ -80,22 +107,21 @@ export default function RegisterPage() {
           email: formData.email,
           password: formData.password
         })
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || "Registration failed")
+        throw new Error(data.detail || t("errorGeneric"));
       }
 
-      // Redirect to verification page with email
-      router.push(`/verify?email=${encodeURIComponent(formData.email)}`)
+      router.push(`/verify?email=${encodeURIComponent(formData.email)}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed")
+      setError(err instanceof Error ? err.message : t("errorGeneric"));
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <>
@@ -107,10 +133,10 @@ export default function RegisterPage() {
                 <LogoIcon />
               </Box>
               <Typography component="h1" variant="h4" fontWeight={800} sx={{ mb: 1 }}>
-                Create Account
+                {t("title")}
               </Typography>
               <Typography color="textSecondary">
-                Join DibraSpeaks and help build Albanian ASR
+                {t("subtitle")}
               </Typography>
             </Box>
 
@@ -132,11 +158,11 @@ export default function RegisterPage() {
                 '&:hover': { bgcolor: 'grey.50', borderColor: 'grey.400' }
               }}
             >
-              Continue with Google
+              {t("continueGoogle")}
             </Button>
 
             <Divider sx={{ width: '100%', mb: 3 }}>
-              <Typography variant="caption" color="textSecondary" sx={{ px: 1 }}>OR EMAIL</Typography>
+              <Typography variant="caption" color="textSecondary" sx={{ px: 1 }}>{t("orEmail")}</Typography>
             </Divider>
 
             {error && (
@@ -151,7 +177,7 @@ export default function RegisterPage() {
                   margin="normal"
                   fullWidth
                   id="name"
-                  label="First Name"
+                  label={t("firstName")}
                   name="name"
                   autoComplete="given-name"
                   autoFocus
@@ -170,7 +196,7 @@ export default function RegisterPage() {
                   margin="normal"
                   fullWidth
                   id="surname"
-                  label="Last Name"
+                  label={t("lastName")}
                   name="surname"
                   autoComplete="family-name"
                   value={formData.surname}
@@ -186,7 +212,7 @@ export default function RegisterPage() {
                 required
                 fullWidth
                 id="email"
-                label="Email Address"
+                label={t("email")}
                 name="email"
                 autoComplete="email"
                 value={formData.email}
@@ -206,13 +232,13 @@ export default function RegisterPage() {
                 required
                 fullWidth
                 name="password"
-                label="Password"
+                label={t("password")}
                 type={showPassword ? "text" : "password"}
                 id="password"
                 autoComplete="new-password"
                 value={formData.password}
                 onChange={handleChange}
-                helperText="At least 8 characters"
+                helperText={t("passwordHint")}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -239,7 +265,7 @@ export default function RegisterPage() {
                 required
                 fullWidth
                 name="confirmPassword"
-                label="Confirm Password"
+                label={t("confirmPassword")}
                 type={showConfirmPassword ? "text" : "password"}
                 id="confirmPassword"
                 autoComplete="new-password"
@@ -282,21 +308,21 @@ export default function RegisterPage() {
                   boxShadow: '0 4px 14px 0 rgba(166, 77, 74, 0.39)'
                 }}
               >
-                {loading ? "Creating account..." : "Create Account"}
+                {loading ? t("creating") : t("cta")}
               </Button>
 
               <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center', mb: 2 }}>
-                By creating an account, you agree to our{' '}
+                {t("termsNote")}{' '}
                 <Link href="/termsandservices" className="font-bold text-primary hover:underline">
-                  Terms of Service
+                  {t("terms")}
                 </Link>
               </Typography>
               
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="body2" color="textSecondary">
-                  Already have an account?{' '}
+                  {t("already")}{' '}
                   <Link href="/login" className="font-bold text-primary hover:underline">
-                    Sign in
+                    {t("signin")}
                   </Link>
                 </Typography>
               </Box>
@@ -306,5 +332,5 @@ export default function RegisterPage() {
       </Box>
       <Footer />
     </>
-  )
+  );
 }
