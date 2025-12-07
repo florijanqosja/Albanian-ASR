@@ -383,7 +383,7 @@ async def lifespan(app: FastAPI):
                     # Delete ONLY the sample video records so we can recreate it
                     try:
                         # Delete splices associated with this video
-                        db.query(_models.Splice).filter(_models.Splice.video_id == existing_video.id).delete()
+                        db.query(_models.Splice).filter(_models.Splice.name == existing_video.name).delete()
                         # Delete the video itself
                         db.delete(existing_video)
                         db.commit()
