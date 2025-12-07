@@ -16,7 +16,7 @@ RUN apt-get install -y ffmpeg
 
 # 
 COPY ./api /code/app
-COPY ./sample_perrala.mp3 /code/sample_perrala.mp3
+COPY ./sample_audio_njerez_dhe_fate_e2.mp3 /code/sample_audio_njerez_dhe_fate_e2.mp3
 
 VOLUME /code/mp4
 VOLUME /code/splices

@@ -1273,6 +1273,45 @@ export default function TermsAndServices() {
                 style={{ lineHeight: "1.5" }}
               >
                 <span style={{ fontSize: "15px" }}>
+                  <strong>Media Upload Consent.</strong> Every time you upload
+                  any audio or video file (collectively, &quot;Media Uploads&quot;), you
+                  confirm that you either own the underlying recording or have
+                  secured all necessary rights, consents, and permissions from
+                  every individual whose voice, likeness, or content appears in
+                  that media. You grant us explicit permission to store,
+                  duplicate, transcribe, label, validate, edit, and otherwise
+                  process the Media Uploads so we can operate, improve, and
+                  commercialise our speech recognition services. This permission
+                  includes allowing trusted partners to perform technical work on
+                  our behalf, provided they follow these Legal Terms.
+                </span>
+              </div>
+              <div className="MsoNormal" style={{ lineHeight: "1.5" }}>
+                <br />
+              </div>
+              <div
+                className="MsoNormal"
+                data-custom-class="body_text"
+                style={{ lineHeight: "1.5" }}
+              >
+                <span style={{ fontSize: "15px" }}>
+                  By checking the consent box inside our upload workflow you
+                  acknowledge that you understand these ownership requirements
+                  and that you grant us the unrestricted operational licence set
+                  out above. If you do not have the right to share a Media
+                  Upload, or if you do not agree to these permissions, you must
+                  not submit the file.
+                </span>
+              </div>
+              <div className="MsoNormal" style={{ lineHeight: "1.5" }}>
+                <br />
+              </div>
+              <div
+                className="MsoNormal"
+                data-custom-class="body_text"
+                style={{ lineHeight: "1.5" }}
+              >
+                <span style={{ fontSize: "15px" }}>
                   This <span className="block-component" />
                   licence
                   <span className="else-block" /> includes our use of your name,
