@@ -372,7 +372,7 @@ async def lifespan(app: FastAPI):
             normalized_sample_name = sample_video_name.replace(" ", "_") 
             
             existing_video = db.query(_models.Video).filter(_models.Video.name == normalized_sample_name).first()
-            splice_dir = os.path.join(SPLICES_DIR, "sample_audio_njerez_dhe_fate_e2")
+            splice_dir = os.path.join(SPLICES_DIR, normalized_sample_name)
             splice_files_exist = os.path.exists(splice_dir) and len(os.listdir(splice_dir)) > 0
             
             if existing_video and splice_files_exist:
@@ -452,7 +452,7 @@ async def lifespan(app: FastAPI):
                             logger.info("Successfully seeded database with sample video.")
                             
                             # Verify splices were created
-                            splice_dir = os.path.join(SPLICES_DIR, "sample_audio_njerez_dhe_fate_e2")
+                            splice_dir = os.path.join(SPLICES_DIR, normalized_name)
                             if os.path.exists(splice_dir):
                                 splice_files = os.listdir(splice_dir)
                                 logger.info(f"Created {len(splice_files)} splice files in {splice_dir}")
