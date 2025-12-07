@@ -84,6 +84,7 @@ export default function TopNavbar() {
     const handleLangMenuClose = () => setLangAnchorEl(null);
 
     const handleLocaleChange = (nextLocale: string) => {
+        // @ts-expect-error -- basePathname is a valid path but type inference fails here
         router.replace(basePathname, { locale: nextLocale });
         setLangAnchorEl(null);
     };
@@ -258,7 +259,7 @@ export default function TopNavbar() {
         {/* Mobile Nav */}
         <div className={`lg:hidden transition-all duration-300 ease-in-out overflow-hidden ${openNav ? "max-h-[500px] opacity-100 mt-4" : "max-h-0 opacity-0"}`}>
             <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                <NavList />
+                <NavList activePath={basePathname} />
                                 <div className="flex items-center gap-3 mt-3">
                                     <Button
                                         variant="outlined"

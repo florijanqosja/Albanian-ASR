@@ -1,1 +1,1 @@
-export { default } from "../../my-labels/page";
+export { default } from "../../my-labels/content";

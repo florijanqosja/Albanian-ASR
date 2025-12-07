@@ -1,1 +1,1 @@
-export { default } from "../../termsandservices/page";
+export { default } from "../../termsandservices/content";

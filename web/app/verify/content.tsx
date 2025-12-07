@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect, useRef, Suspense } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
+import { Link, useRouter } from "../../i18n/routing"
 import { 
   Box, 
   Button, 
@@ -12,7 +13,6 @@ import {
   CircularProgress
 } from "@mui/material"
 import { Mail, ArrowRight, RefreshCw } from "lucide-react"
-import Link from "next/link"
 import LogoIcon from "../../src/assets/svg/Logo"
 import Footer from "@/components/Sections/Footer"
 
@@ -107,7 +107,7 @@ function VerifyPageContent() {
       
       // Redirect to login page after a short delay
       setTimeout(() => {
-        router.push(`/login?verified=true&email=${encodeURIComponent(email)}`)
+        router.push({ pathname: '/login', query: { verified: 'true', email } })
       }, 1500)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed")

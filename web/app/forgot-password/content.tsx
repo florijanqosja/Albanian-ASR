@@ -12,8 +12,7 @@ import {
   CircularProgress
 } from "@mui/material"
 import { Mail, ArrowRight, ArrowLeft } from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { Link, useRouter } from "../../i18n/routing"
 import LogoIcon from "../../src/assets/svg/Logo"
 import Footer from "@/components/Sections/Footer"
 
@@ -56,7 +55,7 @@ export default function ForgotPasswordPage() {
       
       // Redirect to reset password page after a short delay
       setTimeout(() => {
-        router.push(`/reset-password?email=${encodeURIComponent(email)}`)
+        router.push({ pathname: '/reset-password', query: { email } })
       }, 2000)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send reset code")
