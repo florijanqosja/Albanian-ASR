@@ -1,1 +1,1 @@
-export { default } from "../../verify/page";
+export { default } from "../../verify/content";

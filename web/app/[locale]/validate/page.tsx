@@ -1,1 +1,1 @@
-export { default } from "../../validate/page";
+export { default } from "../../validate/content";

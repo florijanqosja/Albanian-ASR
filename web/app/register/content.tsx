@@ -115,7 +115,7 @@ export default function RegisterPage() {
         throw new Error(data.detail || t("errorGeneric"));
       }
 
-      router.push(`/verify?email=${encodeURIComponent(formData.email)}`);
+      router.push({ pathname: '/verify', query: { email: formData.email } });
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errorGeneric"));
     } finally {
