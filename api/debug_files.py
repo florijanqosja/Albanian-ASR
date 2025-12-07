@@ -2,8 +2,8 @@ import os
 import sys
 
 # The path we are trying to access
-target_file = "videoplaybackmp4_19.338-40.08.wav"
-target_dir = "/code/splices/sample_audio_njerez_dhe_fate_e2"
+target_file = "videoplaybackmp4_1823.183-1853.643.wav"
+target_dir = "/code/splices/Sample"
 path = os.path.join(target_dir, target_file)
 
 print(f"--- Debugging File Access ---")

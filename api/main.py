@@ -511,6 +511,27 @@ app.mount("/mp4", StaticFiles(directory=UPLOAD_DIR_MP4), name="mp4")
 app.include_router(auth.router)
 app.include_router(users.router)
 
+@app.get("/debug/file/{file_path:path}", tags=["Debug"])
+async def debug_file(file_path: str):
+    """Debug endpoint to check file existence and permissions."""
+    full_path = os.path.join(SPLICES_DIR, file_path)
+    exists = os.path.exists(full_path)
+    return {
+        "requested_path": file_path,
+        "full_path": full_path,
+        "exists": exists,
+        "is_file": os.path.isfile(full_path) if exists else False,
+        "size": os.path.getsize(full_path) if exists else -1,
+        "permissions": oct(os.stat(full_path).st_mode) if exists else "N/A",
+        "uid": os.stat(full_path).st_uid if exists else "N/A",
+        "gid": os.stat(full_path).st_gid if exists else "N/A",
+        "app_uid": os.getuid(),
+        "app_gid": os.getgid(),
+        "splices_dir": SPLICES_DIR,
+        "listdir_splices": os.listdir(SPLICES_DIR) if os.path.exists(SPLICES_DIR) else "DIR_NOT_FOUND",
+        "listdir_subdir": os.listdir(os.path.dirname(full_path)) if exists else "SUBDIR_NOT_FOUND"
+    }
+
 @app.post(
     "/video/add",
     response_model=_schemas.ResponseModel,
