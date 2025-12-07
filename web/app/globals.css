@@ -3,7 +3,7 @@
 @import "tw-animate-css";
 
 @theme inline {
-  --font-sans: var(--font-khula), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
 
   --radius-sm: calc(var(--radius) - 4px);

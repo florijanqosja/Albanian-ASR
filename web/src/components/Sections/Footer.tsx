@@ -1,11 +1,14 @@
 "use client";
 import React from "react";
-import Link from "next/link";
-import LogoImg from "../../assets/svg/Logo";
 import { Github, Linkedin, ArrowUp } from "lucide-react";
 import { Container, Grid, Typography, IconButton, Box } from "@mui/material";
+import { useTranslations } from "next-intl";
+import { Link } from "../../../i18n/routing";
+import LogoImg from "../../assets/svg/Logo";
 
 export default function Footer() {
+  const t = useTranslations("footer");
+  const tCommon = useTranslations("common");
   const docsUrl = process.env.NEXT_PUBLIC_API_DOCS_URL || "http://localhost:8000/docs";
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -25,7 +28,7 @@ export default function Footer() {
               </Typography>
             </Box>
             <Typography variant="body2" sx={{ color: 'grey.400', maxWidth: 300 }}>
-              Building the future of Albanian speech technology, one voice at a time.
+              {t("tagline")}
             </Typography>
           </Grid>
 
@@ -51,7 +54,7 @@ export default function Footer() {
               </IconButton>
             </Box>
             <Link href="/termsandservices" className="text-gray-400 hover:text-white text-sm transition-colors">
-              Terms and Conditions
+              {t("terms")}
             </Link>
             {docsUrl && (
               <a
@@ -60,11 +63,11 @@ export default function Footer() {
                 rel="noopener noreferrer"
                 className="block text-gray-400 hover:text-white text-sm transition-colors mt-1"
               >
-                API Docs
+                {t("apiDocs")}
               </a>
             )}
             <Typography variant="body2" sx={{ color: 'grey.500', mt: 1 }}>
-              © 2025 DibraSpeaks. All rights reserved.
+              {t("copyright")}
             </Typography>
           </Grid>
 
@@ -81,7 +84,7 @@ export default function Footer() {
                 transition: 'color 0.2s'
               }}
             >
-              <Typography variant="button" sx={{ textTransform: 'none', color: 'inherit' }}>Back to top</Typography>
+              <Typography variant="button" sx={{ textTransform: 'none', color: 'inherit' }}>{tCommon("backToTop")}</Typography>
               <ArrowUp size={16} />
             </Box>
           </Grid>

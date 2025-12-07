@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { usePathname } from "next/navigation"
 import ProfileCompletionModal from "../components/Modals/ProfileCompletionModal"
@@ -13,6 +13,13 @@ interface UserData {
   profile_completed: boolean
   provider: string
   name?: string
+  avatar_url?: string | null
+}
+
+const UserProfileContext = createContext<UserData | null>(null)
+
+export function useUserProfile() {
+  return useContext(UserProfileContext)
 }
 
 interface ExtendedSession {
@@ -59,10 +66,9 @@ export default function ProfileCompletionWrapper({ children }: { children: React
         })
 
         if (response.ok) {
-          const data = await response.json()
+          const data: UserData = await response.json()
           setUserData(data)
-          
-          // Show modal only for Google users who haven't completed their profile
+
           if (data.provider === "google" && !data.profile_completed) {
             setShowModal(true)
           }
@@ -91,16 +97,16 @@ export default function ProfileCompletionWrapper({ children }: { children: React
   const extendedSession = session as unknown as ExtendedSession
 
   return (
-    <>
+    <UserProfileContext.Provider value={userData}>
       {children}
       {session && (
         <ProfileCompletionModal
           open={showModal}
-          accessToken={extendedSession.accessToken || ""}
+          accessToken={extendedSession?.accessToken || ""}
           userName={userData?.name}
           onComplete={handleProfileComplete}
         />
       )}
-    </>
+    </UserProfileContext.Provider>
   )
 }

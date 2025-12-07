@@ -3,6 +3,7 @@ import sqlalchemy as _sql
 from sqlalchemy.orm import relationship
 
 from . import database as _database
+from .enums import MediaProcessingStatus
 
 
 class User(_database.Base):
@@ -42,6 +43,13 @@ class Video(_database.Base):
     splice_status = _sql.Column(_sql.String, nullable=True)
     mp3_path = _sql.Column(_sql.String, nullable=True)
     upload_time = _sql.Column(_sql.DateTime, default=_dt.datetime.utcnow)
+    uploader_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=True)
+    processing_status = _sql.Column(
+        _sql.Enum(MediaProcessingStatus, name="video_processing_status"),
+        nullable=False,
+        default=MediaProcessingStatus.IN_PROGRESS,
+    )
+    processing_error = _sql.Column(_sql.String, nullable=True)
 
 class Splice(_database.Base):
     __tablename__ = "splices"
@@ -109,4 +117,67 @@ class SpliceBeingProcessed(_database.Base):
     owner_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=False)
     labeler_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=True)
     validator_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=True)
+
+
+class TextSplice(_database.Base):
+    __tablename__ = "text_splices"
+    id = _sql.Column(_sql.Integer, primary_key=True, index=True)
+    prompt_text = _sql.Column(_sql.String, unique=True, nullable=False)
+    status = _sql.Column(_sql.String, nullable=False, default="pending")
+    reserved_by = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=True)
+    reserved_at = _sql.Column(_sql.DateTime, nullable=True)
+    completed_at = _sql.Column(_sql.DateTime, nullable=True)
+    recorded_splice_id = _sql.Column(_sql.Integer, _sql.ForeignKey("labeled_splices.id"), nullable=True)
+    created_at = _sql.Column(_sql.DateTime, default=_dt.datetime.utcnow)
+    updated_at = _sql.Column(
+        _sql.DateTime,
+        default=_dt.datetime.utcnow,
+        onupdate=_dt.datetime.utcnow,
+    )
+
+
+class TextSpliceRecording(_database.Base):
+    __tablename__ = "text_splice_recordings"
+    id = _sql.Column(_sql.Integer, primary_key=True, index=True)
+    text_splice_id = _sql.Column(_sql.Integer, _sql.ForeignKey("text_splices.id"), nullable=False)
+    recorded_splice_id = _sql.Column(_sql.Integer, nullable=False)
+    name = _sql.Column(_sql.String, nullable=True)
+    path = _sql.Column(_sql.String, nullable=False)
+    label = _sql.Column(_sql.String, nullable=False)
+    origin = _sql.Column(_sql.String, nullable=True)
+    duration = _sql.Column(_sql.String, nullable=True)
+    validation = _sql.Column(_sql.String, nullable=True)
+    owner_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=False)
+    labeler_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=True)
+    created_at = _sql.Column(_sql.DateTime, default=_dt.datetime.utcnow)
+    updated_at = _sql.Column(
+        _sql.DateTime,
+        default=_dt.datetime.utcnow,
+        onupdate=_dt.datetime.utcnow,
+    )
+
+
+class UploadRecord(_database.Base):
+    __tablename__ = "upload_records"
+
+    id = _sql.Column(_sql.Integer, primary_key=True, index=True)
+    user_id = _sql.Column(_sql.String, _sql.ForeignKey("users.id"), nullable=False)
+    video_id = _sql.Column(_sql.Integer, _sql.ForeignKey("videos.id"), nullable=True)
+    original_filename = _sql.Column(_sql.String, nullable=False)
+    display_name = _sql.Column(_sql.String, nullable=False)
+    category = _sql.Column(_sql.String, nullable=True)
+    consent_version = _sql.Column(_sql.String, nullable=False, default="v1")
+    consent_given = _sql.Column(_sql.Boolean, nullable=False, default=True)
+    status = _sql.Column(
+        _sql.Enum(MediaProcessingStatus, name="upload_status_enum"),
+        nullable=False,
+        default=MediaProcessingStatus.IN_PROGRESS,
+    )
+    error_message = _sql.Column(_sql.String, nullable=True)
+    created_at = _sql.Column(_sql.DateTime, default=_dt.datetime.utcnow)
+    updated_at = _sql.Column(
+        _sql.DateTime,
+        default=_dt.datetime.utcnow,
+        onupdate=_dt.datetime.utcnow,
+    )
 

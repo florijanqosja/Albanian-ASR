@@ -1,9 +1,12 @@
 import type { NextConfig } from "next";
 import path from "path";
 import dotenv from "dotenv";
+import nextIntl from "next-intl/plugin";
 
 // Load environment variables from the parent directory
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
+
+const withNextIntl = nextIntl();
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -13,4 +16,4 @@ const nextConfig: NextConfig = {
   output: process.env.NODE_ENV === "production" ? "standalone" : undefined,
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

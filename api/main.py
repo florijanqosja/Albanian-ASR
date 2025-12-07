@@ -1,16 +1,28 @@
+import io
 import logging
+import math
 import os
+import uuid
 import wave
 from contextlib import asynccontextmanager
 from typing import Optional, Tuple
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
+from fastapi import (
+    BackgroundTasks,
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+)
 from fastapi.concurrency import run_in_threadpool
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from moviepy.editor import VideoFileClip
 from pydub import AudioSegment
-from pydub.silence import split_on_silence
+from pydub.silence import split_on_silence, detect_silence
 from sqlalchemy.orm import Session
 from sqlalchemy import func, select
 import sqlalchemy as _sql
@@ -18,7 +30,19 @@ import sqlalchemy as _sql
 from .database import schemas as _schemas
 from .database import services as _services
 from .database import models as _models
+from .database.enums import MediaProcessingStatus
 from .routers import auth, users
+from .utils.paths import (
+    BASE_DIR,
+    IS_PRODUCTION,
+    SPLICES_DIR,
+    SPLICES_DIR_ABS,
+    UPLOAD_DIR_MP3,
+    UPLOAD_DIR_MP3_ABS,
+    UPLOAD_DIR_MP4,
+    UPLOAD_DIR_MP4_ABS,
+    get_public_path,
+)
 from .docs import (
     API_DESCRIPTION,
     API_TITLE,
@@ -38,19 +62,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Constants - Use absolute paths in production (Docker), relative in development
-IS_PRODUCTION = os.getenv("ENVIRONMENT") == "production"
-BASE_DIR = "/code" if IS_PRODUCTION else "."
 API_ROOT_PATH = os.getenv("API_ROOT_PATH", "")
+CONSENT_VERSION = os.getenv("CONSENT_VERSION", "2025-12-02")
+MIN_SPLICE_DURATION_MS = int(os.getenv("MIN_SPLICE_DURATION_MS", "30000"))
+DEFAULT_TEXT_SPLICE_PROMPTS = [f"sample{i}" for i in range(1, 11)]
 
-UPLOAD_DIR_MP4 = os.path.join(BASE_DIR, "mp4")
-UPLOAD_DIR_MP3 = os.path.join(BASE_DIR, "mp3")
-SPLICES_DIR = os.path.join(BASE_DIR, "splices")
-
-UPLOAD_DIR_MP4_ABS = os.path.abspath(UPLOAD_DIR_MP4)
-UPLOAD_DIR_MP3_ABS = os.path.abspath(UPLOAD_DIR_MP3)
-SPLICES_DIR_ABS = os.path.abspath(SPLICES_DIR)
-SAMPLE_FILE_PATH = "sample_perrala.mp3"
-DOCKER_SAMPLE_PATH = "/code/sample_perrala.mp3"
+SAMPLE_FILE_PATH = "sample_audio_njerez_dhe_fate_e2.mp3"
+DOCKER_SAMPLE_PATH = "/code/sample_audio_njerez_dhe_fate_e2.mp3"
 
 # In development, ensure directories exist. In production, entrypoint.sh handles this.
 if not IS_PRODUCTION:
@@ -59,6 +77,43 @@ if not IS_PRODUCTION:
 
 logger.info(f"Running in {'production' if IS_PRODUCTION else 'development'} mode")
 logger.info(f"Static file directories: mp4={UPLOAD_DIR_MP4}, mp3={UPLOAD_DIR_MP3}, splices={SPLICES_DIR}")
+
+
+def _persist_media_file(
+    video_name: str,
+    filename: str,
+    file_content: bytes,
+) -> Tuple[str, str, str, str, str, Optional[str]]:
+    """Save incoming media to disk and prepare derivative paths."""
+
+    normalized_name = str(video_name).replace(" ", "_")
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in [".mp4", ".mp3"]:
+        raise HTTPException(status_code=400, detail="Invalid document type. Only .mp4 and .mp3 are supported.")
+
+    safe_filename = "".join(x for x in filename if x.isalnum() or x in "._-")
+    mp4_path: Optional[str] = None
+    mp3_path: Optional[str] = None
+
+    if ext == ".mp4":
+        mp4_dir = os.path.join(UPLOAD_DIR_MP4, normalized_name)
+        os.makedirs(mp4_dir, exist_ok=True)
+        file_location = os.path.join(mp4_dir, safe_filename)
+        mp4_path = file_location
+
+        mp3_dir = os.path.join(UPLOAD_DIR_MP3, normalized_name)
+        os.makedirs(mp3_dir, exist_ok=True)
+        mp3_path = os.path.join(mp3_dir, safe_filename.replace(".mp4", ".mp3"))
+    else:
+        mp3_dir = os.path.join(UPLOAD_DIR_MP3, normalized_name)
+        os.makedirs(mp3_dir, exist_ok=True)
+        file_location = os.path.join(mp3_dir, safe_filename)
+        mp3_path = file_location
+
+    with open(file_location, "wb+") as destination:
+        destination.write(file_content)
+
+    return normalized_name, safe_filename, ext, file_location, mp3_path, mp4_path
 
 def _get_wav_duration(wav_path: str) -> float:
     """Calculates the duration of a WAV file in seconds."""
@@ -83,125 +138,155 @@ def _convert_mp4_to_mp3(mp4_path: str, mp3_path: str) -> None:
         logger.error(f"Error converting mp4 to mp3: {e}")
         raise HTTPException(status_code=500, detail=f"Audio conversion failed: {str(e)}")
 
-def _splice_audio(file_path: str, video_name: str, min_silence_len: int = 500, silence_thresh: int = -30) -> None:
-    """Splits audio into chunks based on silence."""
+
+def _store_recorded_audio(user_id: str, audio_bytes: bytes) -> Tuple[str, str, float]:
+    """Converts an uploaded blob into a WAV file under the user's splice directory."""
+    if not audio_bytes:
+        raise ValueError("Audio payload is empty")
+
+    user_dir = os.path.join(SPLICES_DIR, user_id)
+    os.makedirs(user_dir, exist_ok=True)
+
+    try:
+        audio_segment = AudioSegment.from_file(io.BytesIO(audio_bytes))
+    except Exception as exc:  # pragma: no cover - depends on ffmpeg codecs
+        raise ValueError("Unsupported audio format") from exc
+
+    duration_seconds = len(audio_segment) / 1000.0
+    file_token = uuid.uuid4().hex
+    filename = f"recording_{file_token}.wav"
+    file_path = os.path.join(user_dir, filename)
+    audio_segment.export(file_path, format="wav")
+
+    return file_path, filename, duration_seconds
+
+def _splice_audio(
+    file_path: str,
+    video_name: str,
+    min_silence_len: int = 700,
+    silence_thresh: int = -20,
+    keep_silence: int = 150,
+    min_chunk_duration_ms: int = MIN_SPLICE_DURATION_MS,
+) -> None:
+    """Splits audio into chunks based on silence and enforces a minimum duration."""
     try:
         logger.info(f"Splicing audio for {video_name}")
         output_dir = os.path.join(SPLICES_DIR, video_name)
         os.makedirs(output_dir, exist_ok=True)
         
         audio = AudioSegment.from_file(file_path)
-        chunks = split_on_silence(
+        
+        silences = detect_silence(
             audio,
             min_silence_len=min_silence_len,
             silence_thresh=silence_thresh
         )
         
-        chunk_start = 0
-        for chunk in chunks:
-            chunk_end = chunk_start + len(chunk)
-            # Format: videoplaybackmp4_START-END.wav (START/END in seconds)
-            chunk_filename = f"videoplaybackmp4_{chunk_start/1000}-{chunk_end/1000}.wav"
-            chunk_path = os.path.join(output_dir, chunk_filename)
-            chunk.export(chunk_path, format="wav")
-            chunk_start = chunk_end
+        last_split = 0
+        
+        for start, end in silences:
+            mid_point = int((start + end) / 2)
+            
+            current_chunk_duration = mid_point - last_split
+            remaining_duration = len(audio) - mid_point
+            
+            if current_chunk_duration >= min_chunk_duration_ms:
+                if remaining_duration < min_chunk_duration_ms:
+                    continue
+                
+                chunk = audio[last_split:mid_point]
+                chunk_filename = f"videoplaybackmp4_{last_split/1000}-{mid_point/1000}.wav"
+                chunk_path = os.path.join(output_dir, chunk_filename)
+                chunk.export(chunk_path, format="wav")
+                
+                last_split = mid_point
+        
+        # Export final chunk
+        final_chunk = audio[last_split:]
+        final_filename = f"videoplaybackmp4_{last_split/1000}-{len(audio)/1000}.wav"
+        final_path = os.path.join(output_dir, final_filename)
+        final_chunk.export(final_path, format="wav")
             
     except Exception as e:
         logger.error(f"Error splicing audio: {e}")
         raise HTTPException(status_code=500, detail=f"Audio splicing failed: {str(e)}")
 
-async def _process_video_upload(
+
+async def _process_video_file(
+    video_id: int,
     video_name: str,
-    video_category: str,
-    file_content: bytes,
-    filename: str,
-    db: Session,
-    user_id: str
-) -> _schemas.Video:
-    """
-    Handles the core logic for processing a video upload:
-    1. Save file
-    2. Create DB entry
-    3. Convert to MP3 (if needed)
-    4. Splice audio
-    5. Create splice entries in DB
-    6. Update video status
-    """
-    video_name = str(video_name).replace(" ", "_")
-    ext = os.path.splitext(filename)[1].lower()
-    
-    # Sanitize filename
-    safe_filename = "".join(x for x in filename if x.isalnum() or x in "._-")
-    
-    mp4_path = None
-    mp3_path = None
-    file_location = None
+    safe_filename: str,
+    ext: str,
+    original_path: str,
+    mp3_path: str,
+    owner_id: str,
+    upload_record_id: Optional[int] = None,
+    db_session: Optional[Session] = None,
+) -> None:
+    """Run conversion, splicing, and status updates for a stored media asset."""
 
-    if ext == ".mp4":
-        mp4_dir = os.path.join(UPLOAD_DIR_MP4, video_name)
-        os.makedirs(mp4_dir, exist_ok=True)
-        file_location = os.path.join(mp4_dir, safe_filename)
-        mp4_path = file_location
-        
-        mp3_dir = os.path.join(UPLOAD_DIR_MP3, video_name)
-        os.makedirs(mp3_dir, exist_ok=True)
-        mp3_path = os.path.join(mp3_dir, safe_filename.replace('.mp4', '.mp3'))
-    else:
-        # Assume MP3
-        mp3_dir = os.path.join(UPLOAD_DIR_MP3, video_name)
-        os.makedirs(mp3_dir, exist_ok=True)
-        mp3_path = os.path.join(mp3_dir, safe_filename)
-        file_location = mp3_path
+    db = db_session or _services.SessionLocal()
+    owns_session = db_session is None
 
-    # Save file
-    with open(file_location, "wb+") as f:
-        f.write(file_content)
+    try:
+        if ext == ".mp4":
+            await run_in_threadpool(_convert_mp4_to_mp3, original_path, mp3_path)
 
-    # Create initial DB entry
-    create_video_data = _schemas.VideoCreate(
-        name=video_name,
-        path=file_location,
-        category=video_category,
-        to_mp3_status="False",
-        splice_status="False",
-    )
-    video_record = await _services.create_video(video=create_video_data, db=db)
+        await run_in_threadpool(_splice_audio, mp3_path, video_name)
 
-    # Process Audio (Convert & Splice)
-    # Run blocking operations in threadpool
-    if ext == ".mp4":
-        await run_in_threadpool(_convert_mp4_to_mp3, mp4_path, mp3_path)
-    
-    await run_in_threadpool(_splice_audio, mp3_path, video_name)
+        splices_output_dir = os.path.join(SPLICES_DIR, video_name)
+        if os.path.exists(splices_output_dir):
+            for splice_file in os.listdir(splices_output_dir):
+                splice_path = os.path.join(splices_output_dir, splice_file)
+                duration = await run_in_threadpool(_get_wav_duration, splice_path)
 
-    # Create Splice Entries
-    splices_output_dir = os.path.join(SPLICES_DIR, video_name)
-    if os.path.exists(splices_output_dir):
-        splice_files = os.listdir(splices_output_dir)
-        for splice_file in splice_files:
-            splice_path = os.path.join(splices_output_dir, splice_file)
-            # Calculate duration (blocking I/O)
-            duration = await run_in_threadpool(_get_wav_duration, splice_path)
+                create_splice_data = _schemas.SpliceCreate(
+                    name=video_name,
+                    path=splice_path,
+                    origin=safe_filename,
+                    duration=str(duration),
+                    validation="0",
+                    label="",
+                    owner_id=owner_id,
+                )
+                await _services.create_splice(splice=create_splice_data, db=db)
 
-            create_splice_data = _schemas.SpliceCreate(
-                name=video_name,
-                path=splice_path,
-                origin=safe_filename,
-                duration=str(duration),
-                validation="0",
-                label="",
-                owner_id=user_id
+        await _services.update_video_by_id(
+            video_id=video_id,
+            update_data={
+                "mp3_path": mp3_path,
+                "to_mp3_status": "True",
+                "splice_status": "True",
+                "processing_status": MediaProcessingStatus.COMPLETED,
+                "processing_error": None,
+            },
+            db=db,
+        )
+
+        if upload_record_id is not None:
+            _services.set_upload_status(upload_record_id, MediaProcessingStatus.COMPLETED, db)
+    except Exception as exc:
+        logger.error(f"Video processing failed for video_id={video_id}: {exc}", exc_info=True)
+        await _services.update_video_by_id(
+            video_id=video_id,
+            update_data={
+                "processing_status": MediaProcessingStatus.ERROR,
+                "processing_error": str(exc),
+            },
+            db=db,
+        )
+        if upload_record_id is not None:
+            _services.set_upload_status(
+                upload_record_id,
+                MediaProcessingStatus.ERROR,
+                db,
+                error_message=str(exc),
             )
-            await _services.create_splice(splice=create_splice_data, db=db)
+        raise
+    finally:
+        if owns_session:
+            db.close()
 
-    # Update Video Status
-    update_video_data = {
-        "mp3_path": mp3_path,
-        "to_mp3_status": "True",
-        "splice_status": "True",
-    }
-    updated_video = await _services.update_video(video_path=file_location, update_data=update_video_data, db=db)
-    return updated_video
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -256,9 +341,16 @@ async def lifespan(app: FastAPI):
                 else:
                     raise e
 
+        try:
+            inserted_prompt_count = _services.seed_text_splices(db, DEFAULT_TEXT_SPLICE_PROMPTS)
+            if inserted_prompt_count:
+                logger.info(f"Seeded {inserted_prompt_count} default text splices")
+        except Exception as text_seed_error:
+            logger.error(f"Failed to seed default text splices: {text_seed_error}", exc_info=True)
+
         # Seed database if empty OR if splice files are missing
         existing_video = db.query(_models.Video).first()
-        splice_dir = os.path.join(SPLICES_DIR, "Sample_Perrala")
+        splice_dir = os.path.join(SPLICES_DIR, "sample_audio_njerez_dhe_fate_e2")
         splice_files_exist = os.path.exists(splice_dir) and len(os.listdir(splice_dir)) > 0
         
         if existing_video and splice_files_exist:
@@ -294,20 +386,46 @@ async def lifespan(app: FastAPI):
                         file_content = f.read()
                     logger.info(f"Sample file size: {len(file_content)} bytes")
                     
-                    # We use the processing function to ensure the seed data is fully functional
                     logger.info("Starting video processing...")
-                    await _process_video_upload(
-                        video_name="Sample Perrala",
-                        video_category="Story",
+                    (
+                        normalized_name,
+                        safe_filename,
+                        ext,
+                        file_location,
+                        mp3_path,
+                        _,
+                    ) = _persist_media_file(
+                        video_name="Sample Audio Njerez Dhe Fate E2",
+                        filename="sample_audio_njerez_dhe_fate_e2.mp3",
                         file_content=file_content,
-                        filename="sample_perrala.mp3",
-                        db=db,
-                        user_id=system_user.id
+                    )
+
+                    create_video_data = _schemas.VideoCreate(
+                        name=normalized_name,
+                        path=file_location,
+                        category="Story",
+                        to_mp3_status="False",
+                        splice_status="False",
+                        mp3_path=mp3_path,
+                        uploader_id=system_user.id,
+                        processing_status=MediaProcessingStatus.IN_PROGRESS,
+                    )
+                    video_record = await _services.create_video(video=create_video_data, db=db)
+
+                    await _process_video_file(
+                        video_id=video_record.id,
+                        video_name=normalized_name,
+                        safe_filename=safe_filename,
+                        ext=ext,
+                        original_path=file_location,
+                        mp3_path=mp3_path,
+                        owner_id=system_user.id,
+                        db_session=db,
                     )
                     logger.info("Successfully seeded database with sample video.")
                     
                     # Verify splices were created
-                    splice_dir = os.path.join(SPLICES_DIR, "Sample_Perrala")
+                    splice_dir = os.path.join(SPLICES_DIR, "sample_audio_njerez_dhe_fate_e2")
                     if os.path.exists(splice_dir):
                         splice_files = os.listdir(splice_dir)
                         logger.info(f"Created {len(splice_files)} splice files in {splice_dir}")
@@ -360,45 +478,133 @@ app.include_router(users.router)
     tags=["Video Intake"],
     summary="Upload and preprocess a new media asset",
     description=(
-        "Accepts MP4 or MP3 files, stores the raw asset, converts video to audio, "
-        "generates splice waveforms, and seeds the labeling queue in a single transaction."
+        "Accepts MP4 or MP3 files, stores the raw asset, and schedules background processing "
+        "(conversion + splicing) so the client receives an immediate acknowledgement."
     ),
 )
 async def create_video(
-    video_name: str,
-    video_category: str,
+    background_tasks: BackgroundTasks,
+    video_name: str = Form(...),
+    video_category: str = Form(...),
+    consent: bool = Form(True),
     video_file: UploadFile = File(...),
+    current_user: _models.User = Depends(auth.get_current_user),
     db: Session = Depends(_services.get_db),
 ):
+    if not consent:
+        raise HTTPException(status_code=400, detail="Consent is required to upload media.")
+
     filename = video_file.filename
+    if filename is None:
+        raise HTTPException(status_code=400, detail="Filename is required.")
+
     ext = os.path.splitext(filename)[1].lower()
-    
     if ext not in [".mp4", ".mp3"]:
         raise HTTPException(status_code=400, detail="Invalid document type. Only .mp4 and .mp3 are supported.")
-    
-    try:
-        system_user = _services.get_user_by_email(db, "system@albaniansr.com")
-        if not system_user:
-             raise HTTPException(status_code=500, detail="System user not found")
 
+    try:
         file_content = await video_file.read()
-        updated_video = await _process_video_upload(
-            video_name=video_name,
-            video_category=video_category,
-            file_content=file_content,
-            filename=filename,
-            db=db,
-            user_id=system_user.id
+        (
+            normalized_name,
+            safe_filename,
+            ext,
+            file_location,
+            mp3_path,
+            _,
+        ) = _persist_media_file(video_name, filename, file_content)
+
+        create_video_data = _schemas.VideoCreate(
+            name=normalized_name,
+            path=file_location,
+            category=video_category,
+            to_mp3_status="False",
+            splice_status="False",
+            mp3_path=mp3_path,
+            uploader_id=current_user.id,
+            processing_status=MediaProcessingStatus.IN_PROGRESS,
         )
-        
+        video_record = await _services.create_video(video=create_video_data, db=db)
+
+        upload_record = await _services.create_upload_record(
+            upload=_schemas.UploadRecordCreate(
+                user_id=current_user.id,
+                video_id=video_record.id,
+                original_filename=filename,
+                display_name=normalized_name,
+                category=video_category,
+                consent_version=CONSENT_VERSION,
+                consent_given=True,
+                status=MediaProcessingStatus.IN_PROGRESS,
+            ),
+            db=db,
+        )
+
+        background_tasks.add_task(
+            _process_video_file,
+            video_record.id,
+            normalized_name,
+            safe_filename,
+            ext,
+            file_location,
+            mp3_path,
+            current_user.id,
+            upload_record.id,
+        )
+
         return _schemas.ResponseModel(
             status="success",
-            data=updated_video,
-            message="Video created and processed successfully"
+            data={
+                "video_id": video_record.id,
+                "upload_id": upload_record.id,
+                "status": upload_record.status.value,
+            },
+            message="Upload received. Processing has been scheduled.",
         )
     except Exception as e:
         logger.error(f"Error creating video: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get(
+    "/uploads/history",
+    response_model=_schemas.ResponseModel,
+    tags=["Video Intake"],
+    summary="List recently uploaded media",
+    description="Returns the authenticated user's most recent uploads with their processing state.",
+)
+async def list_upload_history(
+    current_user: _models.User = Depends(auth.get_current_user),
+    db: Session = Depends(_services.get_db),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+):
+    total, records = _services.get_user_upload_records(db, current_user.id, page, page_size)
+    names = [record.display_name for record in records if record.display_name]
+    stats_map = _services.get_splice_stats_for_video_names(db, names)
+
+    items = []
+    for record in records:
+        schema_record = _schemas.UploadRecord.model_validate(record)
+        stats_payload = stats_map.get(record.display_name)
+        if stats_payload:
+            schema_record = schema_record.model_copy(
+                update={"stats": _schemas.UploadStats(**stats_payload)}
+            )
+        items.append(schema_record.model_dump())
+
+    total_pages = math.ceil(total / page_size) if total else 0
+    return _schemas.ResponseModel(
+        status="success",
+        data={
+            "items": items,
+            "meta": {
+                "page": page,
+                "page_size": page_size,
+                "total": total,
+                "total_pages": total_pages,
+            },
+        },
+        message="Upload history retrieved",
+    )
 
 def _prepare_trim_window(start: Optional[float], end: Optional[float]) -> Optional[Tuple[float, float]]:
     """Validates and orders trimming boundaries."""
@@ -452,44 +658,6 @@ def _trim_audio_segment(file_path: str, start: float, end: float) -> Optional[fl
         logger.error("Failed to trim audio file %s: %s", file_path, exc)
         raise HTTPException(status_code=500, detail="Failed to trim audio file")
 
-def _get_public_path(file_path: str, include_version: bool = True) -> str:
-    """Converts a filesystem path into the mounted static path and busts caches."""
-    if not file_path:
-        return file_path
-
-    normalized_path = os.path.abspath(file_path)
-
-    def _relativize(base_dir: str, mount_point: str) -> Optional[str]:
-        if normalized_path.startswith(base_dir):
-            relative_path = normalized_path[len(base_dir):]
-            if not relative_path.startswith("/"):
-                relative_path = "/" + relative_path
-            return f"{mount_point}{relative_path}"
-        return None
-
-    public_path = None
-    for directory, mount_point in (
-        (SPLICES_DIR_ABS, "/splices"),
-        (UPLOAD_DIR_MP3_ABS, "/mp3"),
-        (UPLOAD_DIR_MP4_ABS, "/mp4"),
-    ):
-        public_path = _relativize(directory, mount_point)
-        if public_path:
-            break
-
-    if not public_path:
-        return normalized_path
-
-    if include_version:
-        try:
-            version = int(os.path.getmtime(normalized_path))
-            separator = "&" if "?" in public_path else "?"
-            return f"{public_path}{separator}v={version}"
-        except OSError as exc:
-            logger.warning("Could not read modification time for %s: %s", normalized_path, exc)
-
-    return public_path
-
 @app.get(
     "/audio/to_label",
     response_model=_schemas.ResponseModel,
@@ -521,7 +689,7 @@ async def get_audio_to_label(db: Session = Depends(_services.get_db)):
         await _services.delete_splice(first_splice.id, db)
 
         response_data = processed_splice.model_copy(update={
-            "path": _get_public_path(processed_splice.path)
+            "path": get_public_path(processed_splice.path)
         })
 
         return _schemas.ResponseModel(
@@ -564,7 +732,7 @@ async def get_audio_to_validate(db: Session = Depends(_services.get_db)):
         await _services.delete_labeled_splice(first_splice.id, db)
 
         response_data = processed_splice.model_copy(update={
-            "path": _get_public_path(processed_splice.path)
+            "path": get_public_path(processed_splice.path)
         })
 
         return _schemas.ResponseModel(
@@ -845,6 +1013,139 @@ async def get_validation_audio_link_plus(db: Session = Depends(_services.get_db)
     if not first_splice_path:
         return _schemas.ResponseModel(status="success", data=[], message="No validation audio link found")
     return _schemas.ResponseModel(status="success", data=first_splice_path, message="Validation audio link retrieved")
+
+
+@app.get(
+    "/record/text",
+    response_model=_schemas.ResponseModel,
+    tags=["Recording"],
+    summary="Reserve a text prompt for recording",
+    description=(
+        "Returns the contributor's active prompt if it is already reserved or fetches the next available "
+        "text snippet so they can record fresh speech directly into the labeled queue."
+    ),
+)
+async def get_record_prompt(
+    current_user: _models.User = Depends(auth.get_current_user),
+    db: Session = Depends(_services.get_db),
+):
+    existing_prompt = _services.get_reserved_text_splice_for_user(db, current_user.id)
+    if existing_prompt:
+        return _schemas.ResponseModel(
+            status="success",
+            data=existing_prompt.model_dump(),
+            message="Prompt already reserved",
+        )
+
+    next_prompt = _services.get_next_available_text_splice(db)
+    if not next_prompt:
+        return _schemas.ResponseModel(
+            status="success",
+            data=None,
+            message="No text prompts available right now.",
+        )
+
+    reserved_prompt = await _services.reserve_text_splice(next_prompt.id, current_user.id, db)
+    return _schemas.ResponseModel(
+        status="success",
+        data=reserved_prompt.model_dump(),
+        message="Recording prompt reserved",
+    )
+
+
+@app.post(
+    "/record/upload",
+    response_model=_schemas.ResponseModel,
+    tags=["Recording"],
+    summary="Submit a recorded clip",
+    description=(
+        "Accepts raw microphone audio plus the prompted text, persists the file under the contributor's splice "
+        "directory, and promotes it straight into the labeled queue so validators can pick it up next."
+    ),
+)
+async def submit_recording(
+    text_splice_id: int = Form(...),
+    spoken_text: str = Form(...),
+    audio_file: UploadFile = File(...),
+    current_user: _models.User = Depends(auth.get_current_user),
+    db: Session = Depends(_services.get_db),
+):
+    text_splice = _services.get_text_splice_by_id(db, text_splice_id)
+    if not text_splice:
+        raise HTTPException(status_code=404, detail="Text prompt not found")
+
+    if text_splice.reserved_by and text_splice.reserved_by != current_user.id:
+        raise HTTPException(status_code=403, detail="This prompt is reserved by another contributor")
+
+    if text_splice.status == "completed":
+        raise HTTPException(status_code=409, detail="This prompt has already been recorded")
+
+    if text_splice.status == "pending":
+        text_splice = await _services.reserve_text_splice(text_splice.id, current_user.id, db)
+
+    transcript = spoken_text.strip()
+    if not transcript:
+        raise HTTPException(status_code=400, detail="Transcript text is required")
+
+    file_bytes = await audio_file.read()
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="Audio file is empty")
+
+    try:
+        audio_path, safe_filename, duration_seconds = await run_in_threadpool(
+            _store_recorded_audio,
+            current_user.id,
+            file_bytes,
+        )
+    except ValueError as exc:
+        logger.error("Failed to decode recorded audio", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    duration_str = str(round(duration_seconds, 3))
+    recording_name = f"recordings_{current_user.id}"
+
+    labeled_splice_payload = _schemas.LabeledSpliceCreate(
+        name=recording_name,
+        path=audio_path,
+        label=transcript,
+        origin=safe_filename,
+        duration=duration_str,
+        validation="0.95",
+        owner_id=current_user.id,
+        labeler_id=current_user.id,
+    )
+    recorded_splice = await _services.create_labeled_splice(labeled_splice_payload, db)
+
+    snapshot_payload = _schemas.TextSpliceRecordingCreate(
+        text_splice_id=text_splice.id,
+        recorded_splice_id=recorded_splice.id,
+        name=recorded_splice.name,
+        path=recorded_splice.path,
+        label=recorded_splice.label,
+        origin=recorded_splice.origin,
+        duration=recorded_splice.duration,
+        validation=recorded_splice.validation,
+        owner_id=recorded_splice.owner_id,
+        labeler_id=recorded_splice.labeler_id,
+    )
+    await _services.create_text_splice_recording(snapshot_payload, db)
+
+    completed_prompt = await _services.complete_text_splice(
+        text_splice_id=text_splice.id,
+        recorded_splice_id=recorded_splice.id,
+        db=db,
+    )
+
+    return _schemas.ResponseModel(
+        status="success",
+        data={
+            "recorded_splice_id": recorded_splice.id,
+            "audio_path": get_public_path(recorded_splice.path),
+            "duration": duration_str,
+            "text_splice": completed_prompt.model_dump(),
+        },
+        message="Recording submitted successfully",
+    )
 
 @app.get(
     "/dataset_insight_info",

@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 COPY ./api /code/app
 
 # Copy sample file for seeding (optional)
-COPY ./sample_perrala.mp3 /code/sample_perrala.mp3
+COPY ./sample_audio_njerez_dhe_fate_e2.mp3 /code/sample_audio_njerez_dhe_fate_e2.mp3
 
 # Copy entrypoint script
 COPY ./api/dockerfiles/entrypoint.sh /code/entrypoint.sh

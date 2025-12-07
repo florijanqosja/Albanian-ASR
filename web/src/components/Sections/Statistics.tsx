@@ -5,6 +5,7 @@ import 'react-circular-progressbar/dist/styles.css';
 import { Typography, Grid, Box, Container, Paper } from "@mui/material";
 import { Database, CheckCircle, Clock, ClipboardCheck } from "lucide-react";
 import axios from "axios";
+import { useTranslations } from "next-intl";
 
 interface SummaryInfo {
   total_labeled: number;
@@ -21,6 +22,7 @@ interface SummaryInfo {
 }
 
 export default function Statistics() {
+    const t = useTranslations("stats");
   const [summaryInfo, setSummaryInfo] = useState<SummaryInfo | null>(null);
 
   useEffect(() => {
@@ -63,7 +65,7 @@ export default function Statistics() {
     fetchSummaryInfo();
   }, []);
 
-  const StatCard = ({ title, value, subtitle, icon, color }: { title: string, value: string | number, subtitle: string, icon: React.ReactNode, color: string }) => (
+    const StatCard = ({ title, value, subtitle, icon, color }: { title: string, value: string | number, subtitle: string, icon: React.ReactNode, color: string }) => (
     <Paper elevation={0} sx={{ p: 3, height: '100%', borderRadius: 4, border: '1px solid', borderColor: 'divider', transition: 'all 0.3s', '&:hover': { transform: 'translateY(-5px)', boxShadow: '0 10px 30px -10px rgba(0,0,0,0.1)' } }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
             <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: `${color}15`, color: color, mr: 2 }}>
@@ -87,14 +89,13 @@ export default function Statistics() {
       <Container maxWidth="lg">
         <Box sx={{ textAlign: 'center', mb: 8 }}>
             <Typography variant="overline" color="primary" fontWeight={700} letterSpacing={2}>
-                PROJECT INSIGHTS
+                {t("eyebrow")}
             </Typography>
             <Typography variant="h2" fontWeight={800} sx={{ mt: 1, mb: 3, background: 'linear-gradient(45deg, #1F2937 30%, #4B5563 90%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                We Love Technology
+                {t("title")}
             </Typography>
             <Typography variant="body1" color="textSecondary" sx={{ maxWidth: 700, mx: 'auto', fontSize: '1.1rem', lineHeight: 1.8 }}>
-                Our mission is to build the most comprehensive Albanian speech dataset. 
-                Track our progress as we collect, label, and validate audio data to power the next generation of AI tools.
+                {t("body")}
             </Typography>
         </Box>
 
@@ -102,7 +103,7 @@ export default function Statistics() {
             <Grid container spacing={4}>
                 <Grid size={{ xs: 12, md: 4 }}>
                     <Box sx={{ textAlign: 'center', p: 4, bgcolor: 'white', borderRadius: 4, height: '100%', border: '1px solid', borderColor: 'divider' }}>
-                        <Typography variant="h6" fontWeight={700} gutterBottom>Validation Progress</Typography>
+                        <Typography variant="h6" fontWeight={700} gutterBottom>{t("progress")}</Typography>
                         <Box sx={{ width: 180, height: 180, mx: 'auto', my: 4 }}>
                             <CircularProgressbar
                                 value={summaryInfo.progressPercentage}
@@ -116,7 +117,7 @@ export default function Statistics() {
                             />
                         </Box>
                         <Typography variant="body2" color="textSecondary">
-                            Percentage of total audio duration that has been validated.
+                            {t("progressHelp")}
                         </Typography>
                     </Box>
                 </Grid>
@@ -125,36 +126,36 @@ export default function Statistics() {
                     <Grid container spacing={3}>
                         <Grid size={{ xs: 12, sm: 6 }}>
                             <StatCard 
-                                title="Total Labeled" 
+                                title={t("totalLabeled")} 
                                 value={summaryInfo.total_labeled.toLocaleString()} 
-                                subtitle={`${summaryInfo.sumofLabeled.toFixed(1)}% of total clips`}
+                                subtitle={t("labeledSubtitle", { percent: summaryInfo.sumofLabeled.toFixed(1) })}
                                 icon={<Database size={24} />}
                                 color="#3B82F6"
                             />
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6 }}>
                             <StatCard 
-                                title="Validated Hours" 
+                                title={t("validatedHours")}
                                 value={summaryInfo.total_duration_validated.toFixed(1)} 
-                                subtitle="Hours of high-quality audio"
+                                subtitle={t("validatedHoursSubtitle")}
                                 icon={<CheckCircle size={24} />}
                                 color="#10B981"
                             />
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6 }}>
                             <StatCard 
-                                title="Labeled Hours" 
+                                title={t("labeledHours")}
                                 value={summaryInfo.total_duration_labeled.toFixed(1)} 
-                                subtitle="Total hours transcribed"
+                                subtitle={t("labeledHoursSubtitle")}
                                 icon={<Clock size={24} />}
                                 color="#F59E0B"
                             />
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6 }}>
                             <StatCard 
-                                title="Total Validated" 
+                                title={t("totalValidated")}
                                 value={summaryInfo.total_validated?.toLocaleString() || "0"} 
-                                subtitle="Total clips validated"
+                                subtitle={t("totalValidatedSubtitle")}
                                 icon={<ClipboardCheck size={24} />}
                                 color="#8B5CF6"
                             />

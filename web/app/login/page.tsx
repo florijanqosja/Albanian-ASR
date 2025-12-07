@@ -1,60 +1,94 @@
-"use client"
-import { useState, useEffect, Suspense } from "react"
-import { signIn } from "next-auth/react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Box, Button, TextField, Typography, Container, Paper, Divider, InputAdornment, IconButton, Alert } from "@mui/material"
-import { FcGoogle } from "react-icons/fc"
-import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react"
-import Link from "next/link"
-import LogoIcon from "../../src/assets/svg/Logo"
-import Footer from "@/components/Sections/Footer"
+"use client";
+import { useState, useEffect, Suspense } from "react";
+import { signIn, useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
+import { Box, Button, TextField, Typography, Container, Paper, Divider, InputAdornment, IconButton, Alert, CircularProgress } from "@mui/material";
+import { FcGoogle } from "react-icons/fc";
+import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Link, useRouter } from "../../i18n/routing";
+import LogoIcon from "../../src/assets/svg/Logo";
+import Footer from "@/components/Sections/Footer";
 
-const isProduction = process.env.NEXT_PUBLIC_ENVIRONMENT === "production"
+const isProduction = process.env.NEXT_PUBLIC_ENVIRONMENT === "production";
 
 function LoginPageContent() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const verified = searchParams.get("verified")
-  const emailParam = searchParams.get("email")
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const t = useTranslations("login");
+  const verified = searchParams.get("verified");
+  const emailParam = searchParams.get("email");
+  const { data: session, status } = useSession();
   
-  const [email, setEmail] = useState(emailParam || "")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(verified ? "Email verified successfully! Please sign in." : null)
+  const [email, setEmail] = useState(emailParam || "");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(verified ? t("successVerified") : null);
+
+  useEffect(() => {
+    if (verified) {
+      setSuccess(t("successVerified"));
+    }
+  }, [t, verified]);
 
   useEffect(() => {
     if (emailParam) {
-      setEmail(emailParam)
+      setEmail(emailParam);
     }
-  }, [emailParam])
+  }, [emailParam]);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (status === "authenticated" && session) {
+      router.push("/");
+      router.refresh();
+    }
+  }, [status, session, router]);
+
+  // Show loading state while checking authentication
+  if (status === "loading") {
+    return (
+      <>
+        <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.50' }}>
+          <CircularProgress size={40} />
+        </Box>
+        <Footer />
+      </>
+    );
+  }
+
+  // Don't render login form if already authenticated
+  if (status === "authenticated") {
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-    setSuccess(null)
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
     
     try {
       const result = await signIn("credentials", { 
         email, 
         password, 
         redirect: false 
-      })
+      });
       
       if (result?.error) {
-        setError("Invalid email or password. Please try again.")
+        setError(t("errorInvalid"));
       } else if (result?.ok) {
-        router.push("/")
-        router.refresh()
+        router.push("/");
+        router.refresh();
       }
     } catch {
-      setError("An error occurred. Please try again.")
+      setError(t("errorGeneric"));
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <>
@@ -66,10 +100,10 @@ function LoginPageContent() {
                 <LogoIcon />
             </Box>
             <Typography component="h1" variant="h4" fontWeight={800} sx={{ mb: 1 }}>
-              Welcome Back
+              {t("title")}
             </Typography>
             <Typography color="textSecondary">
-              Sign in to continue to DibraSpeaks
+              {t("subtitle")}
             </Typography>
           </Box>
           
@@ -93,11 +127,11 @@ function LoginPageContent() {
                     '&:hover': { bgcolor: 'grey.50', borderColor: 'grey.400' }
                 }}
               >
-                Continue with Google
+                {t("continueGoogle")}
               </Button>
 
               <Divider sx={{ width: '100%', mb: 3 }}>
-                <Typography variant="caption" color="textSecondary" sx={{ px: 1 }}>OR EMAIL</Typography>
+                <Typography variant="caption" color="textSecondary" sx={{ px: 1 }}>{t("orEmail")}</Typography>
               </Divider>
             </>
           )}
@@ -118,7 +152,7 @@ function LoginPageContent() {
               required
               fullWidth
               id="email"
-              label="Email Address"
+              label={t("emailLabel")}
               name="email"
               autoComplete="email"
               autoFocus
@@ -138,7 +172,7 @@ function LoginPageContent() {
               required
               fullWidth
               name="password"
-              label="Password"
+              label={t("passwordLabel")}
               type={showPassword ? "text" : "password"}
               id="password"
               autoComplete="current-password"
@@ -180,20 +214,20 @@ function LoginPageContent() {
                 boxShadow: '0 4px 14px 0 rgba(166, 77, 74, 0.39)'
               }}
             >
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? t("signingIn") : t("signIn")}
             </Button>
             
             <Box sx={{ textAlign: 'center', mb: 2 }}>
               <Link href="/forgot-password" className="text-gray-500 hover:text-primary text-sm">
-                Forgot your password?
+                {t("forgot")}
               </Link>
             </Box>
 
             <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="body2" color="textSecondary">
-                    Don&apos;t have an account?{' '}
+                    {t("ctaRegister")} 
                     <Link href="/register" className="font-bold text-primary hover:underline">
-                        Sign up
+                        {t("ctaRegisterLink")}
                     </Link>
                 </Typography>
             </Box>

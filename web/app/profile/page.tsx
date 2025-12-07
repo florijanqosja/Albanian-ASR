@@ -1,10 +1,12 @@
 "use client"
 import { useSession } from "next-auth/react"
 import { useState, useEffect } from "react"
-import { Container, Typography, TextField, Button, Box, Paper, Grid, Avatar, Divider } from "@mui/material"
+import type { ChangeEvent } from "react"
+import { Container, Typography, TextField, Button, Box, Paper, Grid, Avatar, Divider, MenuItem } from "@mui/material"
 import { User, Mail, Phone, MapPin, Globe, Mic, Save } from "lucide-react"
 import axios from "axios"
 import Footer from "@/components/Sections/Footer"
+import { ALBANIAN_ACCENTS, ALBANIAN_REGIONS, ACCENT_OTHER_VALUE, REGION_OTHER_VALUE } from "@/constants/profileOptions"
 
 export default function ProfilePage() {
   const { data: session } = useSession()
@@ -19,6 +21,32 @@ export default function ProfilePage() {
     region: ""
   })
   const [loading, setLoading] = useState(false)
+  const [accentSelection, setAccentSelection] = useState("")
+  const [customAccent, setCustomAccent] = useState("")
+  const [regionSelection, setRegionSelection] = useState("")
+  const [customRegion, setCustomRegion] = useState("")
+
+    const handleAccentSelection = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const value = event.target.value
+        setAccentSelection(value)
+        if (value === ACCENT_OTHER_VALUE) {
+            setFormData(prev => ({ ...prev, accent: customAccent }))
+        } else {
+            setCustomAccent("")
+            setFormData(prev => ({ ...prev, accent: value }))
+        }
+    }
+
+    const handleRegionSelection = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const value = event.target.value
+        setRegionSelection(value)
+        if (value === REGION_OTHER_VALUE) {
+            setFormData(prev => ({ ...prev, region: customRegion }))
+        } else {
+            setCustomRegion("")
+            setFormData(prev => ({ ...prev, region: value }))
+        }
+    }
 
   useEffect(() => {
     if (session?.user) {
@@ -28,6 +56,23 @@ export default function ProfilePage() {
                     headers: { Authorization: `Bearer ${(session as { accessToken?: string }).accessToken}` }
                 })
                 setFormData(res.data)
+                const accentValue = res.data.accent || ""
+                if (accentValue && !ALBANIAN_ACCENTS.includes(accentValue)) {
+                    setAccentSelection(ACCENT_OTHER_VALUE)
+                    setCustomAccent(accentValue)
+                } else {
+                    setAccentSelection(accentValue || "")
+                    setCustomAccent("")
+                }
+
+                const regionValue = res.data.region || ""
+                if (regionValue && !ALBANIAN_REGIONS.includes(regionValue)) {
+                    setRegionSelection(REGION_OTHER_VALUE)
+                    setCustomRegion(regionValue)
+                } else {
+                    setRegionSelection(regionValue || "")
+                    setCustomRegion("")
+                }
             } catch (e) {
                 console.error(e)
             }
@@ -36,7 +81,7 @@ export default function ProfilePage() {
     }
   }, [session])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
@@ -44,6 +89,12 @@ export default function ProfilePage() {
     e.preventDefault()
     setLoading(true)
     try {
+        if (accentSelection === ACCENT_OTHER_VALUE && !customAccent.trim()) {
+            alert("Please specify your accent/dialect")
+            setLoading(false)
+            return
+        }
+
         await axios.put(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/users/me`, formData, {
             headers: { Authorization: `Bearer ${(session as { accessToken?: string }).accessToken}` }
         })
@@ -161,28 +212,81 @@ export default function ProfilePage() {
                 </Typography>
                 <Grid container spacing={3} sx={{ mb: 4 }}>
                     <Grid size={{ xs: 12, sm: 6 }}>
-                        <TextField 
-                            fullWidth 
-                            label="Accent / Dialect" 
-                            name="accent" 
-                            value={formData.accent || ""} 
-                            onChange={handleChange}
-                            helperText="e.g., Gheg, Tosk"
+                        <TextField
+                            select
+                            fullWidth
+                            label="Accent / Dialect"
+                            name="accent"
+                            value={accentSelection}
+                            onChange={handleAccentSelection}
+                            helperText="Choose the dialect that best matches your speech"
                             variant="outlined"
                             InputProps={{ sx: { borderRadius: 2 } }}
-                        />
+                        >
+                            <MenuItem value="">
+                                <em>Select your dialect</em>
+                            </MenuItem>
+                            {ALBANIAN_ACCENTS.map(accent => (
+                                <MenuItem key={accent} value={accent}>
+                                    {accent}
+                                </MenuItem>
+                            ))}
+                            <MenuItem value={ACCENT_OTHER_VALUE}>Other / Custom</MenuItem>
+                        </TextField>
+                        {accentSelection === ACCENT_OTHER_VALUE && (
+                            <TextField
+                                fullWidth
+                                label="Custom Accent / Dialect"
+                                value={customAccent}
+                                onChange={(event) => {
+                                    const value = event.target.value
+                                    setCustomAccent(value)
+                                    setFormData(prev => ({ ...prev, accent: value }))
+                                }}
+                                sx={{ mt: 2 }}
+                                helperText="Please describe your dialect"
+                                required
+                                InputProps={{ sx: { borderRadius: 2 } }}
+                            />
+                        )}
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
-                        <TextField 
-                            fullWidth 
-                            label="Region" 
-                            name="region" 
-                            value={formData.region || ""} 
-                            onChange={handleChange}
-                            helperText="e.g., Tirana, Prishtina"
+                        <TextField
+                            select
+                            fullWidth
+                            label="Region"
+                            name="region"
+                            value={regionSelection}
+                            onChange={handleRegionSelection}
+                            helperText="Where do you primarily speak Albanian?"
                             variant="outlined"
                             InputProps={{ startAdornment: <MapPin size={18} style={{ marginRight: 8, opacity: 0.5 }} />, sx: { borderRadius: 2 } }}
-                        />
+                        >
+                            <MenuItem value="">
+                                <em>Select your region</em>
+                            </MenuItem>
+                            {ALBANIAN_REGIONS.map(region => (
+                                <MenuItem key={region} value={region}>
+                                    {region}
+                                </MenuItem>
+                            ))}
+                            <MenuItem value={REGION_OTHER_VALUE}>Other / Custom</MenuItem>
+                        </TextField>
+                        {regionSelection === REGION_OTHER_VALUE && (
+                            <TextField
+                                fullWidth
+                                label="Custom Region"
+                                value={customRegion}
+                                onChange={(event) => {
+                                    const value = event.target.value
+                                    setCustomRegion(value)
+                                    setFormData(prev => ({ ...prev, region: value }))
+                                }}
+                                sx={{ mt: 2 }}
+                                helperText="Add your city or region"
+                                InputProps={{ sx: { borderRadius: 2 } }}
+                            />
+                        )}
                     </Grid>
                 </Grid>
 
