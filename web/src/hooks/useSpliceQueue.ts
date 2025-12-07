@@ -21,6 +21,13 @@ interface SubmitArgs {
   validatorId?: string;
 }
 
+interface QueueCopy {
+  noAudio?: string;
+  fetchError?: string;
+  submitError?: string;
+  deleteError?: string;
+}
+
 interface UseSpliceQueueResult {
   clip: SpliceClip | null;
   isLoading: boolean;
@@ -57,7 +64,7 @@ const STAGE_CONFIG: Record<SpliceStage, {
   },
 };
 
-export function useSpliceQueue(stage: SpliceStage): UseSpliceQueueResult {
+export function useSpliceQueue(stage: SpliceStage, copy: QueueCopy = {}): UseSpliceQueueResult {
   const [clip, setClip] = useState<SpliceClip | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -86,19 +93,19 @@ export function useSpliceQueue(stage: SpliceStage): UseSpliceQueueResult {
         return normalizedClip;
       }
       setClip(null);
-      setStatusMessage(data?.message ?? "No audio available.");
+      setStatusMessage(data?.message ?? copy.noAudio ?? "No audio available.");
       return null;
     } catch (err) {
       console.error(`Failed to fetch ${stage} audio`, err);
       setClip(null);
-      setError("Unable to fetch audio. Please try again.");
+      setError(copy.fetchError ?? "Unable to fetch audio. Please try again.");
       return null;
     } finally {
       if (showLoader) {
         setIsLoading(false);
       }
     }
-  }, [stage]);
+  }, [copy.fetchError, copy.noAudio, stage]);
 
   const submitClip = useCallback(async ({ label, start, end, isAuthenticated, accessToken, validatorId }: SubmitArgs) => {
     if (!clip) {
@@ -128,12 +135,12 @@ export function useSpliceQueue(stage: SpliceStage): UseSpliceQueueResult {
       await fetchNextClip(false);
     } catch (err) {
       console.error(`Failed to submit ${stage} audio`, err);
-      setError("Submission failed. Please try again.");
+      setError(copy.submitError ?? "Submission failed. Please try again.");
       throw err;
     } finally {
       setIsLoading(false);
     }
-  }, [clip, stage, fetchNextClip]);
+  }, [clip, copy.submitError, stage, fetchNextClip]);
 
   const deleteClipHandler = useCallback(async () => {
     if (!clip) {
@@ -146,12 +153,12 @@ export function useSpliceQueue(stage: SpliceStage): UseSpliceQueueResult {
       await fetchNextClip(false);
     } catch (err) {
       console.error("Failed to delete audio", err);
-      setError("Unable to delete audio right now.");
+      setError(copy.deleteError ?? "Unable to delete audio right now.");
       throw err;
     } finally {
       setIsLoading(false);
     }
-  }, [clip, fetchNextClip]);
+  }, [clip, copy.deleteError, fetchNextClip]);
 
   const deleteClip = STAGE_CONFIG[stage].allowDelete ? deleteClipHandler : undefined;
 

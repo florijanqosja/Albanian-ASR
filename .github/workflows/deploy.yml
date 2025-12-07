@@ -84,10 +84,6 @@ jobs:
         run: |
           docker compose -f docker-compose.prod.yml up -d --build
 
-      - name: Cleanup Old Docker Resources
-        run: |
-          docker system prune -af --volumes --filter "until=168h" || true
-
       - name: Verify Deployment
         run: |
           echo "Waiting for services to be healthy..."
