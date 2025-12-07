@@ -4,6 +4,7 @@ import math
 import os
 import uuid
 import wave
+import fcntl
 from contextlib import asynccontextmanager
 from typing import Optional, Tuple
 
@@ -291,154 +292,192 @@ async def _process_video_file(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifecycle events for the application."""
-    # Initialize DB tables
-    _services._add_tables()
     
-    db = _services.SessionLocal()
+    # Create a lock file to coordinate initialization across workers
+    lock_file_path = os.path.join("/tmp", "app_init.lock")
+    lock_file = open(lock_file_path, "w")
+    
     try:
-        # Seed Users - use get_or_create pattern to handle race conditions
-        system_user = _services.get_user_by_email(db, "system@albaniansr.com")
-        if not system_user:
-            try:
-                system_user_create = _schemas.UserCreate(
-                    email="system@albaniansr.com",
-                    name="System",
-                    surname="Admin",
-                    password="password",
-                    provider="system"
-                )
-                system_hash = auth.get_password_hash("password")
-                system_user = _services.create_user(db, system_user_create, hashed_password=system_hash)
-                logger.info("Seeded System User")
-            except Exception as e:
-                db.rollback()
-                # Another worker might have created it, try to get it again
-                system_user = _services.get_user_by_email(db, "system@albaniansr.com")
-                if system_user:
-                    logger.info("System User already exists (created by another worker)")
-                else:
-                    raise e
-
-        anon_user = _services.get_user_by_email(db, "anonymous@albaniansr.com")
-        if not anon_user:
-            try:
-                anon_user_create = _schemas.UserCreate(
-                    email="anonymous@albaniansr.com",
-                    name="Anonymous",
-                    surname="User",
-                    password="password",
-                    provider="system"
-                )
-                anon_hash = auth.get_password_hash("password")
-                _services.create_user(db, anon_user_create, hashed_password=anon_hash)
-                logger.info("Seeded Anonymous User")
-            except Exception as e:
-                db.rollback()
-                # Another worker might have created it
-                anon_user = _services.get_user_by_email(db, "anonymous@albaniansr.com")
-                if anon_user:
-                    logger.info("Anonymous User already exists (created by another worker)")
-                else:
-                    raise e
-
-        try:
-            inserted_prompt_count = _services.seed_text_splices(db, DEFAULT_TEXT_SPLICE_PROMPTS)
-            if inserted_prompt_count:
-                logger.info(f"Seeded {inserted_prompt_count} default text splices")
-        except Exception as text_seed_error:
-            logger.error(f"Failed to seed default text splices: {text_seed_error}", exc_info=True)
-
-        # Seed database if empty OR if splice files are missing
-        existing_video = db.query(_models.Video).first()
-        splice_dir = os.path.join(SPLICES_DIR, "sample_audio_njerez_dhe_fate_e2")
-        splice_files_exist = os.path.exists(splice_dir) and len(os.listdir(splice_dir)) > 0
+        # Try to acquire an exclusive, non-blocking lock
+        fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
         
-        if existing_video and splice_files_exist:
-            logger.info(f"Database has videos (found: {existing_video.name}) and splice files exist. Skipping seed.")
-        else:
-            if existing_video and not splice_files_exist:
-                logger.warning(f"Database has video record but splice files are missing at {splice_dir}. Re-seeding files...")
-                # Delete orphaned database records so we can recreate everything
+        logger.info("Acquired initialization lock. Starting database setup...")
+        
+        # Initialize DB tables
+        try:
+            _services._add_tables()
+            logger.info("Database tables created/verified.")
+        except Exception as e:
+            # Ignore errors if tables/types already exist (race condition safety)
+            logger.warning(f"Database table creation warning (safe to ignore if concurrent): {e}")
+        
+        db = _services.SessionLocal()
+        try:
+            # Seed Users - use get_or_create pattern to handle race conditions
+            system_user = _services.get_user_by_email(db, "system@albaniansr.com")
+            if not system_user:
                 try:
-                    db.query(_models.Splice).delete()
-                    db.query(_models.Video).delete()
-                    db.commit()
-                    logger.info("Cleared orphaned database records.")
+                    system_user_create = _schemas.UserCreate(
+                        email="system@albaniansr.com",
+                        name="System",
+                        surname="Admin",
+                        password="password",
+                        provider="system"
+                    )
+                    system_hash = auth.get_password_hash("password")
+                    system_user = _services.create_user(db, system_user_create, hashed_password=system_hash)
+                    logger.info("Seeded System User")
                 except Exception as e:
                     db.rollback()
-                    logger.error(f"Failed to clear orphaned records: {e}")
-            else:
-                logger.info("Database is empty. Attempting to seed...")
-            
-            seed_file_path = None
-            logger.info(f"Checking for sample file at: {DOCKER_SAMPLE_PATH}")
-            if os.path.exists(DOCKER_SAMPLE_PATH):
-                seed_file_path = DOCKER_SAMPLE_PATH
-                logger.info(f"Found sample file at: {DOCKER_SAMPLE_PATH}")
-            elif os.path.exists(SAMPLE_FILE_PATH):
-                seed_file_path = SAMPLE_FILE_PATH
-                logger.info(f"Found sample file at: {SAMPLE_FILE_PATH}")
-            
-            if seed_file_path:
-                try:
-                    logger.info(f"Reading sample file from: {seed_file_path}")
-                    with open(seed_file_path, "rb") as f:
-                        file_content = f.read()
-                    logger.info(f"Sample file size: {len(file_content)} bytes")
-                    
-                    logger.info("Starting video processing...")
-                    (
-                        normalized_name,
-                        safe_filename,
-                        ext,
-                        file_location,
-                        mp3_path,
-                        _,
-                    ) = _persist_media_file(
-                        video_name="Sample Audio Njerez Dhe Fate E2",
-                        filename="sample_audio_njerez_dhe_fate_e2.mp3",
-                        file_content=file_content,
-                    )
-
-                    create_video_data = _schemas.VideoCreate(
-                        name=normalized_name,
-                        path=file_location,
-                        category="Story",
-                        to_mp3_status="False",
-                        splice_status="False",
-                        mp3_path=mp3_path,
-                        uploader_id=system_user.id,
-                        processing_status=MediaProcessingStatus.IN_PROGRESS,
-                    )
-                    video_record = await _services.create_video(video=create_video_data, db=db)
-
-                    await _process_video_file(
-                        video_id=video_record.id,
-                        video_name=normalized_name,
-                        safe_filename=safe_filename,
-                        ext=ext,
-                        original_path=file_location,
-                        mp3_path=mp3_path,
-                        owner_id=system_user.id,
-                        db_session=db,
-                    )
-                    logger.info("Successfully seeded database with sample video.")
-                    
-                    # Verify splices were created
-                    splice_dir = os.path.join(SPLICES_DIR, "sample_audio_njerez_dhe_fate_e2")
-                    if os.path.exists(splice_dir):
-                        splice_files = os.listdir(splice_dir)
-                        logger.info(f"Created {len(splice_files)} splice files in {splice_dir}")
+                    # Another worker might have created it, try to get it again
+                    system_user = _services.get_user_by_email(db, "system@albaniansr.com")
+                    if system_user:
+                        logger.info("System User already exists (created by another worker)")
                     else:
-                        logger.warning(f"Splice directory not found: {splice_dir}")
+                        logger.error(f"Failed to seed System User: {e}")
+
+            anon_user = _services.get_user_by_email(db, "anonymous@albaniansr.com")
+            if not anon_user:
+                try:
+                    anon_user_create = _schemas.UserCreate(
+                        email="anonymous@albaniansr.com",
+                        name="Anonymous",
+                        surname="User",
+                        password="password",
+                        provider="system"
+                    )
+                    anon_hash = auth.get_password_hash("password")
+                    _services.create_user(db, anon_user_create, hashed_password=anon_hash)
+                    logger.info("Seeded Anonymous User")
                 except Exception as e:
-                    logger.error(f"Failed to seed database: {e}", exc_info=True)
+                    db.rollback()
+                    # Another worker might have created it
+                    anon_user = _services.get_user_by_email(db, "anonymous@albaniansr.com")
+                    if anon_user:
+                        logger.info("Anonymous User already exists (created by another worker)")
+                    else:
+                        logger.error(f"Failed to seed Anonymous User: {e}")
+
+            try:
+                inserted_prompt_count = _services.seed_text_splices(db, DEFAULT_TEXT_SPLICE_PROMPTS)
+                if inserted_prompt_count:
+                    logger.info(f"Seeded {inserted_prompt_count} default text splices")
+            except Exception as text_seed_error:
+                logger.error(f"Failed to seed default text splices: {text_seed_error}", exc_info=True)
+
+            # Seed database if empty OR if splice files are missing
+            # Check specifically for the sample video
+            sample_video_name = "Sample_Audio_Njerez_Dhe_Fate_E2"
+            # Normalized name used in DB
+            normalized_sample_name = sample_video_name.replace(" ", "_") 
+            
+            existing_video = db.query(_models.Video).filter(_models.Video.name == normalized_sample_name).first()
+            splice_dir = os.path.join(SPLICES_DIR, "sample_audio_njerez_dhe_fate_e2")
+            splice_files_exist = os.path.exists(splice_dir) and len(os.listdir(splice_dir)) > 0
+            
+            if existing_video and splice_files_exist:
+                logger.info(f"Sample video '{existing_video.name}' and splice files exist. Skipping seed.")
             else:
-                logger.warning(f"Sample file not found at {DOCKER_SAMPLE_PATH} or {SAMPLE_FILE_PATH}. Skipping seed.")
-    except Exception as e:
-        logger.error(f"Error during startup seeding: {e}", exc_info=True)
+                if existing_video and not splice_files_exist:
+                    logger.warning(f"Database has sample video record but splice files are missing at {splice_dir}. Re-seeding files...")
+                    # Delete ONLY the sample video records so we can recreate it
+                    try:
+                        # Delete splices associated with this video
+                        db.query(_models.Splice).filter(_models.Splice.video_id == existing_video.id).delete()
+                        # Delete the video itself
+                        db.delete(existing_video)
+                        db.commit()
+                        logger.info("Cleared orphaned sample video records.")
+                        # Reset existing_video to None so we proceed to seed
+                        existing_video = None
+                    except Exception as e:
+                        db.rollback()
+                        logger.error(f"Failed to clear orphaned records: {e}")
+                
+                if not existing_video:
+                    logger.info("Sample video missing. Attempting to seed...")
+                
+                    seed_file_path = None
+                    logger.info(f"Checking for sample file at: {DOCKER_SAMPLE_PATH}")
+                    if os.path.exists(DOCKER_SAMPLE_PATH):
+                        seed_file_path = DOCKER_SAMPLE_PATH
+                        logger.info(f"Found sample file at: {DOCKER_SAMPLE_PATH}")
+                    elif os.path.exists(SAMPLE_FILE_PATH):
+                        seed_file_path = SAMPLE_FILE_PATH
+                        logger.info(f"Found sample file at: {SAMPLE_FILE_PATH}")
+                    
+                    if seed_file_path:
+                        try:
+                            logger.info(f"Reading sample file from: {seed_file_path}")
+                            with open(seed_file_path, "rb") as f:
+                                file_content = f.read()
+                            logger.info(f"Sample file size: {len(file_content)} bytes")
+                            
+                            logger.info("Starting video processing...")
+                            (
+                                normalized_name,
+                                safe_filename,
+                                ext,
+                                file_location,
+                                mp3_path,
+                                _,
+                            ) = _persist_media_file(
+                                video_name="Sample Audio Njerez Dhe Fate E2",
+                                filename="sample_audio_njerez_dhe_fate_e2.mp3",
+                                file_content=file_content,
+                            )
+
+                            create_video_data = _schemas.VideoCreate(
+                                name=normalized_name,
+                                path=file_location,
+                                category="Story",
+                                to_mp3_status="False",
+                                splice_status="False",
+                                mp3_path=mp3_path,
+                                uploader_id=system_user.id if system_user else "system",
+                                processing_status=MediaProcessingStatus.IN_PROGRESS,
+                            )
+                            video_record = await _services.create_video(video=create_video_data, db=db)
+
+                            await _process_video_file(
+                                video_id=video_record.id,
+                                video_name=normalized_name,
+                                safe_filename=safe_filename,
+                                ext=ext,
+                                original_path=file_location,
+                                mp3_path=mp3_path,
+                                owner_id=system_user.id if system_user else "system",
+                                db_session=db,
+                            )
+                            logger.info("Successfully seeded database with sample video.")
+                            
+                            # Verify splices were created
+                            splice_dir = os.path.join(SPLICES_DIR, "sample_audio_njerez_dhe_fate_e2")
+                            if os.path.exists(splice_dir):
+                                splice_files = os.listdir(splice_dir)
+                                logger.info(f"Created {len(splice_files)} splice files in {splice_dir}")
+                            else:
+                                logger.warning(f"Splice directory not found: {splice_dir}")
+                        except Exception as e:
+                            logger.error(f"Failed to seed database: {e}", exc_info=True)
+                    else:
+                        logger.warning(f"Sample file not found at {DOCKER_SAMPLE_PATH} or {SAMPLE_FILE_PATH}. Skipping seed.")
+        except Exception as e:
+            logger.error(f"Error during startup seeding: {e}", exc_info=True)
+        finally:
+            db.close()
+            
+    except IOError:
+        logger.info("Another worker is initializing the application. Skipping initialization steps.")
     finally:
-        db.close()
+        # Keep the lock file open but release the lock? 
+        # Actually, closing the file releases the lock.
+        # But we want to hold it until we are done.
+        # The 'finally' block here runs after the try block finishes (success or exception).
+        # So we just close the file.
+        lock_file.close()
+        
+    yield
     yield
 
 app = FastAPI(
