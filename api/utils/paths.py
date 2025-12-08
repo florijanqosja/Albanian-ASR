@@ -5,7 +5,7 @@ import os
 from typing import Optional
 
 IS_PRODUCTION = os.getenv("ENVIRONMENT") == "production"
-BASE_DIR = "/code" if IS_PRODUCTION else "."
+BASE_DIR = "/code" if os.path.exists("/code") else "."
 
 UPLOAD_DIR_MP4 = os.path.join(BASE_DIR, "mp4")
 UPLOAD_DIR_MP3 = os.path.join(BASE_DIR, "mp3")

@@ -512,9 +512,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/splices", StaticFiles(directory=SPLICES_DIR), name="splices")
-app.mount("/mp3", StaticFiles(directory=UPLOAD_DIR_MP3), name="mp3")
-app.mount("/mp4", StaticFiles(directory=UPLOAD_DIR_MP4), name="mp4")
+app.mount("/splices", StaticFiles(directory=SPLICES_DIR_ABS), name="splices")
+app.mount("/mp3", StaticFiles(directory=UPLOAD_DIR_MP3_ABS), name="mp3")
+app.mount("/mp4", StaticFiles(directory=UPLOAD_DIR_MP4_ABS), name="mp4")
 
 app.include_router(auth.router)
 app.include_router(users.router)
