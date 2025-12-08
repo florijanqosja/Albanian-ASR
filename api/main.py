@@ -79,7 +79,7 @@ if not IS_PRODUCTION:
         os.makedirs(directory, exist_ok=True)
 
 logger.info(f"Running in {'production' if IS_PRODUCTION else 'development'} mode")
-logger.info(f"Static file directories: mp4={UPLOAD_DIR_MP4}, mp3={UPLOAD_DIR_MP3}, splices={SPLICES_DIR}")
+logger.info(f"Static file directories: mp4={UPLOAD_DIR_MP4_ABS}, mp3={UPLOAD_DIR_MP3_ABS}, splices={SPLICES_DIR_ABS}")
 
 
 def _persist_media_file(
@@ -498,12 +498,6 @@ app = FastAPI(
 
 configure_documentation(app)
 
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    logger.info(f"Incoming request: {request.method} {request.url.path}")
-    response = await call_next(request)
-    return response
-
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -518,41 +512,6 @@ app.mount("/mp4", StaticFiles(directory=UPLOAD_DIR_MP4_ABS), name="mp4")
 
 app.include_router(auth.router)
 app.include_router(users.router)
-
-@app.get("/manual_splice/{file_path:path}")
-async def manual_splice(file_path: str):
-    full_path = os.path.join(SPLICES_DIR, file_path)
-    if os.path.exists(full_path):
-        return FileResponse(full_path)
-    return {"error": "File not found", "path": full_path}
-
-@app.get("/debug/file/{file_path:path}", tags=["Debug"])
-async def debug_file(file_path: str):
-    """Debug endpoint to check file existence and permissions."""
-    full_path = os.path.join(SPLICES_DIR, file_path)
-    
-    # Write test
-    test_file = os.path.join(SPLICES_DIR, "write_test.txt")
-    write_success = False
-    try:
-        with open(test_file, "w") as f:
-            f.write("Hello from Python App")
-        write_success = True
-    except Exception as e:
-        write_success = f"Failed: {e}"
-
-    return {
-        "requested_path": file_path,
-        "full_path": full_path,
-        "exists": os.path.exists(full_path),
-        "splices_dir": SPLICES_DIR,
-        "splices_content": os.listdir(SPLICES_DIR) if os.path.exists(SPLICES_DIR) else "DIR_NOT_FOUND",
-        "code_dir_content": os.listdir("/code") if os.path.exists("/code") else "DIR_NOT_FOUND",
-        "write_test": write_success,
-        "cwd": os.getcwd(),
-        "uid": os.getuid(),
-        "gid": os.getgid(),
-    }
 
 @app.post(
     "/video/add",
