@@ -515,21 +515,28 @@ app.include_router(users.router)
 async def debug_file(file_path: str):
     """Debug endpoint to check file existence and permissions."""
     full_path = os.path.join(SPLICES_DIR, file_path)
-    exists = os.path.exists(full_path)
+    
+    # Write test
+    test_file = os.path.join(SPLICES_DIR, "write_test.txt")
+    write_success = False
+    try:
+        with open(test_file, "w") as f:
+            f.write("Hello from Python App")
+        write_success = True
+    except Exception as e:
+        write_success = f"Failed: {e}"
+
     return {
         "requested_path": file_path,
         "full_path": full_path,
-        "exists": exists,
-        "is_file": os.path.isfile(full_path) if exists else False,
-        "size": os.path.getsize(full_path) if exists else -1,
-        "permissions": oct(os.stat(full_path).st_mode) if exists else "N/A",
-        "uid": os.stat(full_path).st_uid if exists else "N/A",
-        "gid": os.stat(full_path).st_gid if exists else "N/A",
-        "app_uid": os.getuid(),
-        "app_gid": os.getgid(),
+        "exists": os.path.exists(full_path),
         "splices_dir": SPLICES_DIR,
-        "listdir_splices": os.listdir(SPLICES_DIR) if os.path.exists(SPLICES_DIR) else "DIR_NOT_FOUND",
-        "listdir_subdir": os.listdir(os.path.dirname(full_path)) if exists else "SUBDIR_NOT_FOUND"
+        "splices_content": os.listdir(SPLICES_DIR) if os.path.exists(SPLICES_DIR) else "DIR_NOT_FOUND",
+        "code_dir_content": os.listdir("/code") if os.path.exists("/code") else "DIR_NOT_FOUND",
+        "write_test": write_success,
+        "cwd": os.getcwd(),
+        "uid": os.getuid(),
+        "gid": os.getgid(),
     }
 
 @app.post(
