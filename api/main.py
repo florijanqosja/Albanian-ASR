@@ -17,7 +17,9 @@ from fastapi import (
     HTTPException,
     Query,
     UploadFile,
+    Request,
 )
+from fastapi.responses import FileResponse
 from fastapi.concurrency import run_in_threadpool
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -496,6 +498,12 @@ app = FastAPI(
 
 configure_documentation(app)
 
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    logger.info(f"Incoming request: {request.method} {request.url.path}")
+    response = await call_next(request)
+    return response
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -510,6 +518,13 @@ app.mount("/mp4", StaticFiles(directory=UPLOAD_DIR_MP4), name="mp4")
 
 app.include_router(auth.router)
 app.include_router(users.router)
+
+@app.get("/manual_splice/{file_path:path}")
+async def manual_splice(file_path: str):
+    full_path = os.path.join(SPLICES_DIR, file_path)
+    if os.path.exists(full_path):
+        return FileResponse(full_path)
+    return {"error": "File not found", "path": full_path}
 
 @app.get("/debug/file/{file_path:path}", tags=["Debug"])
 async def debug_file(file_path: str):
