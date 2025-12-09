@@ -487,7 +487,6 @@ app = FastAPI(
     description=API_DESCRIPTION,
     version=API_VERSION,
     lifespan=lifespan,
-    root_path=API_ROOT_PATH,
     docs_url=None,
     redoc_url=None,
     contact=CONTACT_INFO,
