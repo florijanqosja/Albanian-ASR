@@ -6,6 +6,12 @@ type Props = {
   markdown: string;
 };
 
+/**
+ * Render a styled policy page that displays the provided Markdown content.
+ *
+ * @param markdown - Markdown string to render inside the page
+ * @returns A React element containing a styled container with the rendered Markdown
+ */
 export default function MarkdownPolicyPage({ markdown }: Props) {
   return (
     <div className="container mx-auto px-4 py-8">

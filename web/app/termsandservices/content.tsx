@@ -5,6 +5,11 @@ import path from "path";
 import Footer from "@/components/Sections/Footer";
 import MarkdownPolicyPage from "@/components/Sections/MarkdownPolicyPage";
 
+/**
+ * Renders the Terms and Services page by loading the terms markdown and composing it with the page footer.
+ *
+ * @returns A React element containing the rendered markdown policy content and the site footer.
+ */
 export default async function TermsAndServicesPage() {
   const markdownPath = path.join(
     process.cwd(),

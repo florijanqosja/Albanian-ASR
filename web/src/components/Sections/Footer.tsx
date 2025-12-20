@@ -17,6 +17,13 @@ import { useTranslations } from "next-intl";
 import { Link } from "../../../i18n/routing";
 import LogoImg from "../../assets/svg/Logo";
 
+/**
+ * Renders the site footer with branding, a tagline, navigation links, social icons, an API docs link, and a back-to-top control.
+ *
+ * Reads NEXT_PUBLIC_API_DOCS_URL to render the external API docs link and falls back to "http://localhost:8000/docs" when unset.
+ *
+ * @returns The footer React element.
+ */
 export default function Footer() {
   const t = useTranslations("footer");
   const tCommon = useTranslations("common");

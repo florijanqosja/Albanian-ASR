@@ -16,7 +16,15 @@ router = APIRouter(
 
 @router.post("/message", response_model=schemas.ResponseModel)
 def submit_support_message(payload: schemas.SupportMessageRequest):
-    """Accept a support/report message and forward it to the operator's support inbox."""
+    """
+    Forward a user's support/report message to the operator's support inbox.
+    
+    Parameters:
+        payload (schemas.SupportMessageRequest): Support message payload containing the sender's email, name, surname, and message body.
+    
+    Returns:
+        schemas.ResponseModel: Response with `status` set to "success" and a success message when the message is sent; otherwise `status` set to "error", `data` as None, and an error message indicating the send failure.
+    """
 
     support_email = os.getenv("SUPPORT_EMAIL", "support@uneduashqiperine.com")
     ok = send_support_message(

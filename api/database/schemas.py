@@ -241,6 +241,18 @@ class SupportMessageRequest(_pydantic.BaseModel):
     @_pydantic.field_validator("name", "surname")
     @classmethod
     def _strip_name(cls, value: str) -> str:
+        """
+        Validate and normalize a name or surname by trimming surrounding whitespace and enforcing length limits.
+        
+        Parameters:
+            value (str): The raw name string to validate.
+        
+        Returns:
+            str: The trimmed name.
+        
+        Raises:
+            ValueError: "Required" if the trimmed value is empty; "Too long" if the trimmed value has more than 100 characters.
+        """
         value = value.strip()
         if not value:
             raise ValueError("Required")
@@ -251,6 +263,20 @@ class SupportMessageRequest(_pydantic.BaseModel):
     @_pydantic.field_validator("message")
     @classmethod
     def _strip_message(cls, value: str) -> str:
+        """
+        Validate and trim a support message string.
+        
+        Trims surrounding whitespace and ensures the message is not empty and does not exceed 5000 characters.
+        
+        Parameters:
+            value (str): The input message string to validate and trim.
+        
+        Returns:
+            str: The trimmed message.
+        
+        Raises:
+            ValueError: If the trimmed message is empty ("Required") or longer than 5000 characters ("Too long").
+        """
         value = value.strip()
         if not value:
             raise ValueError("Required")
@@ -261,6 +287,20 @@ class SupportMessageRequest(_pydantic.BaseModel):
     @_pydantic.field_validator("email")
     @classmethod
     def _strip_email(cls, value: str) -> str:
+        """
+        Validate and normalize an email address.
+        
+        Strips surrounding whitespace and enforces that the email is present, does not exceed 320 characters, and contains a single '@' that is not at the start or end.
+        
+        Parameters:
+            value (str): The email address to validate.
+        
+        Returns:
+            str: The trimmed, validated email address.
+        
+        Raises:
+            ValueError: With message "Required" if empty after trimming, "Too long" if length > 320, or "Invalid email" if the '@' character is missing or placed at the start or end.
+        """
         value = value.strip()
         if not value:
             raise ValueError("Required")
@@ -339,6 +379,18 @@ class DeleteAccountRequest(_pydantic.BaseModel):
     @_pydantic.field_validator("acknowledge_data_retention", "acknowledge_future_request")
     @classmethod
     def _must_acknowledge(cls, value: bool) -> bool:
+        """
+        Validate that a boolean acknowledgment is explicitly True.
+        
+        Parameters:
+            value (bool): The value to validate.
+        
+        Returns:
+            bool: `True` if the provided value is True.
+        
+        Raises:
+            ValueError: If `value` is not True with the message "Please confirm to continue".
+        """
         if value is not True:
             raise ValueError("Please confirm to continue")
         return value

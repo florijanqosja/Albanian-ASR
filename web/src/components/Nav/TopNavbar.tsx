@@ -46,6 +46,16 @@ function NavList({ activePath }: { activePath: string }) {
   );
 }
 
+/**
+ * Renders the application's responsive top navigation bar with language and session controls.
+ *
+ * Displays the logo and centered navigation links, provides a language selector, and shows
+ * authentication-aware controls: skeletons while loading, a user avatar with dropdown menu
+ * when authenticated (profile, dashboard, logout), or login/register actions when not.
+ * On small screens it collapses into a mobile panel with the same navigation and controls.
+ *
+ * @returns The TopNavbar React element
+ */
 export default function TopNavbar() {
     const t = useTranslations();
     const locale = useLocale();

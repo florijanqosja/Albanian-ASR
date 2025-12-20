@@ -140,7 +140,12 @@ def _get_wav_duration(wav_path: str) -> float:
         return 0.0
 
 def _convert_mp4_to_mp3(mp4_path: str, mp3_path: str) -> None:
-    """Converts an MP4 video file to an MP3 audio file."""
+    """
+    Convert an MP4 video file to an MP3 audio file.
+    
+    Raises:
+        HTTPException: if conversion fails; returns status code 500 with error details.
+    """
     try:
         logger.info(f"Converting {mp4_path} to {mp3_path}")
         video = VideoFileClip(mp4_path)
@@ -153,7 +158,23 @@ def _convert_mp4_to_mp3(mp4_path: str, mp3_path: str) -> None:
 
 
 def _store_recorded_audio(user_id: Union[uuid.UUID, str], audio_bytes: bytes) -> Tuple[str, str, float]:
-    """Converts an uploaded blob into a WAV file under the user's splice directory."""
+    """
+    Store an uploaded audio blob as a WAV file in the user's splice directory.
+    
+    Parameters:
+        user_id (uuid.UUID | str): Identifier of the user; used to create/locate the user's splice directory.
+        audio_bytes (bytes): Raw audio file bytes (any format supported by pydub/ffmpeg).
+    
+    Returns:
+        tuple: (file_path, filename, duration_seconds)
+            file_path (str): Full filesystem path to the exported WAV file.
+            filename (str): Filename of the exported WAV file (e.g., "recording_<token>.wav").
+            duration_seconds (float): Duration of the stored audio in seconds.
+    
+    Raises:
+        ValueError: If the provided audio payload is empty.
+        ValueError: If the audio format is unsupported or cannot be decoded.
+    """
     if not audio_bytes:
         raise ValueError("Audio payload is empty")
 
@@ -236,7 +257,16 @@ async def _process_video_file(
     upload_record_id: Optional[uuid.UUID] = None,
     db_session: Optional[Session] = None,
 ) -> None:
-    """Run conversion, splicing, and status updates for a stored media asset."""
+    """
+    Process a stored media asset by converting video to MP3 (if needed), splitting the audio into splices, and updating related database records.
+    
+    Performs conversion and splicing work in background threads, creates splice records for each generated WAV file, and updates the video's processing status and optional upload record.
+    
+    Parameters:
+        owner_id (Union[uuid.UUID, str]): Identifier of the user who owns the video; stored on created splice records.
+        upload_record_id (Optional[uuid.UUID]): If provided, the corresponding upload record's processing status will be updated.
+        db_session (Optional[Session]): If provided, this database session will be used; otherwise a new session is created and closed by the function.
+    """
 
     db = db_session or _services.SessionLocal()
     owns_session = db_session is None
@@ -303,7 +333,11 @@ async def _process_video_file(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifecycle events for the application."""
+    """
+    Run application startup and shutdown lifecycle tasks.
+    
+    On startup, attempts to acquire an exclusive filesystem lock to serialize initialization across workers, ensures database tables exist, seeds a default policy consent (with safe fallback), creates system and anonymous users (linking them to the seeded consent), seeds default text prompts, and conditionally seeds a bundled sample media asset and its derived splices when missing. Handles common race conditions (retries, rollbacks, idempotent get-or-create patterns) and logs warnings/errors without preventing other workers from proceeding. Always closes the database session and releases the initialization lock before yielding control to the application runtime.
+    """
     
     # Create a lock file to coordinate initialization across workers
     lock_file_path = os.path.join("/tmp", "app_init.lock")
@@ -572,6 +606,20 @@ async def create_video(
     current_user: _models.User = Depends(auth.get_current_user),
     db: Session = Depends(_services.get_db),
 ):
+    """
+    Handle an uploaded video or audio file: persist the file, create corresponding Video and UploadRecord entries, and schedule background processing.
+    
+    Parameters:
+        video_name (str): Display name provided for the media.
+        video_category (str): Category label for the media.
+        consent (bool): Whether the uploader has given consent; upload is rejected if False.
+    
+    Returns:
+        ResponseModel: Success response containing `video_id`, `upload_id`, and `status` indicating the upload processing state.
+    
+    Raises:
+        HTTPException: If consent is not given, if no server consent version is configured, if the uploaded file lacks a filename, if the file extension is unsupported (only `.mp4` and `.mp3`), or on other processing failures.
+    """
     if not consent:
         raise HTTPException(status_code=400, detail="Consent is required to upload media.")
 
@@ -1155,6 +1203,29 @@ async def submit_recording(
     current_user: _models.User = Depends(auth.get_current_user),
     db: Session = Depends(_services.get_db),
 ):
+    """
+    Accepts a user's recorded audio and transcript for a text prompt, stores the audio as a labeled splice, and marks the prompt completed.
+    
+    Parameters:
+        text_splice_id (uuid.UUID): ID of the text prompt being recorded.
+        spoken_text (str): Transcript provided by the contributor.
+        audio_file (UploadFile): Uploaded audio file containing the recording.
+        current_user (_models.User): Authenticated user submitting the recording.
+        db (Session): Database session for persistence operations.
+    
+    Returns:
+        _schemas.ResponseModel: Success response containing:
+            - recorded_splice_id: ID of the created labeled splice.
+            - audio_path: Public URL path to the stored audio file.
+            - duration: Duration of the stored audio (seconds as a string).
+            - text_splice: The updated text splice record.
+    
+    Raises:
+        HTTPException 404: If the text prompt is not found.
+        HTTPException 403: If the text prompt is reserved by another contributor.
+        HTTPException 409: If the text prompt has already been recorded.
+        HTTPException 400: If the transcript is empty or the uploaded audio is empty, or if the audio cannot be decoded.
+    """
     text_splice = _services.get_text_splice_by_id(db, text_splice_id)
     if not text_splice:
         raise HTTPException(status_code=404, detail="Text prompt not found")
@@ -1264,6 +1335,5 @@ async def get_summary(db: Session = Depends(_services.get_db)):
         data=data,
         message="Dataset summary retrieved"
     )
-
 
 
