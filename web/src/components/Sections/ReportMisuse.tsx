@@ -16,6 +16,11 @@ import { useTranslations } from "next-intl";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+/**
+ * Renders a report form for submitting misuse reports and displaying submission status.
+ *
+ * @returns A JSX element containing the form fields (first name, last name, email, message), a submit button with a loading state, and success/error feedback alerts.
+ */
 export default function ReportMisuse() {
   const t = useTranslations("report");
   const tCommon = useTranslations("common");

@@ -18,6 +18,13 @@ import Footer from "@/components/Sections/Footer"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
+/**
+ * Renders the email verification page UI that collects a 6-digit verification code, verifies it with the backend, and supports resending the code.
+ *
+ * The component extracts the `email` query parameter, focuses inputs on mount, accepts single-digit input (including paste of a full 6-digit code), auto-submits when the code is complete, displays success or error alerts, and redirects to the login page after successful verification.
+ *
+ * @returns The React element for the email verification page.
+ */
 function VerifyPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()

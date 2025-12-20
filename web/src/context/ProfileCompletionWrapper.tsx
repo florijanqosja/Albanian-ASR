@@ -41,6 +41,13 @@ interface ExtendedSession {
   }
 }
 
+/**
+ * Wraps application content with user profile context and conditionally displays a profile completion modal for authenticated users with incomplete profiles.
+ *
+ * The component checks the current authenticated session (respecting locale-prefixed routes and a set of excluded paths) and, when the user's profile is not completed and the provider is neither `system` nor `deleted`, renders the ProfileCompletionModal. It updates local user state when the modal is completed or dismissed.
+ *
+ * @returns The children wrapped in UserProfileContext.Provider and, when applicable, a ProfileCompletionModal configured for the current user.
+ */
 export default function ProfileCompletionWrapper({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
   const pathname = usePathname()

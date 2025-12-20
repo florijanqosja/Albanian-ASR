@@ -65,6 +65,17 @@ def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 
 def _token_pair_response(user: models.User) -> schemas.Token:
+    """
+    Builds an access and refresh JWT pair for the given user.
+    
+    The generated tokens embed the user's email, id, and token_version (defaults to 0 if missing). The access token's expiry (in seconds) is returned in the Token response.
+    
+    Parameters:
+        user (models.User): User object for which to create tokens. Its `id`, `email`, and optional `token_version` are used.
+    
+    Returns:
+        schemas.Token: Token object containing `access_token`, `refresh_token`, `token_type` ("bearer"), and `expires_in` (seconds until the access token expires).
+    """
     token_version = getattr(user, "token_version", 0) or 0
     user_id = str(user.id)
     access_token, expires_in = create_access_token({"sub": user.email, "id": user_id, "token_version": token_version})
@@ -77,6 +88,21 @@ def _token_pair_response(user: models.User) -> schemas.Token:
     )
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """
+    Validate the bearer access token and return the corresponding authenticated user.
+    
+    Parameters:
+        token (str): JWT access token extracted from the Authorization Bearer header.
+        db (Session): Database session used to look up the user.
+    
+    Returns:
+        user: The authenticated user record retrieved from the database.
+    
+    Raises:
+        HTTPException: 401 Unauthorized if the token is invalid, expired, not an access token,
+            does not contain required claims, the token_version does not match the user's
+            stored token_version, or the user's provider is marked "deleted".
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -101,8 +127,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
 @router.post("/register", response_model=schemas.RegisterResponse)
 def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     """
-    Register a new user and send a verification email.
-    The user will need to verify their email before they can log in.
+    Register a new user, enforce acceptance of the latest policy consent, and initiate email verification.
+    
+    If the latest consent is not provided by the caller the request is rejected; a verification email is attempted but its failure does not prevent successful registration.
+    
+    Returns:
+        RegisterResponse: object containing a confirmation message and the registered email address.
     """
     db_user = services.get_user_by_email(db, email=user.email)
     if db_user:
@@ -295,6 +325,21 @@ def refresh_access_token(
     request: schemas.RefreshTokenRequest,
     db: Session = Depends(get_db)
 ):
+    """
+    Validate a refresh token and produce a new access/refresh token pair for the associated user.
+    
+    Validates the provided refresh token's signature and payload, ensures its `token_type` is "refresh",
+    verifies the token contains a user id, and checks the token's `token_version` matches the stored
+    user `token_version` and that the user's provider is not "deleted". If validation succeeds, returns
+    a fresh token pair for the user; otherwise raises an HTTP 401 Unauthorized error.
+    
+    Parameters:
+        request (schemas.RefreshTokenRequest): Object containing the `refresh_token` to validate.
+        db (Session): Database session dependency used to load the user.
+    
+    Returns:
+        schemas.Token: A new token pair (access and refresh) for the authenticated user.
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -321,6 +366,20 @@ def refresh_access_token(
 
 @router.post("/google", response_model=schemas.Token)
 def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db)):
+    """
+    Authenticate or register a user using a Google ID token and return an access/refresh token pair.
+    
+    Verifies the provided Google ID token, enforces that the provided consent_id matches the latest configured policy consent, and either creates a new user (marking Google users as verified and profile incomplete) or updates an existing user's avatar and consent_id as needed. Returns a token pair for the authenticated user.
+    
+    Parameters:
+        request (GoogleLoginRequest): Incoming request containing the Google ID token (`token`) and the `consent_id` that the user accepted; `consent_id` must match the latest policy consent.
+    
+    Returns:
+        Token: A token pair schema containing an access token and a refresh token (and their expirations).
+    
+    Raises:
+        HTTPException: 400 if the Google token is invalid or the provided consent_id is outdated; 500 if the latest consent version is not configured.
+    """
     try:
         # Verify the Google token
 

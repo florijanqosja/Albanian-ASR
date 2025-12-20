@@ -8,6 +8,13 @@ import axios from "axios"
 import Footer from "@/components/Sections/Footer"
 import { ALBANIAN_ACCENTS, ALBANIAN_REGIONS, ACCENT_OTHER_VALUE, REGION_OTHER_VALUE } from "@/constants/profileOptions"
 
+/**
+ * Render the authenticated user's profile page with editable personal and linguistic details and an account deletion workflow.
+ *
+ * Renders a form pre-filled from the current session's user data (fetched from the API) that allows updating name, contact, age, nationality, accent/dialect (including a custom "Other" option), and region (including a custom "Other" option). Also provides a guarded "Delete account" section that requires two acknowledgments and typing "CONFIRM" before sending a deletion request and signing the user out.
+ *
+ * @returns The React element for the profile page, including the profile form, save controls, and account deletion UI.
+ */
 export default function ProfilePage() {
   const { data: session } = useSession()
     const theme = useTheme()

@@ -25,6 +25,12 @@ type ConsentResponse = {
   message?: string
 }
 
+/**
+ * Fetches the authenticated user's profile from the backend.
+ *
+ * @param accessToken - Bearer access token used for Authorization header
+ * @returns The user's profile data as a `BackendUser`
+ */
 async function fetchUserProfile(accessToken: string): Promise<BackendUser> {
   const userRes = await axios.get(`${apiUrl}/users/me`, {
     headers: { Authorization: `Bearer ${accessToken}` }
@@ -32,6 +38,12 @@ async function fetchUserProfile(accessToken: string): Promise<BackendUser> {
   return userRes.data
 }
 
+/**
+ * Refreshes an access token using the stored refresh token and returns an updated token object.
+ *
+ * @param token - Token-like object that must include a `refreshToken` string; other token fields are preserved.
+ * @returns An updated token object containing `accessToken`, `refreshToken` (backend value or original if not returned), `accessTokenExpires` (epoch ms), and `error: undefined` on success; on failure returns the original token with `error` set to `"RefreshAccessTokenError"`.
+ */
 async function refreshAccessToken(token: Record<string, unknown>) {
   try {
     const refreshToken = token.refreshToken as string | undefined
@@ -54,6 +66,12 @@ async function refreshAccessToken(token: Record<string, unknown>) {
   }
 }
 
+/**
+ * Fetches the latest consent version ID from the backend.
+ *
+ * @returns The latest consent ID as a number.
+ * @throws Error if the backend response does not include a consent ID
+ */
 async function fetchLatestConsentId(): Promise<number> {
   const res = await axios.get<ConsentResponse>(`${apiUrl}/consents/latest`)
   const consentId = res.data.data?.id

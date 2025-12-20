@@ -25,6 +25,13 @@ import Footer from "@/components/Sections/Footer";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+/**
+ * Render the registration page with email and Google sign-up flows, consent collection, form validation, and navigation.
+ *
+ * Includes fetching the latest consent version, enforcing consent acceptance before sign-up, client-side validation (email, password length, and password confirmation), and redirects authenticated users away from the page or to the verification route after successful registration.
+ *
+ * @returns The registration page as a JSX element.
+ */
 export default function RegisterPage() {
   const router = useRouter();
   const { data: session, status } = useSession();

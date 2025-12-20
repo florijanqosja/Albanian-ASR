@@ -33,6 +33,20 @@ interface ProfileCompletionModalProps {
   onComplete: () => void
 }
 
+/**
+ * Modal dialog that prompts the user to complete optional profile fields and accept consent before continuing.
+ *
+ * Renders a form for phone number, age, nationality, region and Albanian dialect/accent (with a custom option),
+ * fetches the latest consent metadata on mount, requires the user to accept the Terms of Service and Privacy Notice,
+ * and submits profile data (including `consent_id`) to the server. Provides controls to save the profile or dismiss the modal.
+ *
+ * @param open - Controls whether the dialog is visible
+ * @param accessToken - Bearer token used for authenticated API requests
+ * @param onComplete - Called when the profile is successfully saved
+ * @param onClose - Called when the modal is dismissed/closed
+ * @param userName - Optional user display name shown in the welcome message
+ * @returns The profile completion modal React element
+ */
 export default function ProfileCompletionModal({ 
   open, 
   accessToken, 

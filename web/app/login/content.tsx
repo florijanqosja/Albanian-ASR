@@ -13,6 +13,16 @@ import Footer from "@/components/Sections/Footer";
 const isProduction = process.env.NEXT_PUBLIC_ENVIRONMENT === "production";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+/**
+ * Renders the login page UI, including email/password sign-in, a production-only consent block with Google sign-in gating, and success/error messaging.
+ *
+ * The component:
+ * - Shows a centered loading indicator while authentication status is being determined and redirects to the homepage when already authenticated.
+ * - Presents an email/password form that performs credential sign-in and displays validation, success, and error messages.
+ * - In production, fetches the latest consent metadata and renders a consent checkbox that must be accepted (and whose version/effective date are shown when available) before enabling Google sign-in; displays an error if consent metadata cannot be loaded.
+ *
+ * @returns The rendered login page content as a React element.
+ */
 function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
