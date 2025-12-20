@@ -157,7 +157,19 @@
   "footer": {
     "tagline": "Building the future of Albanian speech technology, one voice at a time.",
     "terms": "Terms and Conditions",
+    "report": "Report misuse",
+    "privacy": "Privacy Notice",
     "apiDocs": "API Docs",
     "copyright": "© 2025 DibraSpeaks. All rights reserved."
+  },
+  "report": {
+    "title": "Report misuse",
+    "subtitle": "If you believe your voice, personal data, or other content appears here without consent, send us a report and we will review it.",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "email": "Email",
+    "message": "Message",
+    "success": "Thanks — your message has been sent.",
+    "error": "Unable to send your message right now. Please try again later."
   }
 }

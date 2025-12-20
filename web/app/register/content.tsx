@@ -11,7 +11,9 @@ import {
   InputAdornment, 
   IconButton,
   Alert,
-  CircularProgress
+  CircularProgress,
+  FormControlLabel,
+  Checkbox
 } from "@mui/material";
 import { FcGoogle } from "react-icons/fc";
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight } from "lucide-react";
@@ -23,6 +25,13 @@ import Footer from "@/components/Sections/Footer";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+/**
+ * Render the registration page with email and Google sign-up flows, consent collection, form validation, and navigation.
+ *
+ * Includes fetching the latest consent version, enforcing consent acceptance before sign-up, client-side validation (email, password length, and password confirmation), and redirects authenticated users away from the page or to the verification route after successful registration.
+ *
+ * @returns The registration page as a JSX element.
+ */
 export default function RegisterPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -38,6 +47,10 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [consentAccepted, setConsentAccepted] = useState(false);
+  const [consentVersion, setConsentVersion] = useState<string | null>(null);
+  const [consentId, setConsentId] = useState<number | null>(null);
+  const [effectiveDate, setEffectiveDate] = useState<string | null>(null);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -46,6 +59,25 @@ export default function RegisterPage() {
       router.refresh();
     }
   }, [status, session, router]);
+
+  useEffect(() => {
+    const fetchConsent = async () => {
+      try {
+        const res = await fetch(`${API_URL}/consents/latest`);
+        const data = await res.json();
+        if (res.ok && data?.data?.id) {
+          setConsentId(data.data.id);
+          setConsentVersion(data.data.version);
+          setEffectiveDate(data.data.effective_date ?? null);
+        } else {
+          setError("Consent version missing. Please try again later.");
+        }
+      } catch {
+        setError("Consent version missing. Please try again later.");
+      }
+    };
+    fetchConsent();
+  }, []);
 
   // Show loading state while checking authentication
   if (status === "loading") {
@@ -91,6 +123,10 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
+    if (!consentAccepted || !consentId) {
+      setError("Please accept the Terms of Service and Privacy Notice to continue.");
+      return;
+    }
     
     setLoading(true);
     setError(null);
@@ -105,7 +141,8 @@ export default function RegisterPage() {
           name: formData.name,
           surname: formData.surname,
           email: formData.email,
-          password: formData.password
+          password: formData.password,
+          consent_id: consentId
         })
       });
 
@@ -145,7 +182,13 @@ export default function RegisterPage() {
               variant="outlined"
               size="large"
               startIcon={<FcGoogle size={24} />}
-              onClick={() => signIn("google", { callbackUrl: "/" })}
+              onClick={() => {
+                if (!consentAccepted || !consentId) {
+                  setError("Please accept the Terms of Service and Privacy Notice to continue.");
+                  return;
+                }
+                signIn("google", { callbackUrl: "/" })
+              }}
               sx={{ 
                 mb: 3, 
                 py: 1.5, 
@@ -297,7 +340,7 @@ export default function RegisterPage() {
                 fullWidth
                 variant="contained"
                 size="large"
-                disabled={loading}
+                disabled={loading || !consentAccepted || !consentId}
                 endIcon={loading ? <CircularProgress size={20} color="inherit" /> : <ArrowRight size={20} />}
                 sx={{ 
                   mt: 4, 
@@ -305,18 +348,34 @@ export default function RegisterPage() {
                   py: 1.5, 
                   borderRadius: 2, 
                   fontWeight: 700,
-                  boxShadow: '0 4px 14px 0 rgba(166, 77, 74, 0.39)'
+                  boxShadow: (theme) => theme.shadows[4]
                 }}
               >
                 {loading ? t("creating") : t("cta")}
               </Button>
 
-              <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center', mb: 2 }}>
-                {t("termsNote")}{' '}
-                <Link href="/termsandservices" className="font-bold text-primary hover:underline">
-                  {t("terms")}
-                </Link>
-              </Typography>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={consentAccepted}
+                    onChange={(event) => setConsentAccepted(event.target.checked)}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Typography variant="body2" color="textSecondary">
+                    I have read and agree to the{' '}
+                    <Link href="/termsandservices" className="font-bold text-primary hover:underline">
+                      Terms of Service
+                    </Link>{' '}and{' '}
+                    <Link href="/privacy" className="font-bold text-primary hover:underline">
+                      Privacy Notice
+                    </Link>
+                    {consentVersion ? ` (Version ${consentVersion}${effectiveDate ? `, effective ${effectiveDate}` : ''})` : ''}.
+                  </Typography>
+                }
+                sx={{ alignItems: 'flex-start', mb: 2 }}
+              />
               
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="body2" color="textSecondary">

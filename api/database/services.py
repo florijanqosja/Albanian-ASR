@@ -1,8 +1,10 @@
 import datetime as _dt
 from typing import TYPE_CHECKING, Optional
+from uuid import UUID
 
 from fastapi import HTTPException
 from sqlalchemy import func, literal, select, union_all
+import sqlalchemy as _sql
 
 from . import database as _database
 from . import models as _models
@@ -14,18 +16,133 @@ if TYPE_CHECKING:
 
 
 def _add_tables():
+    """
+    Ensure the PostgreSQL pgcrypto extension exists and create all database tables from the module metadata.
+    
+    This initializes database schema by creating the "pgcrypto" extension if it is missing, then invoking the SQLAlchemy metadata to create all configured tables.
+    """
+    with _database.engine.begin() as conn:
+        conn.execute(_sql.text('CREATE EXTENSION IF NOT EXISTS "pgcrypto"'))
     return _database.Base.metadata.create_all(bind=_database.engine)
 
 SessionLocal = _database.SessionLocal
 
 def get_db():
+    """
+    Yield a database session and ensure it is closed after use.
+    
+    Returns:
+        db (Session): An open SQLAlchemy session that will be closed when the generator exits.
+    """
     db = _database.SessionLocal()
     try:
         yield db
     finally:
         db.close()
 
+
+def create_policy_consent(db: "Session", consent: _schemas.PolicyConsentCreate) -> _schemas.PolicyConsent:
+    """
+    Create a new PolicyConsent database record from the provided create schema and return the validated PolicyConsent schema.
+    
+    Parameters:
+        consent (_schemas.PolicyConsentCreate): Data used to create the new policy consent, including version, effective_date, privacy_content, and terms_content.
+    
+    Returns:
+        _schemas.PolicyConsent: The created PolicyConsent validated and returned as a schema.
+    """
+    record = _models.PolicyConsent(**consent.model_dump())
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return _schemas.PolicyConsent.model_validate(record)
+
+
+def get_policy_consent_by_id(db: "Session", consent_id: UUID) -> Optional[_models.PolicyConsent]:
+    """
+    Retrieve the PolicyConsent record for the given consent identifier.
+    
+    Parameters:
+        consent_id (UUID): UUID of the PolicyConsent to fetch.
+    
+    Returns:
+        _models.PolicyConsent | None: The matching PolicyConsent model if found, `None` otherwise.
+    """
+    return db.query(_models.PolicyConsent).filter(_models.PolicyConsent.id == consent_id).first()
+
+
+def get_latest_policy_consent_model(db: "Session") -> Optional[_models.PolicyConsent]:
+    """
+    Retrieve the most recently effective PolicyConsent record.
+    
+    Searches PolicyConsent entries ordered by effective_date (newest first) and created_at (newest first) and returns the first match.
+    
+    Returns:
+        _models.PolicyConsent | None: The most recent PolicyConsent model instance, or `None` if no records exist.
+    """
+    return (
+        db.query(_models.PolicyConsent)
+        .order_by(_models.PolicyConsent.effective_date.desc(), _models.PolicyConsent.created_at.desc())
+        .first()
+    )
+
+
+def get_latest_policy_consent(db: "Session") -> Optional[_schemas.PolicyConsent]:
+    """
+    Retrieve the most recently effective PolicyConsent record.
+    
+    Returns:
+        _schemas.PolicyConsent | None: A PolicyConsent schema for the most recently effective record, or `None` if no consent exists.
+    """
+    record = get_latest_policy_consent_model(db)
+    return _schemas.PolicyConsent.model_validate(record) if record else None
+
+
+def ensure_policy_consent(
+    db: "Session",
+    *,
+    version: str,
+    effective_date: _dt.date,
+    privacy_content: str,
+    terms_content: str,
+) -> _models.PolicyConsent:
+    """
+    Ensure a PolicyConsent record with the given version exists, creating and persisting a new record if none is found.
+    
+    Parameters:
+        version (str): The policy version identifier to ensure.
+        effective_date (datetime.date): The date when this policy version becomes effective.
+        privacy_content (str): The privacy policy text for this version.
+        terms_content (str): The terms of service text for this version.
+    
+    Returns:
+        _models.PolicyConsent: The existing or newly created PolicyConsent ORM instance corresponding to `version`.
+    """
+    existing = db.query(_models.PolicyConsent).filter(_models.PolicyConsent.version == version).first()
+    if existing:
+        return existing
+
+    record = _models.PolicyConsent(
+        version=version,
+        effective_date=effective_date,
+        privacy_content=privacy_content,
+        terms_content=terms_content,
+    )
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
 async def create_video(video: _schemas.VideoCreate, db: "Session") -> _schemas.Video:
+    """
+    Create a Video record from the provided VideoCreate schema and persist it to the database.
+    
+    Parameters:
+        video (_schemas.VideoCreate): Data used to create the Video record.
+    
+    Returns:
+        _schemas.Video: The created Video validated and returned as a schema.
+    """
     video_db = _models.Video(**video.model_dump())
     db.add(video_db)
     db.commit()
@@ -33,6 +150,19 @@ async def create_video(video: _schemas.VideoCreate, db: "Session") -> _schemas.V
     return _schemas.Video.model_validate(video_db)
 
 async def update_video(video_path: str, update_data: dict, db: "Session") -> _schemas.Video:
+    """
+    Update a Video record identified by its path with the provided fields.
+    
+    Parameters:
+        video_path (str): Path identifying the Video to update.
+        update_data (dict): Mapping of Video attribute names to their new values.
+    
+    Returns:
+        _schemas.Video: The updated Video as a validated schema.
+    
+    Raises:
+        HTTPException: 404 if no Video with the given path exists.
+    """
     video_db = db.query(_models.Video).filter(_models.Video.path == video_path).first()
     if video_db is None:
         raise HTTPException(404, detail="Video not found")
@@ -45,7 +175,20 @@ async def update_video(video_path: str, update_data: dict, db: "Session") -> _sc
     return _schemas.Video.model_validate(video_db)
 
 
-async def update_video_by_id(video_id: int, update_data: dict, db: "Session") -> _schemas.Video:
+async def update_video_by_id(video_id: UUID, update_data: dict, db: "Session") -> _schemas.Video:
+    """
+    Update fields on an existing Video identified by its UUID.
+    
+    Parameters:
+        video_id (UUID): UUID of the Video to update.
+        update_data (dict): Mapping of Video attribute names to new values to apply.
+    
+    Returns:
+        _schemas.Video: The updated Video validated as a schema.
+    
+    Raises:
+        HTTPException: 404 if no Video with the given `video_id` exists.
+    """
     video_db = db.query(_models.Video).filter(_models.Video.id == video_id).first()
     if video_db is None:
         raise HTTPException(404, detail="Video not found")
@@ -57,7 +200,21 @@ async def update_video_by_id(video_id: int, update_data: dict, db: "Session") ->
     db.refresh(video_db)
     return _schemas.Video.model_validate(video_db)
 
-async def update_splice_being_processed(splice_id: int, data: dict, db: "Session") -> _schemas.SpliceBeingProcessed:
+async def update_splice_being_processed(splice_id: UUID, data: dict, db: "Session") -> _schemas.SpliceBeingProcessed:
+    """
+    Update fields on a SpliceBeingProcessed identified by its UUID and return the updated record.
+    
+    Parameters:
+        splice_id (UUID): UUID of the SpliceBeingProcessed to update.
+        data (dict): Mapping of model attribute names to their new values; keys must match writable model attributes.
+        db (Session): Database session (omitted from detailed docs for common service parameters).
+    
+    Returns:
+        _schemas.SpliceBeingProcessed: The updated SpliceBeingProcessed validated as a schema.
+    
+    Raises:
+        HTTPException: 404 if no SpliceBeingProcessed with the given `splice_id` exists.
+    """
     splice_being_processed_db = db.query(_models.SpliceBeingProcessed).filter(_models.SpliceBeingProcessed.id == splice_id).first()
     if splice_being_processed_db is None:
         raise HTTPException(404, detail="Splice not found")
@@ -86,6 +243,15 @@ async def create_splice_being_processed(splice: _schemas.SpliceBeingProcessedCre
 
 
 async def create_upload_record(upload: _schemas.UploadRecordCreate, db: "Session") -> _schemas.UploadRecord:
+    """
+    Create a new upload record in the database from the provided create schema.
+    
+    Parameters:
+        upload (_schemas.UploadRecordCreate): Data used to populate the new upload record.
+    
+    Returns:
+        _schemas.UploadRecord: The created upload record validated and returned as a schema.
+    """
     upload_db = _models.UploadRecord(**upload.model_dump())
     db.add(upload_db)
     db.commit()
@@ -93,7 +259,20 @@ async def create_upload_record(upload: _schemas.UploadRecordCreate, db: "Session
     return _schemas.UploadRecord.model_validate(upload_db)
 
 
-def update_upload_record(upload_id: int, data: dict, db: "Session") -> _schemas.UploadRecord:
+def update_upload_record(upload_id: UUID, data: dict, db: "Session") -> _schemas.UploadRecord:
+    """
+    Update fields on an existing upload record identified by its UUID.
+    
+    Parameters:
+        upload_id (UUID): UUID of the upload record to update.
+        data (dict): Mapping of model field names to new values to apply.
+    
+    Returns:
+        _schemas.UploadRecord: The updated upload record as a validated schema.
+    
+    Raises:
+        HTTPException: 404 if no upload record with the given `upload_id` exists.
+    """
     record = db.query(_models.UploadRecord).filter(_models.UploadRecord.id == upload_id).first()
     if record is None:
         raise HTTPException(404, detail="Upload record not found")
@@ -107,17 +286,39 @@ def update_upload_record(upload_id: int, data: dict, db: "Session") -> _schemas.
 
 
 def set_upload_status(
-    upload_id: int,
+    upload_id: UUID,
     status: MediaProcessingStatus,
     db: "Session",
     error_message: Optional[str] = None,
 ) -> _schemas.UploadRecord:
+    """
+    Set the processing status for an upload record.
+    
+    If provided, associates `error_message` with the upload (commonly used when setting an error status).
+    
+    Parameters:
+        upload_id (UUID): Identifier of the upload record to update.
+        status (MediaProcessingStatus): New processing status to assign.
+        error_message (Optional[str]): Optional error message to store with the upload when applicable.
+    
+    Returns:
+        _schemas.UploadRecord: The updated upload record.
+    """
     payload = {"status": status}
     if error_message is not None:
         payload["error_message"] = error_message
     return update_upload_record(upload_id, payload, db)
 
-async def delete_labeled_splice(splice_id: int, db: "Session"):
+async def delete_labeled_splice(splice_id: UUID, db: "Session"):
+    """
+    Delete a labeled splice and preserve any referencing text splice recordings.
+    
+    Removes the LabeledSplice with the given `splice_id`. For each TextSplice that referenced the deleted splice, a TextSpliceRecording snapshot is created if one does not already exist, and the TextSplice's recorded_splice_id is cleared and marked as updated.
+    
+    Parameters:
+        splice_id (UUID): Identifier of the LabeledSplice to delete.
+    
+    """
     labeled_splice = (
         db.query(_models.LabeledSplice)
         .filter(_models.LabeledSplice.id == splice_id)
@@ -158,22 +359,54 @@ async def delete_labeled_splice(splice_id: int, db: "Session"):
     db.delete(labeled_splice)
     db.commit()
 
-async def delete_splice(splice_id: int, db: "Session"):
+async def delete_splice(splice_id: UUID, db: "Session"):
+    """
+    Delete the Splice record with the given UUID from the database.
+    
+    Deletes the Splice identified by splice_id if it exists; the operation is idempotent and commits the transaction.
+    """
     db.query(_models.Splice).filter(_models.Splice.id == splice_id).delete()
     db.commit()
 
 async def get_first_labeled_splice(db: "Session") -> _schemas.LabeledSplice:
-    first_splice = db.query(_models.LabeledSplice).order_by(_models.LabeledSplice.id).first()
+    """
+    Retrieve the earliest created labeled splice.
+    
+    Returns:
+        _schemas.LabeledSplice | None: The validated `LabeledSplice` schema for the earliest created record, or `None` if no labeled splices exist.
+    """
+    first_splice = db.query(_models.LabeledSplice).order_by(_models.LabeledSplice.created_at).first()
     return _schemas.LabeledSplice.model_validate(first_splice) if first_splice else None
 
 async def get_first_splice(db: "Session") -> _schemas.Splice:
-    first_splice = db.query(_models.Splice).order_by(_models.Splice.id).first()
+    """
+    Retrieve the earliest-created Splice from the database.
+    
+    Returns:
+        _schemas.Splice: The earliest-created splice as a validated schema, or `None` if no splice exists.
+    """
+    first_splice = db.query(_models.Splice).order_by(_models.Splice.created_at).first()
     return _schemas.Splice.model_validate(first_splice) if first_splice else None
 
-async def get_splice_being_processed(splice_id: int, db: "Session") -> _schemas.SpliceBeingProcessed:
+async def get_splice_being_processed(splice_id: UUID, db: "Session") -> _schemas.SpliceBeingProcessed:
+    """
+    Retrieve a SpliceBeingProcessed record by its UUID.
+    
+    Returns:
+        The SpliceBeingProcessed model instance if found, otherwise None.
+    """
     return db.query(_models.SpliceBeingProcessed).get(splice_id)
 
 async def delete_splice_being_processed(splice: _schemas.SpliceBeingProcessed, db: "Session") -> None:
+    """
+    Delete a SpliceBeingProcessed record from the database.
+    
+    Parameters:
+        splice (_schemas.SpliceBeingProcessed): The SpliceBeingProcessed instance to remove.
+    
+    Raises:
+        HTTPException: with status code 500 and the underlying error message if deletion or commit fails.
+    """
     try:
         db.delete(splice)
         db.commit()
@@ -182,6 +415,21 @@ async def delete_splice_being_processed(splice: _schemas.SpliceBeingProcessed, d
 
 
 async def create_text_splice(text_splice: _schemas.TextSpliceCreate, db: "Session") -> _schemas.TextSplice:
+    """
+    Create a TextSplice record from the provided prompt and mark it as pending.
+    
+    Strips surrounding whitespace from `text_splice.prompt_text`, validates it is not empty, persists a new TextSplice with status "pending", and returns the validated TextSplice schema.
+    
+    Parameters:
+        text_splice (_schemas.TextSpliceCreate): Input data; `prompt_text` is required and will be trimmed.
+        db (Session): Database session used to persist the record.
+    
+    Returns:
+        _schemas.TextSplice: The created TextSplice validated as a schema.
+    
+    Raises:
+        HTTPException: 400 if `prompt_text` is empty after trimming.
+    """
     prompt_text = text_splice.prompt_text.strip()
     if not prompt_text:
         raise HTTPException(status_code=400, detail="Prompt text cannot be empty")
@@ -197,7 +445,21 @@ async def create_text_splice(text_splice: _schemas.TextSpliceCreate, db: "Sessio
     return _schemas.TextSplice.model_validate(text_splice_db)
 
 
-async def update_text_splice(text_splice_id: int, update_data: dict, db: "Session") -> _schemas.TextSplice:
+async def update_text_splice(text_splice_id: UUID, update_data: dict, db: "Session") -> _schemas.TextSplice:
+    """
+    Update fields on an existing TextSplice record.
+    
+    Parameters:
+        text_splice_id (UUID): Identifier of the TextSplice to update.
+        update_data (dict): Mapping of model attribute names to new values to apply.
+        db (Session): Database session used to perform the update.
+    
+    Returns:
+        _schemas.TextSplice: The updated TextSplice validated as a schema.
+    
+    Raises:
+        HTTPException: 404 if no TextSplice with the given id exists.
+    """
     text_splice_db = (
         db.query(_models.TextSplice)
         .filter(_models.TextSplice.id == text_splice_id)
@@ -214,7 +476,21 @@ async def update_text_splice(text_splice_id: int, update_data: dict, db: "Sessio
     return _schemas.TextSplice.model_validate(text_splice_db)
 
 
-async def reserve_text_splice(text_splice_id: int, user_id: str, db: "Session") -> _schemas.TextSplice:
+async def reserve_text_splice(text_splice_id: UUID, user_id: UUID, db: "Session") -> _schemas.TextSplice:
+    """
+    Reserve a pending text splice for a specific user.
+    
+    Parameters:
+        text_splice_id (UUID): Identifier of the text splice to reserve.
+        user_id (UUID): Identifier of the user reserving the text splice.
+    
+    Returns:
+        TextSplice: The reserved text splice as a validated schema.
+    
+    Raises:
+        HTTPException: 404 if the text splice does not exist.
+        HTTPException: 409 if the text splice is not available to be reserved.
+    """
     text_splice_db = (
         db.query(_models.TextSplice)
         .filter(_models.TextSplice.id == text_splice_id)
@@ -236,7 +512,13 @@ async def reserve_text_splice(text_splice_id: int, user_id: str, db: "Session") 
     return _schemas.TextSplice.model_validate(text_splice_db)
 
 
-def get_text_splice_by_id(db: "Session", text_splice_id: int) -> Optional[_schemas.TextSplice]:
+def get_text_splice_by_id(db: "Session", text_splice_id: UUID) -> Optional[_schemas.TextSplice]:
+    """
+    Retrieve a TextSplice by its UUID.
+    
+    Returns:
+        A TextSplice schema when a record with the given id exists, `None` otherwise.
+    """
     text_splice_db = (
         db.query(_models.TextSplice)
         .filter(_models.TextSplice.id == text_splice_id)
@@ -245,7 +527,13 @@ def get_text_splice_by_id(db: "Session", text_splice_id: int) -> Optional[_schem
     return _schemas.TextSplice.model_validate(text_splice_db) if text_splice_db else None
 
 
-def get_reserved_text_splice_for_user(db: "Session", user_id: str) -> Optional[_schemas.TextSplice]:
+def get_reserved_text_splice_for_user(db: "Session", user_id: UUID) -> Optional[_schemas.TextSplice]:
+    """
+    Fetches the most recently reserved TextSplice for a given user.
+    
+    Returns:
+        _schemas.TextSplice: The most recently reserved TextSplice for the user, or `None` if no reserved splice exists.
+    """
     text_splice_db = (
         db.query(_models.TextSplice)
         .filter(
@@ -259,10 +547,23 @@ def get_reserved_text_splice_for_user(db: "Session", user_id: str) -> Optional[_
 
 
 async def complete_text_splice(
-    text_splice_id: int,
-    recorded_splice_id: Optional[int],
+    text_splice_id: UUID,
+    recorded_splice_id: Optional[UUID],
     db: "Session",
 ) -> _schemas.TextSplice:
+    """
+    Mark a text splice as completed and optionally associate it with a recorded splice.
+    
+    Parameters:
+    	text_splice_id (UUID): Identifier of the TextSplice to mark completed.
+    	recorded_splice_id (Optional[UUID]): Identifier of the associated recorded splice, or `None` to leave unlinked.
+    
+    Returns:
+    	_text_splice (TextSplice): The updated TextSplice schema reflecting completion.
+    
+    Raises:
+    	HTTPException: 404 if the specified TextSplice does not exist.
+    """
     text_splice_db = (
         db.query(_models.TextSplice)
         .filter(_models.TextSplice.id == text_splice_id)
@@ -280,10 +581,16 @@ async def complete_text_splice(
 
 
 def get_next_available_text_splice(db: "Session") -> Optional[_schemas.TextSplice]:
+    """
+    Fetches the oldest TextSplice record with status "pending".
+    
+    Returns:
+        _schemas.TextSplice: The oldest pending TextSplice as a validated schema, or `None` if no pending record exists.
+    """
     text_splice_db = (
         db.query(_models.TextSplice)
         .filter(_models.TextSplice.status == "pending")
-        .order_by(_models.TextSplice.id)
+        .order_by(_models.TextSplice.created_at)
         .first()
     )
     return (
@@ -305,8 +612,17 @@ async def create_text_splice_recording(
 
 
 def get_text_splice_recording_by_text_id(
-    db: "Session", text_splice_id: int
+    db: "Session", text_splice_id: UUID
 ) -> Optional[_schemas.TextSpliceRecording]:
+    """
+    Retrieve the recording associated with a specific text splice.
+    
+    Parameters:
+        text_splice_id (UUID): The UUID of the TextSplice whose recording to retrieve.
+    
+    Returns:
+        TextSpliceRecording | None: The validated TextSpliceRecording schema for the given text_splice_id, or `None` if no recording exists.
+    """
     recording_db = (
         db.query(_models.TextSpliceRecording)
         .filter(_models.TextSpliceRecording.text_splice_id == text_splice_id)
@@ -365,16 +681,40 @@ async def create_labeled_splice(
 
 async def create_deleted_splice(
     splice: _schemas.DeletedSpliceCreate, db: "Session") -> _schemas.DeletedSplice:
+    """
+    Create and persist a DeletedSplice record and return the validated schema.
+    
+    Parameters:
+        splice (_schemas.DeletedSpliceCreate): Data used to create the DeletedSplice record.
+    
+    Returns:
+        _schemas.DeletedSplice: The created DeletedSplice as a validated schema.
+    """
     splice_db = _models.DeletedSplice(**splice.model_dump())
     db.add(splice_db)
     db.commit()
     db.refresh(splice_db)
     return _schemas.DeletedSplice.model_validate(splice_db)
 
-def get_user(db: "Session", user_id: str):
+def get_user(db: "Session", user_id: UUID):
+    """
+    Retrieve a User by its UUID.
+    
+    Returns:
+        The matching User model instance if found, otherwise None.
+    """
     return db.query(_models.User).filter(_models.User.id == user_id).first()
 
 def get_user_by_email(db: "Session", email: str):
+    """
+    Retrieve a User by their email address.
+    
+    Parameters:
+        email (str): Email address to look up (exact match).
+    
+    Returns:
+        _models.User | None: The matching User model instance if found, otherwise `None`.
+    """
     return db.query(_models.User).filter(_models.User.email == email).first()
 
 def create_user(
@@ -384,19 +724,35 @@ def create_user(
     verification_code: str = None,
     verification_code_expires = None
 ):
+    """
+    Create a new user record after validating the provided policy consent and return the created user as a validated schema.
+    
+    Validates that `user.consent_id` is present and refers to an existing PolicyConsent; removes any plaintext `password` from the input before creating the DB record. If `verification_code` is provided the created user will have `is_verified` set to `False`; otherwise `is_verified` is set to `True`. The `profile_completed` flag is set to `True` only when the resolved provider (normalized to lowercase) is `"system"`. The supplied `hashed_password` is stored on the created user record.
+    
+    Parameters:
+        user (_schemas.UserCreate): User creation payload (must include `consent_id`).
+        hashed_password (str, optional): Pre-hashed password to store on the user record.
+        verification_code (str, optional): Verification code to associate with the user; presence marks the user unverified.
+        verification_code_expires (datetime.date|datetime.datetime, optional): Expiration for the verification code.
+    
+    Returns:
+        _schemas.User: The created user validated through the Pydantic schema.
+    
+    Raises:
+        HTTPException: 400 if `consent_id` is missing or does not correspond to an existing PolicyConsent.
+    """
     user_dict = user.model_dump()
     if 'password' in user_dict:
         del user_dict['password']
+
+    consent_id = user_dict.get("consent_id")
+    if consent_id is None:
+        raise HTTPException(status_code=400, detail="consent_id is required")
+    consent_record = get_policy_consent_by_id(db, consent_id)
+    if consent_record is None:
+        raise HTTPException(status_code=400, detail="Invalid consent_id")
     
-    # Generate UUID if not provided (though usually we let the DB or caller handle it, 
-    # but here I'll generate it if I can import uuid, or rely on the caller)
-    # The model defines id as String.
-    import uuid
-    if 'id' not in user_dict:
-        user_dict['id'] = str(uuid.uuid4())
-    
-    # Determine if this is a local or Google user
-    is_google_user = user_dict.get('provider') == 'google'
+    provider = (user_dict.get("provider") or "local").strip().lower()
     
     # Handle verification and profile completion fields
     user_db = _models.User(
@@ -405,17 +761,78 @@ def create_user(
         verification_code=verification_code,
         verification_code_expires=verification_code_expires,
         is_verified=False if verification_code else True,  # Google users are auto-verified
-        profile_completed=not is_google_user  # Local users have completed profile, Google users need to complete it
+        profile_completed=(provider == "system"),
     )
     db.add(user_db)
     db.commit()
     db.refresh(user_db)
     return _schemas.User.model_validate(user_db)
 
-def get_user_stats(db: "Session", user_id: str):
+
+def anonymize_user(db: "Session", user: _models.User) -> _schemas.User:
+    """
+    Anonymizes personally identifiable information on a User model while preserving referential integrity.
+    
+    Parameters:
+        user (_models.User): The SQLAlchemy User model instance to anonymize.
+    
+    Returns:
+        anonymized_user (_schemas.User): The anonymized User as a validated schema.
+    """
+    placeholder_email = f"deleted+{user.id}@example.invalid"
+
+    user.name = None
+    user.surname = None
+    user.email = placeholder_email
+    user.phone_number = None
+    user.age = None
+    user.nationality = None
+    user.accent = None
+    user.region = None
+    user.avatar_url = None
+    user.hashed_password = None
+    user.provider = "deleted"
+    user.is_verified = False
+    user.verification_code = None
+    user.verification_code_expires = None
+    user.reset_code = None
+    user.reset_code_expires = None
+    user.profile_completed = False
+    user.token_version = (user.token_version or 0) + 1
+    user.modified_at = _dt.datetime.utcnow()
+
+    db.commit()
+    db.refresh(user)
+    return _schemas.User.model_validate(user)
+
+def get_user_stats(db: "Session", user_id: UUID):
+    """
+    Compute activity and time metrics for a user across recording, labeling, and validation work.
+    
+    Parameters:
+        user_id (UUID): The user's UUID to compute statistics for.
+    
+    Returns:
+        dict: A mapping with the following keys:
+            recorded_count (int): Number of TextSpliceRecordings created by the user.
+            labeled_count (int): Number of LabeledSplice and HighQualityLabeledSplice entries labeled by the user (excludes auto-recorded clips and items already recorded).
+            validated_count (int): Number of HighQualityLabeledSplice entries validated by the user.
+            hours_recorded (float): Total recording duration in hours, rounded to 2 decimal places.
+            hours_labeled (float): Total labeling duration in hours, rounded to 2 decimal places.
+            hours_validated (float): Total validation duration in hours, rounded to 2 decimal places.
+    """
     recording_name_pattern = "recordings_%"
 
     def sum_duration(query):
+        """
+        Compute the sum of `duration` values from an iterable of rows.
+        
+        Parameters:
+        	query (Iterable): Iterable of objects or mappings with a `duration` attribute or key that can be converted to `float`. Non-numeric or missing durations are ignored.
+        
+        Returns:
+        	total (float): Sum of all successfully converted `duration` values.
+        """
         total = 0.0
         for row in query:
             try:
@@ -502,7 +919,27 @@ def get_user_stats(db: "Session", user_id: str):
         "hours_validated": round(hours_validated, 2),
     }
 
-def get_user_activity(db: "Session", user_id: str, page: int, page_size: int):
+def get_user_activity(db: "Session", user_id: UUID, page: int, page_size: int):
+    """
+    Return a paginated union of activity records for a user, combining labeled, pending validation, high-quality labeled, validated, and recorded items.
+    
+    Parameters:
+        db (Session): Database session.
+        user_id (UUID): User identifier to filter activity for.
+        page (int): 1-based page number for pagination.
+        page_size (int): Number of items per page.
+    
+    Returns:
+        (total, rows): 
+            total (int): Total number of activity rows for the user.
+            rows (List[Row]): Paginated list of activity rows ordered by most recent activity. Each row contains:
+                - id: item UUID
+                - activity_type: one of "labeled", "validated", or "recorded"
+                - name, path, label, origin, duration, validation
+                - owner_id, labeler_id, validator_id
+                - created_at: timestamp used for ordering
+                - activity_rank: integer used to break ties when ordering
+    """
     recording_name_pattern = "recordings_%"
     recorded_splice_ids_subquery = (
         select(_models.TextSpliceRecording.recorded_splice_id)
@@ -522,7 +959,8 @@ def get_user_activity(db: "Session", user_id: str, page: int, page_size: int):
             _models.LabeledSplice.owner_id,
             _models.LabeledSplice.labeler_id,
             literal(None).label("validator_id"),
-            (_models.LabeledSplice.id * 10 + 1).label("sort_key"),
+            func.coalesce(_models.LabeledSplice.updated_at, _models.LabeledSplice.created_at).label("created_at"),
+            literal(1).label("activity_rank"),
         )
         .where(
             _models.LabeledSplice.labeler_id == user_id,
@@ -544,7 +982,11 @@ def get_user_activity(db: "Session", user_id: str, page: int, page_size: int):
             _models.SpliceBeingProcessed.owner_id,
             _models.SpliceBeingProcessed.labeler_id,
             _models.SpliceBeingProcessed.validator_id,
-            (_models.SpliceBeingProcessed.id * 10 + 2).label("sort_key"),
+            func.coalesce(
+                _models.SpliceBeingProcessed.updated_at,
+                _models.SpliceBeingProcessed.created_at,
+            ).label("created_at"),
+            literal(2).label("activity_rank"),
         )
         .where(
             _models.SpliceBeingProcessed.status == "labeled",
@@ -566,7 +1008,11 @@ def get_user_activity(db: "Session", user_id: str, page: int, page_size: int):
             _models.HighQualityLabeledSplice.owner_id,
             _models.HighQualityLabeledSplice.labeler_id,
             _models.HighQualityLabeledSplice.validator_id,
-            (_models.HighQualityLabeledSplice.id * 10 + 3).label("sort_key"),
+            func.coalesce(
+                _models.HighQualityLabeledSplice.updated_at,
+                _models.HighQualityLabeledSplice.created_at,
+            ).label("created_at"),
+            literal(3).label("activity_rank"),
         )
         .where(
             _models.HighQualityLabeledSplice.labeler_id == user_id,
@@ -587,7 +1033,11 @@ def get_user_activity(db: "Session", user_id: str, page: int, page_size: int):
             _models.HighQualityLabeledSplice.owner_id,
             _models.HighQualityLabeledSplice.labeler_id,
             _models.HighQualityLabeledSplice.validator_id,
-            (_models.HighQualityLabeledSplice.id * 10 + 4).label("sort_key"),
+            func.coalesce(
+                _models.HighQualityLabeledSplice.updated_at,
+                _models.HighQualityLabeledSplice.created_at,
+            ).label("created_at"),
+            literal(4).label("activity_rank"),
         )
         .where(_models.HighQualityLabeledSplice.validator_id == user_id)
     )
@@ -605,7 +1055,11 @@ def get_user_activity(db: "Session", user_id: str, page: int, page_size: int):
             _models.TextSpliceRecording.owner_id,
             _models.TextSpliceRecording.labeler_id,
             literal(None).label("validator_id"),
-            (_models.TextSpliceRecording.id * 10 + 5).label("sort_key"),
+            func.coalesce(
+                _models.TextSpliceRecording.updated_at,
+                _models.TextSpliceRecording.created_at,
+            ).label("created_at"),
+            literal(5).label("activity_rank"),
         )
         .where(_models.TextSpliceRecording.labeler_id == user_id)
     )
@@ -622,7 +1076,7 @@ def get_user_activity(db: "Session", user_id: str, page: int, page_size: int):
 
     rows = (
         db.query(union_subquery)
-        .order_by(union_subquery.c.sort_key.desc())
+        .order_by(union_subquery.c.created_at.desc(), union_subquery.c.activity_rank)
         .offset((page - 1) * page_size)
         .limit(page_size)
         .all()
@@ -631,7 +1085,18 @@ def get_user_activity(db: "Session", user_id: str, page: int, page_size: int):
     return total, rows
 
 
-def get_user_upload_records(db: "Session", user_id: str, page: int, page_size: int):
+def get_user_upload_records(db: "Session", user_id: UUID, page: int, page_size: int):
+    """
+    Retrieve paginated upload records for a user, ordered by creation time descending.
+    
+    Parameters:
+        user_id (UUID): ID of the user whose upload records to query.
+        page (int): 1-based page number to return.
+        page_size (int): Number of records per page.
+    
+    Returns:
+        tuple: (total, records) where `total` is the total count of matching UploadRecord rows (int) and `records` is a list of UploadRecord model instances for the requested page ordered by `created_at` descending.
+    """
     base_query = (
         db.query(_models.UploadRecord)
         .filter(_models.UploadRecord.user_id == user_id)
@@ -717,5 +1182,4 @@ def get_splice_stats_for_video_names(db: "Session", video_names: list[str]):
         bucket["total_generated"] += count
 
     return stats
-
 

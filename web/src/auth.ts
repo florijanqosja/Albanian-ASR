@@ -16,6 +16,21 @@ type BackendUser = {
   avatar_url?: string | null
 }
 
+type ConsentResponse = {
+  status: string
+  data: {
+    id: number
+    version: string
+  } | null
+  message?: string
+}
+
+/**
+ * Fetches the authenticated user's profile from the backend.
+ *
+ * @param accessToken - Bearer access token used for Authorization header
+ * @returns The user's profile data as a `BackendUser`
+ */
 async function fetchUserProfile(accessToken: string): Promise<BackendUser> {
   const userRes = await axios.get(`${apiUrl}/users/me`, {
     headers: { Authorization: `Bearer ${accessToken}` }
@@ -23,6 +38,12 @@ async function fetchUserProfile(accessToken: string): Promise<BackendUser> {
   return userRes.data
 }
 
+/**
+ * Refreshes an access token using the stored refresh token and returns an updated token object.
+ *
+ * @param token - Token-like object that must include a `refreshToken` string; other token fields are preserved.
+ * @returns An updated token object containing `accessToken`, `refreshToken` (backend value or original if not returned), `accessTokenExpires` (epoch ms), and `error: undefined` on success; on failure returns the original token with `error` set to `"RefreshAccessTokenError"`.
+ */
 async function refreshAccessToken(token: Record<string, unknown>) {
   try {
     const refreshToken = token.refreshToken as string | undefined
@@ -43,6 +64,21 @@ async function refreshAccessToken(token: Record<string, unknown>) {
     console.error("Refresh token error", error)
     return { ...token, error: "RefreshAccessTokenError" }
   }
+}
+
+/**
+ * Fetches the latest consent version ID from the backend.
+ *
+ * @returns The latest consent ID as a number.
+ * @throws Error if the backend response does not include a consent ID
+ */
+async function fetchLatestConsentId(): Promise<number> {
+  const res = await axios.get<ConsentResponse>(`${apiUrl}/consents/latest`)
+  const consentId = res.data.data?.id
+  if (!consentId) {
+    throw new Error("Consent version not configured")
+  }
+  return consentId
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -94,8 +130,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user, account }) {
       if (account?.provider === "google" && account.id_token) {
         try {
+          const consentId = await fetchLatestConsentId()
           const res = await axios.post<BackendTokenResponse>(`${apiUrl}/auth/google`, {
-            token: account.id_token
+            token: account.id_token,
+            consent_id: consentId,
           })
           const profile = await fetchUserProfile(res.data.access_token)
           return {

@@ -39,6 +39,10 @@ TAGS_METADATA = [
         "description": "Registration, login, refresh tokens, and third-party (Google) sign-in flows.",
     },
     {
+        "name": "Policies & Consent",
+        "description": "Retrieve the currently effective Terms of Service and Privacy Notice version metadata.",
+    },
+    {
         "name": "Users",
         "description": "Profile completion, preference updates, and contributor-facing statistics.",
     },

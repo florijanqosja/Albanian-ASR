@@ -6,17 +6,19 @@ import Footer from "@/components/Sections/Footer";
 import MarkdownPolicyPage from "@/components/Sections/MarkdownPolicyPage";
 
 /**
- * Renders the Terms and Services page by loading the terms markdown and composing it with the page footer.
+ * Renders the privacy notice page.
  *
- * @returns A React element containing the rendered markdown policy content and the site footer.
+ * Loads the privacy notice Markdown from src/components/Sections/privacy_notice.md and renders it inside MarkdownPolicyPage followed by the Footer.
+ *
+ * @returns A React element containing the rendered policy content and a footer.
  */
-export default async function TermsAndServicesPage() {
+export default async function PrivacyPage() {
   const markdownPath = path.join(
     process.cwd(),
     "src",
     "components",
     "Sections",
-    "terms_and_services.md",
+    "privacy_notice.md",
   );
   const markdown = await fs.readFile(markdownPath, "utf8");
 

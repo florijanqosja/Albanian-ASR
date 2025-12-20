@@ -2,7 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
-import { Box, Button, TextField, Typography, Container, Paper, Divider, InputAdornment, IconButton, Alert, CircularProgress } from "@mui/material";
+import { Box, Button, TextField, Typography, Container, Paper, Divider, InputAdornment, IconButton, Alert, CircularProgress, Checkbox, FormControlLabel } from "@mui/material";
 import { FcGoogle } from "react-icons/fc";
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -11,7 +11,18 @@ import LogoIcon from "../../src/assets/svg/Logo";
 import Footer from "@/components/Sections/Footer";
 
 const isProduction = process.env.NEXT_PUBLIC_ENVIRONMENT === "production";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+/**
+ * Renders the login page UI, including email/password sign-in, a production-only consent block with Google sign-in gating, and success/error messaging.
+ *
+ * The component:
+ * - Shows a centered loading indicator while authentication status is being determined and redirects to the homepage when already authenticated.
+ * - Presents an email/password form that performs credential sign-in and displays validation, success, and error messages.
+ * - In production, fetches the latest consent metadata and renders a consent checkbox that must be accepted (and whose version/effective date are shown when available) before enabling Google sign-in; displays an error if consent metadata cannot be loaded.
+ *
+ * @returns The rendered login page content as a React element.
+ */
 function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -26,6 +37,11 @@ function LoginPageContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(verified ? t("successVerified") : null);
+  const [consentAccepted, setConsentAccepted] = useState(false);
+  const [consentId, setConsentId] = useState<number | null>(null);
+  const [consentVersion, setConsentVersion] = useState<string | null>(null);
+  const [effectiveDate, setEffectiveDate] = useState<string | null>(null);
+  const [consentLoadError, setConsentLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (verified) {
@@ -38,6 +54,28 @@ function LoginPageContent() {
       setEmail(emailParam);
     }
   }, [emailParam]);
+
+  useEffect(() => {
+    const fetchConsent = async () => {
+      try {
+        const res = await fetch(`${API_URL}/consents/latest`);
+        const data = await res.json();
+        if (res.ok && data?.data?.id) {
+          setConsentId(data.data.id);
+          setConsentVersion(data.data.version);
+          setEffectiveDate(data.data.effective_date ?? null);
+        } else {
+          setConsentLoadError("Consent version missing. Please try again later.");
+        }
+      } catch {
+        setConsentLoadError("Consent version missing. Please try again later.");
+      }
+    };
+
+    if (isProduction) {
+      fetchConsent();
+    }
+  }, []);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -114,7 +152,14 @@ function LoginPageContent() {
                 variant="outlined"
                 size="large"
                 startIcon={<FcGoogle size={24} />}
-                onClick={() => signIn("google", { callbackUrl: "/" })}
+                onClick={() => {
+                  if (!consentAccepted || !consentId) {
+                    setError("Please accept the Terms of Service and Privacy Notice to continue.");
+                    return;
+                  }
+                  signIn("google", { callbackUrl: "/" })
+                }}
+                disabled={!consentAccepted || !consentId}
                 sx={{ 
                     mb: 3, 
                     py: 1.5, 
@@ -133,6 +178,35 @@ function LoginPageContent() {
               <Divider sx={{ width: '100%', mb: 3 }}>
                 <Typography variant="caption" color="textSecondary" sx={{ px: 1 }}>{t("orEmail")}</Typography>
               </Divider>
+
+              {consentLoadError && (
+                <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+                  {consentLoadError}
+                </Alert>
+              )}
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={consentAccepted}
+                    onChange={(event) => setConsentAccepted(event.target.checked)}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Typography variant="body2" color="textSecondary">
+                    I have read and agree to the{' '}
+                    <Link href="/termsandservices" className="font-bold text-primary hover:underline">
+                      Terms of Service
+                    </Link>{' '}and{' '}
+                    <Link href="/privacy" className="font-bold text-primary hover:underline">
+                      Privacy Notice
+                    </Link>
+                    {consentVersion ? ` (Version ${consentVersion}${effectiveDate ? `, effective ${effectiveDate}` : ''})` : ''}.
+                  </Typography>
+                }
+                sx={{ alignItems: 'flex-start', mb: 3 }}
+              />
             </>
           )}
 
@@ -211,7 +285,7 @@ function LoginPageContent() {
                 py: 1.5, 
                 borderRadius: 2, 
                 fontWeight: 700,
-                boxShadow: '0 4px 14px 0 rgba(166, 77, 74, 0.39)'
+                boxShadow: (theme) => theme.shadows[4]
               }}
             >
               {loading ? t("signingIn") : t("signIn")}
@@ -225,9 +299,9 @@ function LoginPageContent() {
 
             <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="body2" color="textSecondary">
-                    {t("ctaRegister")} 
+                    {t("ctaRegister")}{" "}
                     <Link href="/register" className="font-bold text-primary hover:underline">
-                        {t("ctaRegisterLink")}
+                      {t("ctaRegisterLink")}
                     </Link>
                 </Typography>
             </Box>

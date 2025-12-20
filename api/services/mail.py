@@ -20,10 +20,16 @@ MAIL_ACCOUNT_ID = os.getenv("AHASEND_ACCOUNT_ID")
 MAIL_FROM_EMAIL = os.getenv("MAIL_FROM_EMAIL", "noreply@dibraspeaks.com")
 MAIL_FROM_NAME = os.getenv("MAIL_FROM_NAME", "DibraSpeaks")
 APP_URL = os.getenv("NEXTAUTH_URL", "http://localhost:3000")
+LOGO_URL = os.getenv("LOGO_URL")
 
 
 def is_production() -> bool:
-    """Check if running in production environment."""
+    """
+    Determine whether the application is running in the production environment.
+    
+    Returns:
+        true if the ENVIRONMENT value equals "production" (case-insensitive), false otherwise.
+    """
     return ENVIRONMENT.lower() == "production"
 
 
@@ -67,7 +73,16 @@ def generate_verification_code(length: int = 6) -> str:
 
 
 def _get_base_email_template(content: str, title: str) -> str:
-    """Get the base HTML email template with DibraSpeaks branding."""
+    """
+    Return a complete HTML email document wrapped with DibraSpeaks branding.
+    
+    Parameters:
+        content (str): HTML fragment to insert into the email body where the main content belongs.
+        title (str): Text used as the email's visible heading and the HTML <title>.
+    
+    Returns:
+        html_template (str): Full HTML string for the email, ready to send.
+    """
     return f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -87,12 +102,8 @@ def _get_base_email_template(content: str, title: str) -> str:
                     <!-- Header -->
                     <tr>
                         <td align="center" style="padding: 40px 40px 20px;">
-                            <div style="width: 80px; height: 80px; margin-bottom: 24px;">
-                                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <circle cx="50" cy="50" r="45" fill="{BRAND_ACCENT}"/>
-                                    <path d="M30 65 L50 35 L70 65" stroke="{BRAND_PRIMARY}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                                    <circle cx="50" cy="55" r="8" fill="{BRAND_PRIMARY}"/>
-                                </svg>
+                            <div style="margin-bottom: 16px;">
+                                <img src="{LOGO_URL}" alt="DibraSpeaks logo" style="height: 72px; width: auto; display: block; margin: 0 auto 12px;" />
                             </div>
                             <p style="margin: 0 0 12px; font-size: 18px; font-weight: 700; letter-spacing: 2px; color: {BRAND_PRIMARY};">DIBRASPEAKS</p>
                             <h1 style="margin: 0; font-size: 28px; font-weight: 800; color: {BRAND_TEXT};">{title}</h1>
@@ -172,7 +183,16 @@ def _get_welcome_email_content(name: Optional[str] = None) -> str:
 
 
 def _get_password_reset_email_content(code: str, name: Optional[str] = None) -> str:
-    """Generate the password reset email content."""
+    """
+    Builds the HTML body for a password reset email containing the provided reset code.
+    
+    Parameters:
+        code (str): The password reset code to display prominently in the email.
+        name (Optional[str]): Optional recipient name used to personalize the greeting.
+    
+    Returns:
+        html_content (str): HTML string for the email body.
+    """
     greeting = f"Hi {name}," if name else "Hello,"
     return f"""
         <p style="margin: 0 0 20px; font-size: 16px; color: {BRAND_TEXT}; line-height: 1.6;">
@@ -192,11 +212,52 @@ def _get_password_reset_email_content(code: str, name: Optional[str] = None) -> 
 """
 
 
+def _get_account_deleted_email_content(removed_fields: list[str], name: Optional[str] = None) -> str:
+    """
+    Builds the HTML body for an account deletion notification email.
+    
+    Parameters:
+        removed_fields (list[str]): Names of account fields that were removed or anonymized; each will be rendered as a list item in the email.
+        name (Optional[str]): Optional recipient name inserted into the greeting; when omitted a generic greeting is used.
+    
+    Returns:
+        str: HTML content for the account-deleted email, including a greeting, summary sentence, a list of removed fields, and a note about datasets.
+    """
+    greeting = f"Hi {name}," if name else "Hello,"
+    removed_list = "".join(f"<li>{field}</li>" for field in removed_fields)
+    return f"""
+        <p style="margin: 0 0 20px; font-size: 16px; color: {BRAND_TEXT}; line-height: 1.6;">
+            {greeting}
+        </p>
+        <p style="margin: 0 0 16px; font-size: 16px; color: {BRAND_TEXT}; line-height: 1.6;">
+            Your DibraSpeaks account has been deleted and personal details have been removed.
+        </p>
+        <p style="margin: 0 0 12px; font-size: 16px; color: {BRAND_TEXT}; line-height: 1.6;">
+            Removed/anonymized fields:
+        </p>
+        <ul style="margin: 0 0 20px; padding-left: 20px; font-size: 15px; color: {BRAND_TEXT}; line-height: 1.6;">
+            {removed_list}
+        </ul>
+        <p style="margin: 0 0 16px; font-size: 14px; color: #6B7280; line-height: 1.6;">
+            Audio already included in released datasets may remain available. You can request removal from future releases via the report form on our site.
+        </p>
+    """
+
+
 def _send_email(to_email: str, to_name: Optional[str], subject: str, html_content: str) -> bool:
     """
-    Send an email using the AhaSend API.
-    In local environment, logs the email instead of sending.
-    Returns True if successful, False otherwise.
+    Send an HTML email to a recipient via the AhaSend API or log the message in non-production.
+    
+    In production, the function submits the message to the AhaSend v2 messages endpoint. In non-production, it logs a preview and returns success without making network requests.
+    
+    Parameters:
+        to_email (str): Recipient email address.
+        to_name (Optional[str]): Recipient display name, included when provided.
+        subject (str): Email subject line.
+        html_content (str): HTML body of the email.
+    
+    Returns:
+        bool: `True` if the message was accepted for delivery by the API or logged in non-production, `False` otherwise.
     """
     # In local environment, just log and return success
     if not is_production():
@@ -264,7 +325,58 @@ def send_welcome_email(to_email: str, name: Optional[str] = None) -> bool:
 
 
 def send_password_reset_email(to_email: str, code: str, name: Optional[str] = None) -> bool:
-    """Send a password reset code email."""
+    """
+    Send a password reset code to a user's email.
+    
+    Returns:
+        True if the email was sent (or logged in non-production), False otherwise.
+    """
     content = _get_password_reset_email_content(code, name)
     html = _get_base_email_template(content, "Reset Your Password")
     return _send_email(to_email, name, "Reset your DibraSpeaks password", html)
+
+
+def send_account_deleted_email(to_email: str, removed_fields: list[str], name: Optional[str] = None) -> bool:
+    """
+    Send a deletion confirmation email to a user after their account was removed.
+    
+    Parameters:
+        to_email (str): Recipient email address.
+        removed_fields (list[str]): Names of account fields or data that were removed and should be listed in the message.
+        name (Optional[str]): Optional recipient display name used to personalize the message.
+    
+    Returns:
+        bool: `True` if the mail service accepted/sent the message, `False` otherwise.
+    """
+    content = _get_account_deleted_email_content(removed_fields, name)
+    html = _get_base_email_template(content, "Your account was deleted")
+    return _send_email(to_email, name, "Your DibraSpeaks account was deleted", html)
+
+
+def send_support_message(
+    support_email: str,
+    from_email: str,
+    from_name: str,
+    message: str,
+) -> bool:
+    """
+    Send a user-submitted support message to the application's support inbox.
+    
+    Builds an HTML email containing the sender's name, email, and message, wraps it in the site template, and forwards it to the provided support address.
+    
+    Returns:
+        `true` if the email was successfully sent or logged (in non-production), `false` otherwise.
+    """
+
+    subject = f"DibraSpeaks report/message from {from_name}"
+    content = f"""
+        <p style=\"margin: 0 0 16px; font-size: 16px; color: {BRAND_TEXT}; line-height: 1.6;\">
+            You received a new report/message from the DibraSpeaks website.
+        </p>
+        <p style=\"margin: 0 0 8px; font-size: 14px; color: {BRAND_TEXT};\"><strong>Name:</strong> {from_name}</p>
+        <p style=\"margin: 0 0 8px; font-size: 14px; color: {BRAND_TEXT};\"><strong>Email:</strong> {from_email}</p>
+        <hr style=\"border: 0; border-top: 1px solid {BRAND_BORDER}; margin: 18px 0;\" />
+        <p style=\"white-space: pre-wrap; margin: 0; font-size: 14px; color: {BRAND_TEXT}; line-height: 1.6;\">{message}</p>
+    """
+    html = _get_base_email_template(content, "New Report/Message")
+    return _send_email(support_email, "Support", subject, html)

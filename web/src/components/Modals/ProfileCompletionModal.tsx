@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Dialog,
   DialogTitle,
@@ -7,16 +7,21 @@ import {
   DialogActions,
   Box,
   Button,
+  IconButton,
   TextField,
   Typography,
   InputAdornment,
   MenuItem,
   CircularProgress,
-  Alert
+  Alert,
+  Checkbox,
+  FormControlLabel
 } from "@mui/material"
-import { Phone, MapPin, Globe, User, ArrowRight } from "lucide-react"
+import { Phone, MapPin, Globe, User, ArrowRight, X } from "lucide-react"
+import Link from "next/link"
 import LogoIcon from "../../assets/svg/Logo"
 import { ALBANIAN_REGIONS, ALBANIAN_ACCENTS, ACCENT_OTHER_VALUE } from "@/constants/profileOptions"
+import { Theme } from "@mui/material/styles"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -24,14 +29,30 @@ interface ProfileCompletionModalProps {
   open: boolean
   accessToken: string
   userName?: string
+  onClose: () => void
   onComplete: () => void
 }
 
+/**
+ * Modal dialog that prompts the user to complete optional profile fields and accept consent before continuing.
+ *
+ * Renders a form for phone number, age, nationality, region and Albanian dialect/accent (with a custom option),
+ * fetches the latest consent metadata on mount, requires the user to accept the Terms of Service and Privacy Notice,
+ * and submits profile data (including `consent_id`) to the server. Provides controls to save the profile or dismiss the modal.
+ *
+ * @param open - Controls whether the dialog is visible
+ * @param accessToken - Bearer token used for authenticated API requests
+ * @param onComplete - Called when the profile is successfully saved
+ * @param onClose - Called when the modal is dismissed/closed
+ * @param userName - Optional user display name shown in the welcome message
+ * @returns The profile completion modal React element
+ */
 export default function ProfileCompletionModal({ 
   open, 
   accessToken, 
-  userName,
-  onComplete 
+  onComplete,
+  onClose,
+  userName
 }: ProfileCompletionModalProps) {
   const [formData, setFormData] = useState({
     phone_number: "",
@@ -44,6 +65,30 @@ export default function ProfileCompletionModal({
   const [error, setError] = useState<string | null>(null)
   const [accentSelection, setAccentSelection] = useState<string>("")
   const [customAccent, setCustomAccent] = useState("")
+  const [consentAccepted, setConsentAccepted] = useState(false)
+  const [consentId, setConsentId] = useState<number | null>(null)
+  const [consentVersion, setConsentVersion] = useState<string | null>(null)
+  const [effectiveDate, setEffectiveDate] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchConsent = async () => {
+      try {
+        const res = await fetch(`${API_URL}/consents/latest`)
+        const data = await res.json()
+        if (res.ok && data?.data?.id) {
+          setConsentId(data.data.id)
+          setConsentVersion(data.data.version)
+          setEffectiveDate(data.data.effective_date ?? null)
+        } else {
+          setError("Consent version missing. Please try again later.")
+        }
+      } catch {
+        setError("Consent version missing. Please try again later.")
+      }
+    }
+
+    fetchConsent()
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -82,6 +127,10 @@ export default function ProfileCompletionModal({
         throw new Error("Please specify your dialect when choosing Other")
       }
 
+      if (!consentAccepted || !consentId) {
+        throw new Error("Please accept the Terms of Service and Privacy Notice to continue.")
+      }
+
       const response = await fetch(`${API_URL}/users/complete-profile`, {
         method: "POST",
         headers: {
@@ -93,7 +142,8 @@ export default function ProfileCompletionModal({
           age: formData.age ? parseInt(formData.age) : null,
           nationality: formData.nationality || null,
           accent: formData.accent || null,
-          region: formData.region || null
+          region: formData.region || null,
+          consent_id: consentId
         })
       })
 
@@ -110,21 +160,46 @@ export default function ProfileCompletionModal({
     }
   }
 
+  const handleDismiss = async () => {
+    try {
+      if (consentId) {
+        await fetch(`${API_URL}/users/complete-profile`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({ consent_id: consentId })
+        })
+      }
+    } catch (err) {
+      console.error("Failed to mark profile complete on dismiss", err)
+    } finally {
+      onClose()
+    }
+  }
+
   return (
     <Dialog 
       open={open} 
       maxWidth="sm" 
       fullWidth
+      onClose={handleDismiss}
       PaperProps={{
         sx: {
           borderRadius: 4,
           border: '1px solid',
           borderColor: 'divider',
-          boxShadow: '0 20px 40px -10px rgba(0,0,0,0.1)'
+          boxShadow: (theme: Theme) => theme.shadows[10]
         }
       }}
     >
-      <DialogTitle sx={{ pb: 0 }}>
+      <DialogTitle sx={{ pb: 1.5 }}>
+        <Box sx={{ position: 'absolute', top: 8, right: 8 }}>
+          <IconButton aria-label="Close" onClick={handleDismiss} size="small">
+            <X size={18} />
+          </IconButton>
+        </Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 2 }}>
           <Box sx={{ width: 50, height: 50, color: 'primary.main', mb: 2 }}>
             <LogoIcon />
@@ -132,7 +207,11 @@ export default function ProfileCompletionModal({
           <Typography variant="h5" fontWeight={800} sx={{ mb: 0.5 }}>
             Welcome{userName ? `, ${userName}` : ''}! 🎉
           </Typography>
-          <Typography color="textSecondary" variant="body2" sx={{ textAlign: 'center' }}>
+          <Typography
+            color="textSecondary"
+            variant="body2"
+            sx={{ textAlign: 'center', mt: 0.5, mb: 2.5, px: 2 }}
+          >
             Help us personalize your experience by completing your profile
           </Typography>
         </Box>
@@ -145,7 +224,7 @@ export default function ProfileCompletionModal({
           </Alert>
         )}
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
           <TextField
             fullWidth
             label="Phone Number"
@@ -264,6 +343,29 @@ export default function ProfileCompletionModal({
         <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 2, textAlign: 'center' }}>
           All fields are optional. You can update this information later in your profile settings.
         </Typography>
+
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={consentAccepted}
+              onChange={(event) => setConsentAccepted(event.target.checked)}
+              color="primary"
+            />
+          }
+          label={
+            <Typography variant="body2" color="textSecondary">
+              I have read and agree to the{' '}
+              <Link href="/termsandservices" className="font-bold text-primary hover:underline">
+                Terms of Service
+              </Link>{' '}and{' '}
+              <Link href="/privacy" className="font-bold text-primary hover:underline">
+                Privacy Notice
+              </Link>
+              {consentVersion ? ` (Version ${consentVersion}${effectiveDate ? `, effective ${effectiveDate}` : ''})` : ''}.
+            </Typography>
+          }
+          sx={{ alignItems: 'flex-start', mt: 2 }}
+        />
       </DialogContent>
 
       <DialogActions sx={{ p: 3, pt: 1 }}>
@@ -272,13 +374,13 @@ export default function ProfileCompletionModal({
           variant="contained"
           size="large"
           onClick={handleSubmit}
-          disabled={loading}
+          disabled={loading || !consentAccepted || !consentId}
           endIcon={loading ? <CircularProgress size={20} color="inherit" /> : <ArrowRight size={20} />}
           sx={{
             py: 1.5,
             borderRadius: 2,
             fontWeight: 700,
-            boxShadow: '0 4px 14px 0 rgba(166, 77, 74, 0.39)'
+            boxShadow: (theme) => theme.shadows[4]
           }}
         >
           {loading ? "Saving..." : "Complete Profile"}

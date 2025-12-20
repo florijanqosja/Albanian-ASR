@@ -107,3 +107,77 @@
     @apply bg-white text-black;
   }
 }
+
+@layer components {
+  .policy-markdown {
+    @apply text-foreground;
+  }
+
+  .policy-markdown :where(h1) {
+    @apply scroll-m-20 text-3xl font-extrabold tracking-tight mt-2 mb-6;
+  }
+
+  .policy-markdown :where(h2) {
+    @apply scroll-m-20 text-2xl font-bold tracking-tight mt-10 mb-4;
+  }
+
+  .policy-markdown :where(h3) {
+    @apply scroll-m-20 text-xl font-bold mt-8 mb-3;
+  }
+
+  .policy-markdown :where(p) {
+    @apply my-4 leading-7;
+  }
+
+  .policy-markdown :where(ul) {
+    @apply my-4 list-disc pl-6;
+  }
+
+  .policy-markdown :where(ol) {
+    @apply my-4 list-decimal pl-6;
+  }
+
+  .policy-markdown :where(li) {
+    @apply my-1;
+  }
+
+  .policy-markdown :where(li p) {
+    @apply my-2;
+  }
+
+  .policy-markdown :where(hr) {
+    @apply my-10 border-border;
+  }
+
+  .policy-markdown :where(a) {
+    @apply text-primary underline underline-offset-4;
+  }
+
+  .policy-markdown :where(blockquote) {
+    @apply my-6 border-l-4 border-border pl-4 text-muted-foreground;
+  }
+
+  .policy-markdown :where(code) {
+    @apply rounded bg-muted px-1.5 py-0.5 font-mono text-sm;
+  }
+
+  .policy-markdown :where(pre) {
+    @apply my-6 overflow-x-auto rounded-lg bg-muted p-4;
+  }
+
+  .policy-markdown :where(pre code) {
+    @apply bg-transparent p-0;
+  }
+
+  .policy-markdown :where(table) {
+    @apply my-8 w-full border-collapse;
+  }
+
+  .policy-markdown :where(th, td) {
+    @apply border border-border px-3 py-2 align-top;
+  }
+
+  .policy-markdown :where(th) {
+    @apply bg-muted font-semibold text-left;
+  }
+}

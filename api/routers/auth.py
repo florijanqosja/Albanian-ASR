@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Optional
+from uuid import UUID
 import os
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -64,8 +65,21 @@ def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 
 def _token_pair_response(user: models.User) -> schemas.Token:
-    access_token, expires_in = create_access_token({"sub": user.email, "id": user.id})
-    refresh_token, _ = create_refresh_token({"sub": user.email, "id": user.id})
+    """
+    Builds an access and refresh JWT pair for the given user.
+    
+    The generated tokens embed the user's email, id, and token_version (defaults to 0 if missing). The access token's expiry (in seconds) is returned in the Token response.
+    
+    Parameters:
+        user (models.User): User object for which to create tokens. Its `id`, `email`, and optional `token_version` are used.
+    
+    Returns:
+        schemas.Token: Token object containing `access_token`, `refresh_token`, `token_type` ("bearer"), and `expires_in` (seconds until the access token expires).
+    """
+    token_version = getattr(user, "token_version", 0) or 0
+    user_id = str(user.id)
+    access_token, expires_in = create_access_token({"sub": user.email, "id": user_id, "token_version": token_version})
+    refresh_token, _ = create_refresh_token({"sub": user.email, "id": user_id, "token_version": token_version})
     return schemas.Token(
         access_token=access_token,
         refresh_token=refresh_token,
@@ -74,6 +88,21 @@ def _token_pair_response(user: models.User) -> schemas.Token:
     )
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """
+    Validate the bearer access token and return the corresponding authenticated user.
+    
+    Parameters:
+        token (str): JWT access token extracted from the Authorization Bearer header.
+        db (Session): Database session used to look up the user.
+    
+    Returns:
+        user: The authenticated user record retrieved from the database.
+    
+    Raises:
+        HTTPException: 401 Unauthorized if the token is invalid, expired, not an access token,
+            does not contain required claims, the token_version does not match the user's
+            stored token_version, or the user's provider is marked "deleted".
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -84,25 +113,39 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         email: str = payload.get("sub")
         user_id: str = payload.get("id")
         token_type: str = payload.get("token_type")
+        token_version: int = payload.get("token_version", 0)
         if email is None or user_id is None or token_type != "access":
             raise credentials_exception
         token_data = schemas.TokenData(email=email, user_id=user_id)
     except JWTError:
         raise credentials_exception
     user = services.get_user(db, user_id=token_data.user_id)
-    if user is None:
+    if user is None or token_version != (getattr(user, "token_version", 0) or 0) or user.provider == "deleted":
         raise credentials_exception
     return user
 
 @router.post("/register", response_model=schemas.RegisterResponse)
 def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     """
-    Register a new user and send a verification email.
-    The user will need to verify their email before they can log in.
+    Register a new user, enforce acceptance of the latest policy consent, and initiate email verification.
+    
+    If the latest consent is not provided by the caller the request is rejected; a verification email is attempted but its failure does not prevent successful registration.
+    
+    Returns:
+        RegisterResponse: object containing a confirmation message and the registered email address.
     """
     db_user = services.get_user_by_email(db, email=user.email)
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
+
+    latest_consent = services.get_latest_policy_consent(db)
+    if latest_consent is None:
+        raise HTTPException(status_code=500, detail="Consent version is not configured.")
+    if user.consent_id != latest_consent.id:
+        raise HTTPException(
+            status_code=400,
+            detail="Consent version is outdated. Please refresh and accept the latest policy.",
+        )
     
     hashed_password = get_password_hash(user.password)
     
@@ -274,6 +317,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
 
 class GoogleLoginRequest(BaseModel):
     token: str
+    consent_id: UUID
 
 
 @router.post("/refresh", response_model=schemas.Token)
@@ -281,6 +325,21 @@ def refresh_access_token(
     request: schemas.RefreshTokenRequest,
     db: Session = Depends(get_db)
 ):
+    """
+    Validate a refresh token and produce a new access/refresh token pair for the associated user.
+    
+    Validates the provided refresh token's signature and payload, ensures its `token_type` is "refresh",
+    verifies the token contains a user id, and checks the token's `token_version` matches the stored
+    user `token_version` and that the user's provider is not "deleted". If validation succeeds, returns
+    a fresh token pair for the user; otherwise raises an HTTP 401 Unauthorized error.
+    
+    Parameters:
+        request (schemas.RefreshTokenRequest): Object containing the `refresh_token` to validate.
+        db (Session): Database session dependency used to load the user.
+    
+    Returns:
+        schemas.Token: A new token pair (access and refresh) for the authenticated user.
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -292,13 +351,14 @@ def refresh_access_token(
         if payload.get("token_type") != "refresh":
             raise credentials_exception
         user_id: Optional[str] = payload.get("id")
+        token_version: int = payload.get("token_version", 0)
         if not user_id:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
 
     user = services.get_user(db, user_id=user_id)
-    if not user:
+    if not user or token_version != (getattr(user, "token_version", 0) or 0) or user.provider == "deleted":
         raise credentials_exception
 
     return _token_pair_response(user)
@@ -306,6 +366,20 @@ def refresh_access_token(
 
 @router.post("/google", response_model=schemas.Token)
 def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db)):
+    """
+    Authenticate or register a user using a Google ID token and return an access/refresh token pair.
+    
+    Verifies the provided Google ID token, enforces that the provided consent_id matches the latest configured policy consent, and either creates a new user (marking Google users as verified and profile incomplete) or updates an existing user's avatar and consent_id as needed. Returns a token pair for the authenticated user.
+    
+    Parameters:
+        request (GoogleLoginRequest): Incoming request containing the Google ID token (`token`) and the `consent_id` that the user accepted; `consent_id` must match the latest policy consent.
+    
+    Returns:
+        Token: A token pair schema containing an access token and a refresh token (and their expirations).
+    
+    Raises:
+        HTTPException: 400 if the Google token is invalid or the provided consent_id is outdated; 500 if the latest consent version is not configured.
+    """
     try:
         # Verify the Google token
 
@@ -322,20 +396,29 @@ def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db)):
         name = id_info.get('given_name', '')
         surname = id_info.get('family_name', '')
         picture = id_info.get('picture', None)
+
+        latest_consent = services.get_latest_policy_consent(db)
+        if latest_consent is None:
+            raise HTTPException(status_code=500, detail="Consent version is not configured.")
+        if request.consent_id != latest_consent.id:
+            raise HTTPException(
+                status_code=400,
+                detail="Consent version is outdated. Please refresh and accept the latest policy.",
+            )
         
         # Check if user exists
         user = services.get_user_by_email(db, email=email)
         if not user:
             # Create new user
             import uuid
-            new_user_id = str(uuid.uuid4())
             user_create = schemas.UserCreate(
                 email=email,
                 name=name,
                 surname=surname,
                 password="", # No password for Google users
                 provider="google",
-                avatar_url=picture
+                avatar_url=picture,
+                consent_id=request.consent_id,
             )
             # We need to bypass the password requirement in UserCreate if we use it directly,
             # but UserCreate requires password.
@@ -351,6 +434,7 @@ def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db)):
             user_db.provider = "google"
             user_db.is_verified = True  # Google users are auto-verified
             user_db.profile_completed = False  # Need to complete profile on first login
+            user_db.consent_id = latest_consent.id
             db.commit()
             db.refresh(user_db)
             user = user_db
@@ -358,6 +442,10 @@ def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db)):
             # Update existing user's avatar if changed (optional, but good practice)
             if picture and user.avatar_url != picture:
                 user.avatar_url = picture
+                db.commit()
+                db.refresh(user)
+            if user.consent_id != latest_consent.id:
+                user.consent_id = latest_consent.id
                 db.commit()
                 db.refresh(user)
 

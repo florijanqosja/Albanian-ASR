@@ -1,15 +1,24 @@
 "use client"
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
 import { useState, useEffect } from "react"
 import type { ChangeEvent } from "react"
-import { Container, Typography, TextField, Button, Box, Paper, Grid, Avatar, Divider, MenuItem } from "@mui/material"
-import { User, Mail, Phone, MapPin, Globe, Mic, Save } from "lucide-react"
+import { Container, Typography, TextField, Button, Box, Paper, Grid, Avatar, Divider, MenuItem, Alert, FormControlLabel, Checkbox, Stack, useTheme } from "@mui/material"
+import { User, Mail, Phone, MapPin, Globe, Mic, Save, AlertTriangle, Trash2 } from "lucide-react"
 import axios from "axios"
 import Footer from "@/components/Sections/Footer"
 import { ALBANIAN_ACCENTS, ALBANIAN_REGIONS, ACCENT_OTHER_VALUE, REGION_OTHER_VALUE } from "@/constants/profileOptions"
 
+/**
+ * Render the authenticated user's profile page with editable personal and linguistic details and an account deletion workflow.
+ *
+ * Renders a form pre-filled from the current session's user data (fetched from the API) that allows updating name, contact, age, nationality, accent/dialect (including a custom "Other" option), and region (including a custom "Other" option). Also provides a guarded "Delete account" section that requires two acknowledgments and typing "CONFIRM" before sending a deletion request and signing the user out.
+ *
+ * @returns The React element for the profile page, including the profile form, save controls, and account deletion UI.
+ */
 export default function ProfilePage() {
   const { data: session } = useSession()
+    const theme = useTheme()
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
   const [formData, setFormData] = useState({
     name: "",
     surname: "",
@@ -25,6 +34,11 @@ export default function ProfilePage() {
   const [customAccent, setCustomAccent] = useState("")
   const [regionSelection, setRegionSelection] = useState("")
   const [customRegion, setCustomRegion] = useState("")
+    const [ackRelease, setAckRelease] = useState(false)
+    const [ackFuture, setAckFuture] = useState(false)
+        const [deleteConfirm, setDeleteConfirm] = useState("")
+    const [deleteLoading, setDeleteLoading] = useState(false)
+    const [deleteError, setDeleteError] = useState<string | null>(null)
 
     const handleAccentSelection = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const value = event.target.value
@@ -48,11 +62,11 @@ export default function ProfilePage() {
         }
     }
 
-  useEffect(() => {
+    useEffect(() => {
     if (session?.user) {
         const fetchUser = async () => {
             try {
-                const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/users/me`, {
+                const res = await axios.get(`${apiBaseUrl}/users/me`, {
                     headers: { Authorization: `Bearer ${(session as { accessToken?: string }).accessToken}` }
                 })
                 setFormData(res.data)
@@ -79,7 +93,7 @@ export default function ProfilePage() {
         }
         fetchUser()
     }
-  }, [session])
+    }, [session, apiBaseUrl])
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -95,7 +109,7 @@ export default function ProfilePage() {
             return
         }
 
-        await axios.put(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/users/me`, formData, {
+        await axios.put(`${apiBaseUrl}/users/me`, formData, {
             headers: { Authorization: `Bearer ${(session as { accessToken?: string }).accessToken}` }
         })
         alert("Profile updated successfully!")
@@ -103,6 +117,31 @@ export default function ProfilePage() {
         alert("Error updating profile")
     } finally {
         setLoading(false)
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    setDeleteError(null)
+    setDeleteLoading(true)
+
+    try {
+        await axios.delete(`${apiBaseUrl}/users/me`, {
+            headers: { Authorization: `Bearer ${(session as { accessToken?: string }).accessToken}` },
+            data: {
+                acknowledge_data_retention: ackRelease,
+                acknowledge_future_request: ackFuture
+            }
+        })
+        await signOut({ callbackUrl: "/login" })
+    } catch (error) {
+        if (axios.isAxiosError(error)) {
+            const detail = (error.response?.data as { detail?: string; message?: string } | undefined)
+            setDeleteError(detail?.detail || detail?.message || "Unable to delete account. Please try again.")
+        } else {
+            setDeleteError("Unable to delete account. Please try again.")
+        }
+    } finally {
+        setDeleteLoading(false)
     }
   }
 
@@ -302,11 +341,81 @@ export default function ProfilePage() {
                             py: 1.5, 
                             borderRadius: 2, 
                             fontWeight: 700,
-                            boxShadow: '0 4px 14px 0 rgba(166, 77, 74, 0.39)'
+                            boxShadow: (theme) => theme.shadows[4]
                         }}
                     >
                         {loading ? "Saving..." : "Save Changes"}
                     </Button>
+                </Box>
+
+                <Divider sx={{ my: 5 }} />
+
+                <Box sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'error.main', bgcolor: 'background.paper', color: 'text.primary' }}>
+                    <Stack spacing={2}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <AlertTriangle size={20} />
+                            <Typography variant="h6" fontWeight={800}>
+                                Delete account
+                            </Typography>
+                        </Box>
+                        <Alert severity="warning" icon={<AlertTriangle size={18} />}
+                            sx={{ backgroundColor: theme.palette.background.paper }}
+                        >
+                            Deleting your account removes personal details and signs you out. Audio contributions already included in public datasets may remain, but you can ask to exclude future releases through the report form.
+                        </Alert>
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={ackRelease}
+                                    onChange={(event) => setAckRelease(event.target.checked)}
+                                    color="primary"
+                                />
+                            }
+                            label="I understand my clips may stay in datasets that are already published."
+                            sx={{ color: 'inherit' }}
+                        />
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={ackFuture}
+                                    onChange={(event) => setAckFuture(event.target.checked)}
+                                    color="primary"
+                                />
+                            }
+                            label="I understand I can request removal from future releases via the report form."
+                            sx={{ color: 'inherit' }}
+                        />
+
+                        <TextField
+                            fullWidth
+                            label='Type "CONFIRM" to enable deletion'
+                            value={deleteConfirm}
+                            onChange={(event) => setDeleteConfirm(event.target.value)}
+                            helperText='This is an extra safety step. Your account will be anonymized and you will be signed out.'
+                            InputProps={{ sx: { borderRadius: 2 } }}
+                        />
+                        {deleteError && (
+                            <Alert severity="error">{deleteError}</Alert>
+                        )}
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                            <Button
+                                variant="contained"
+                                                                color="primary"
+                                startIcon={<Trash2 size={18} />}
+                                disabled={!ackRelease || !ackFuture || deleteConfirm.trim().toUpperCase() !== "CONFIRM" || deleteLoading}
+                                onClick={handleDeleteAccount}
+                                sx={{
+                                  px: 4,
+                                  py: 1.5,
+                                  borderRadius: 2,
+                                  fontWeight: 700,
+                                  boxShadow: (theme) => theme.shadows[4],
+                                }}
+                            >
+                                {deleteLoading ? "Deleting..." : "Delete account and sign out"}
+                            </Button>
+                        </Box>
+                    </Stack>
                 </Box>
             </Box>
         </Box>
