@@ -1,8 +1,10 @@
 import datetime as _dt
 from typing import TYPE_CHECKING, Optional
+from uuid import UUID
 
 from fastapi import HTTPException
 from sqlalchemy import func, literal, select, union_all
+import sqlalchemy as _sql
 
 from . import database as _database
 from . import models as _models
@@ -14,6 +16,8 @@ if TYPE_CHECKING:
 
 
 def _add_tables():
+    with _database.engine.begin() as conn:
+        conn.execute(_sql.text('CREATE EXTENSION IF NOT EXISTS "pgcrypto"'))
     return _database.Base.metadata.create_all(bind=_database.engine)
 
 SessionLocal = _database.SessionLocal
@@ -24,6 +28,55 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def create_policy_consent(db: "Session", consent: _schemas.PolicyConsentCreate) -> _schemas.PolicyConsent:
+    record = _models.PolicyConsent(**consent.model_dump())
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return _schemas.PolicyConsent.model_validate(record)
+
+
+def get_policy_consent_by_id(db: "Session", consent_id: UUID) -> Optional[_models.PolicyConsent]:
+    return db.query(_models.PolicyConsent).filter(_models.PolicyConsent.id == consent_id).first()
+
+
+def get_latest_policy_consent_model(db: "Session") -> Optional[_models.PolicyConsent]:
+    return (
+        db.query(_models.PolicyConsent)
+        .order_by(_models.PolicyConsent.effective_date.desc(), _models.PolicyConsent.created_at.desc())
+        .first()
+    )
+
+
+def get_latest_policy_consent(db: "Session") -> Optional[_schemas.PolicyConsent]:
+    record = get_latest_policy_consent_model(db)
+    return _schemas.PolicyConsent.model_validate(record) if record else None
+
+
+def ensure_policy_consent(
+    db: "Session",
+    *,
+    version: str,
+    effective_date: _dt.date,
+    privacy_content: str,
+    terms_content: str,
+) -> _models.PolicyConsent:
+    existing = db.query(_models.PolicyConsent).filter(_models.PolicyConsent.version == version).first()
+    if existing:
+        return existing
+
+    record = _models.PolicyConsent(
+        version=version,
+        effective_date=effective_date,
+        privacy_content=privacy_content,
+        terms_content=terms_content,
+    )
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
 
 async def create_video(video: _schemas.VideoCreate, db: "Session") -> _schemas.Video:
     video_db = _models.Video(**video.model_dump())
@@ -45,7 +98,7 @@ async def update_video(video_path: str, update_data: dict, db: "Session") -> _sc
     return _schemas.Video.model_validate(video_db)
 
 
-async def update_video_by_id(video_id: int, update_data: dict, db: "Session") -> _schemas.Video:
+async def update_video_by_id(video_id: UUID, update_data: dict, db: "Session") -> _schemas.Video:
     video_db = db.query(_models.Video).filter(_models.Video.id == video_id).first()
     if video_db is None:
         raise HTTPException(404, detail="Video not found")
@@ -57,7 +110,7 @@ async def update_video_by_id(video_id: int, update_data: dict, db: "Session") ->
     db.refresh(video_db)
     return _schemas.Video.model_validate(video_db)
 
-async def update_splice_being_processed(splice_id: int, data: dict, db: "Session") -> _schemas.SpliceBeingProcessed:
+async def update_splice_being_processed(splice_id: UUID, data: dict, db: "Session") -> _schemas.SpliceBeingProcessed:
     splice_being_processed_db = db.query(_models.SpliceBeingProcessed).filter(_models.SpliceBeingProcessed.id == splice_id).first()
     if splice_being_processed_db is None:
         raise HTTPException(404, detail="Splice not found")
@@ -93,7 +146,7 @@ async def create_upload_record(upload: _schemas.UploadRecordCreate, db: "Session
     return _schemas.UploadRecord.model_validate(upload_db)
 
 
-def update_upload_record(upload_id: int, data: dict, db: "Session") -> _schemas.UploadRecord:
+def update_upload_record(upload_id: UUID, data: dict, db: "Session") -> _schemas.UploadRecord:
     record = db.query(_models.UploadRecord).filter(_models.UploadRecord.id == upload_id).first()
     if record is None:
         raise HTTPException(404, detail="Upload record not found")
@@ -107,7 +160,7 @@ def update_upload_record(upload_id: int, data: dict, db: "Session") -> _schemas.
 
 
 def set_upload_status(
-    upload_id: int,
+    upload_id: UUID,
     status: MediaProcessingStatus,
     db: "Session",
     error_message: Optional[str] = None,
@@ -117,7 +170,7 @@ def set_upload_status(
         payload["error_message"] = error_message
     return update_upload_record(upload_id, payload, db)
 
-async def delete_labeled_splice(splice_id: int, db: "Session"):
+async def delete_labeled_splice(splice_id: UUID, db: "Session"):
     labeled_splice = (
         db.query(_models.LabeledSplice)
         .filter(_models.LabeledSplice.id == splice_id)
@@ -158,19 +211,19 @@ async def delete_labeled_splice(splice_id: int, db: "Session"):
     db.delete(labeled_splice)
     db.commit()
 
-async def delete_splice(splice_id: int, db: "Session"):
+async def delete_splice(splice_id: UUID, db: "Session"):
     db.query(_models.Splice).filter(_models.Splice.id == splice_id).delete()
     db.commit()
 
 async def get_first_labeled_splice(db: "Session") -> _schemas.LabeledSplice:
-    first_splice = db.query(_models.LabeledSplice).order_by(_models.LabeledSplice.id).first()
+    first_splice = db.query(_models.LabeledSplice).order_by(_models.LabeledSplice.created_at).first()
     return _schemas.LabeledSplice.model_validate(first_splice) if first_splice else None
 
 async def get_first_splice(db: "Session") -> _schemas.Splice:
-    first_splice = db.query(_models.Splice).order_by(_models.Splice.id).first()
+    first_splice = db.query(_models.Splice).order_by(_models.Splice.created_at).first()
     return _schemas.Splice.model_validate(first_splice) if first_splice else None
 
-async def get_splice_being_processed(splice_id: int, db: "Session") -> _schemas.SpliceBeingProcessed:
+async def get_splice_being_processed(splice_id: UUID, db: "Session") -> _schemas.SpliceBeingProcessed:
     return db.query(_models.SpliceBeingProcessed).get(splice_id)
 
 async def delete_splice_being_processed(splice: _schemas.SpliceBeingProcessed, db: "Session") -> None:
@@ -197,7 +250,7 @@ async def create_text_splice(text_splice: _schemas.TextSpliceCreate, db: "Sessio
     return _schemas.TextSplice.model_validate(text_splice_db)
 
 
-async def update_text_splice(text_splice_id: int, update_data: dict, db: "Session") -> _schemas.TextSplice:
+async def update_text_splice(text_splice_id: UUID, update_data: dict, db: "Session") -> _schemas.TextSplice:
     text_splice_db = (
         db.query(_models.TextSplice)
         .filter(_models.TextSplice.id == text_splice_id)
@@ -214,7 +267,7 @@ async def update_text_splice(text_splice_id: int, update_data: dict, db: "Sessio
     return _schemas.TextSplice.model_validate(text_splice_db)
 
 
-async def reserve_text_splice(text_splice_id: int, user_id: str, db: "Session") -> _schemas.TextSplice:
+async def reserve_text_splice(text_splice_id: UUID, user_id: UUID, db: "Session") -> _schemas.TextSplice:
     text_splice_db = (
         db.query(_models.TextSplice)
         .filter(_models.TextSplice.id == text_splice_id)
@@ -236,7 +289,7 @@ async def reserve_text_splice(text_splice_id: int, user_id: str, db: "Session") 
     return _schemas.TextSplice.model_validate(text_splice_db)
 
 
-def get_text_splice_by_id(db: "Session", text_splice_id: int) -> Optional[_schemas.TextSplice]:
+def get_text_splice_by_id(db: "Session", text_splice_id: UUID) -> Optional[_schemas.TextSplice]:
     text_splice_db = (
         db.query(_models.TextSplice)
         .filter(_models.TextSplice.id == text_splice_id)
@@ -245,7 +298,7 @@ def get_text_splice_by_id(db: "Session", text_splice_id: int) -> Optional[_schem
     return _schemas.TextSplice.model_validate(text_splice_db) if text_splice_db else None
 
 
-def get_reserved_text_splice_for_user(db: "Session", user_id: str) -> Optional[_schemas.TextSplice]:
+def get_reserved_text_splice_for_user(db: "Session", user_id: UUID) -> Optional[_schemas.TextSplice]:
     text_splice_db = (
         db.query(_models.TextSplice)
         .filter(
@@ -259,8 +312,8 @@ def get_reserved_text_splice_for_user(db: "Session", user_id: str) -> Optional[_
 
 
 async def complete_text_splice(
-    text_splice_id: int,
-    recorded_splice_id: Optional[int],
+    text_splice_id: UUID,
+    recorded_splice_id: Optional[UUID],
     db: "Session",
 ) -> _schemas.TextSplice:
     text_splice_db = (
@@ -283,7 +336,7 @@ def get_next_available_text_splice(db: "Session") -> Optional[_schemas.TextSplic
     text_splice_db = (
         db.query(_models.TextSplice)
         .filter(_models.TextSplice.status == "pending")
-        .order_by(_models.TextSplice.id)
+        .order_by(_models.TextSplice.created_at)
         .first()
     )
     return (
@@ -305,7 +358,7 @@ async def create_text_splice_recording(
 
 
 def get_text_splice_recording_by_text_id(
-    db: "Session", text_splice_id: int
+    db: "Session", text_splice_id: UUID
 ) -> Optional[_schemas.TextSpliceRecording]:
     recording_db = (
         db.query(_models.TextSpliceRecording)
@@ -371,7 +424,7 @@ async def create_deleted_splice(
     db.refresh(splice_db)
     return _schemas.DeletedSplice.model_validate(splice_db)
 
-def get_user(db: "Session", user_id: str):
+def get_user(db: "Session", user_id: UUID):
     return db.query(_models.User).filter(_models.User.id == user_id).first()
 
 def get_user_by_email(db: "Session", email: str):
@@ -387,16 +440,15 @@ def create_user(
     user_dict = user.model_dump()
     if 'password' in user_dict:
         del user_dict['password']
+
+    consent_id = user_dict.get("consent_id")
+    if consent_id is None:
+        raise HTTPException(status_code=400, detail="consent_id is required")
+    consent_record = get_policy_consent_by_id(db, consent_id)
+    if consent_record is None:
+        raise HTTPException(status_code=400, detail="Invalid consent_id")
     
-    # Generate UUID if not provided (though usually we let the DB or caller handle it, 
-    # but here I'll generate it if I can import uuid, or rely on the caller)
-    # The model defines id as String.
-    import uuid
-    if 'id' not in user_dict:
-        user_dict['id'] = str(uuid.uuid4())
-    
-    # Determine if this is a local or Google user
-    is_google_user = user_dict.get('provider') == 'google'
+    provider = (user_dict.get("provider") or "local").strip().lower()
     
     # Handle verification and profile completion fields
     user_db = _models.User(
@@ -405,14 +457,43 @@ def create_user(
         verification_code=verification_code,
         verification_code_expires=verification_code_expires,
         is_verified=False if verification_code else True,  # Google users are auto-verified
-        profile_completed=not is_google_user  # Local users have completed profile, Google users need to complete it
+        profile_completed=(provider == "system"),
     )
     db.add(user_db)
     db.commit()
     db.refresh(user_db)
     return _schemas.User.model_validate(user_db)
 
-def get_user_stats(db: "Session", user_id: str):
+
+def anonymize_user(db: "Session", user: _models.User) -> _schemas.User:
+    """Remove PII from a user record while keeping referential integrity intact."""
+    placeholder_email = f"deleted+{user.id}@example.invalid"
+
+    user.name = None
+    user.surname = None
+    user.email = placeholder_email
+    user.phone_number = None
+    user.age = None
+    user.nationality = None
+    user.accent = None
+    user.region = None
+    user.avatar_url = None
+    user.hashed_password = None
+    user.provider = "deleted"
+    user.is_verified = False
+    user.verification_code = None
+    user.verification_code_expires = None
+    user.reset_code = None
+    user.reset_code_expires = None
+    user.profile_completed = False
+    user.token_version = (user.token_version or 0) + 1
+    user.modified_at = _dt.datetime.utcnow()
+
+    db.commit()
+    db.refresh(user)
+    return _schemas.User.model_validate(user)
+
+def get_user_stats(db: "Session", user_id: UUID):
     recording_name_pattern = "recordings_%"
 
     def sum_duration(query):
@@ -502,7 +583,7 @@ def get_user_stats(db: "Session", user_id: str):
         "hours_validated": round(hours_validated, 2),
     }
 
-def get_user_activity(db: "Session", user_id: str, page: int, page_size: int):
+def get_user_activity(db: "Session", user_id: UUID, page: int, page_size: int):
     recording_name_pattern = "recordings_%"
     recorded_splice_ids_subquery = (
         select(_models.TextSpliceRecording.recorded_splice_id)
@@ -522,7 +603,8 @@ def get_user_activity(db: "Session", user_id: str, page: int, page_size: int):
             _models.LabeledSplice.owner_id,
             _models.LabeledSplice.labeler_id,
             literal(None).label("validator_id"),
-            (_models.LabeledSplice.id * 10 + 1).label("sort_key"),
+            func.coalesce(_models.LabeledSplice.updated_at, _models.LabeledSplice.created_at).label("created_at"),
+            literal(1).label("activity_rank"),
         )
         .where(
             _models.LabeledSplice.labeler_id == user_id,
@@ -544,7 +626,11 @@ def get_user_activity(db: "Session", user_id: str, page: int, page_size: int):
             _models.SpliceBeingProcessed.owner_id,
             _models.SpliceBeingProcessed.labeler_id,
             _models.SpliceBeingProcessed.validator_id,
-            (_models.SpliceBeingProcessed.id * 10 + 2).label("sort_key"),
+            func.coalesce(
+                _models.SpliceBeingProcessed.updated_at,
+                _models.SpliceBeingProcessed.created_at,
+            ).label("created_at"),
+            literal(2).label("activity_rank"),
         )
         .where(
             _models.SpliceBeingProcessed.status == "labeled",
@@ -566,7 +652,11 @@ def get_user_activity(db: "Session", user_id: str, page: int, page_size: int):
             _models.HighQualityLabeledSplice.owner_id,
             _models.HighQualityLabeledSplice.labeler_id,
             _models.HighQualityLabeledSplice.validator_id,
-            (_models.HighQualityLabeledSplice.id * 10 + 3).label("sort_key"),
+            func.coalesce(
+                _models.HighQualityLabeledSplice.updated_at,
+                _models.HighQualityLabeledSplice.created_at,
+            ).label("created_at"),
+            literal(3).label("activity_rank"),
         )
         .where(
             _models.HighQualityLabeledSplice.labeler_id == user_id,
@@ -587,7 +677,11 @@ def get_user_activity(db: "Session", user_id: str, page: int, page_size: int):
             _models.HighQualityLabeledSplice.owner_id,
             _models.HighQualityLabeledSplice.labeler_id,
             _models.HighQualityLabeledSplice.validator_id,
-            (_models.HighQualityLabeledSplice.id * 10 + 4).label("sort_key"),
+            func.coalesce(
+                _models.HighQualityLabeledSplice.updated_at,
+                _models.HighQualityLabeledSplice.created_at,
+            ).label("created_at"),
+            literal(4).label("activity_rank"),
         )
         .where(_models.HighQualityLabeledSplice.validator_id == user_id)
     )
@@ -605,7 +699,11 @@ def get_user_activity(db: "Session", user_id: str, page: int, page_size: int):
             _models.TextSpliceRecording.owner_id,
             _models.TextSpliceRecording.labeler_id,
             literal(None).label("validator_id"),
-            (_models.TextSpliceRecording.id * 10 + 5).label("sort_key"),
+            func.coalesce(
+                _models.TextSpliceRecording.updated_at,
+                _models.TextSpliceRecording.created_at,
+            ).label("created_at"),
+            literal(5).label("activity_rank"),
         )
         .where(_models.TextSpliceRecording.labeler_id == user_id)
     )
@@ -622,7 +720,7 @@ def get_user_activity(db: "Session", user_id: str, page: int, page_size: int):
 
     rows = (
         db.query(union_subquery)
-        .order_by(union_subquery.c.sort_key.desc())
+        .order_by(union_subquery.c.created_at.desc(), union_subquery.c.activity_rank)
         .offset((page - 1) * page_size)
         .limit(page_size)
         .all()
@@ -631,7 +729,7 @@ def get_user_activity(db: "Session", user_id: str, page: int, page_size: int):
     return total, rows
 
 
-def get_user_upload_records(db: "Session", user_id: str, page: int, page_size: int):
+def get_user_upload_records(db: "Session", user_id: UUID, page: int, page_size: int):
     base_query = (
         db.query(_models.UploadRecord)
         .filter(_models.UploadRecord.user_id == user_id)

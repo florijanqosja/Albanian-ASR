@@ -157,7 +157,19 @@
   "footer": {
     "tagline": "Po ndërtojmë të ardhmen e teknologjisë së të folurit në shqip, një zë në një kohë.",
     "terms": "Kushtet dhe shërbimet",
+    "report": "Raporto abuzim",
+    "privacy": "Njoftimi i Privatësisë",
     "apiDocs": "API Docs",
     "copyright": "© 2025 DibraSpeaks. Të gjitha të drejtat e rezervuara."
+  },
+  "report": {
+    "title": "Raporto abuzim",
+    "subtitle": "Nëse besoni se zëri juaj, të dhënat personale, ose përmbajtje tjetër shfaqet këtu pa pëlqim, na dërgoni një raport dhe do ta shqyrtojmë.",
+    "firstName": "Emri",
+    "lastName": "Mbiemri",
+    "email": "Email",
+    "message": "Mesazhi",
+    "success": "Faleminderit — mesazhi u dërgua.",
+    "error": "Mesazhi nuk u dërgua tani. Ju lutemi provoni përsëri më vonë."
   }
 }

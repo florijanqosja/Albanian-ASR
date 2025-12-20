@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Optional
+from uuid import UUID
 import os
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -64,8 +65,10 @@ def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 
 def _token_pair_response(user: models.User) -> schemas.Token:
-    access_token, expires_in = create_access_token({"sub": user.email, "id": user.id})
-    refresh_token, _ = create_refresh_token({"sub": user.email, "id": user.id})
+    token_version = getattr(user, "token_version", 0) or 0
+    user_id = str(user.id)
+    access_token, expires_in = create_access_token({"sub": user.email, "id": user_id, "token_version": token_version})
+    refresh_token, _ = create_refresh_token({"sub": user.email, "id": user_id, "token_version": token_version})
     return schemas.Token(
         access_token=access_token,
         refresh_token=refresh_token,
@@ -84,13 +87,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         email: str = payload.get("sub")
         user_id: str = payload.get("id")
         token_type: str = payload.get("token_type")
+        token_version: int = payload.get("token_version", 0)
         if email is None or user_id is None or token_type != "access":
             raise credentials_exception
         token_data = schemas.TokenData(email=email, user_id=user_id)
     except JWTError:
         raise credentials_exception
     user = services.get_user(db, user_id=token_data.user_id)
-    if user is None:
+    if user is None or token_version != (getattr(user, "token_version", 0) or 0) or user.provider == "deleted":
         raise credentials_exception
     return user
 
@@ -103,6 +107,15 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = services.get_user_by_email(db, email=user.email)
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
+
+    latest_consent = services.get_latest_policy_consent(db)
+    if latest_consent is None:
+        raise HTTPException(status_code=500, detail="Consent version is not configured.")
+    if user.consent_id != latest_consent.id:
+        raise HTTPException(
+            status_code=400,
+            detail="Consent version is outdated. Please refresh and accept the latest policy.",
+        )
     
     hashed_password = get_password_hash(user.password)
     
@@ -274,6 +287,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
 
 class GoogleLoginRequest(BaseModel):
     token: str
+    consent_id: UUID
 
 
 @router.post("/refresh", response_model=schemas.Token)
@@ -292,13 +306,14 @@ def refresh_access_token(
         if payload.get("token_type") != "refresh":
             raise credentials_exception
         user_id: Optional[str] = payload.get("id")
+        token_version: int = payload.get("token_version", 0)
         if not user_id:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
 
     user = services.get_user(db, user_id=user_id)
-    if not user:
+    if not user or token_version != (getattr(user, "token_version", 0) or 0) or user.provider == "deleted":
         raise credentials_exception
 
     return _token_pair_response(user)
@@ -322,20 +337,29 @@ def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db)):
         name = id_info.get('given_name', '')
         surname = id_info.get('family_name', '')
         picture = id_info.get('picture', None)
+
+        latest_consent = services.get_latest_policy_consent(db)
+        if latest_consent is None:
+            raise HTTPException(status_code=500, detail="Consent version is not configured.")
+        if request.consent_id != latest_consent.id:
+            raise HTTPException(
+                status_code=400,
+                detail="Consent version is outdated. Please refresh and accept the latest policy.",
+            )
         
         # Check if user exists
         user = services.get_user_by_email(db, email=email)
         if not user:
             # Create new user
             import uuid
-            new_user_id = str(uuid.uuid4())
             user_create = schemas.UserCreate(
                 email=email,
                 name=name,
                 surname=surname,
                 password="", # No password for Google users
                 provider="google",
-                avatar_url=picture
+                avatar_url=picture,
+                consent_id=request.consent_id,
             )
             # We need to bypass the password requirement in UserCreate if we use it directly,
             # but UserCreate requires password.
@@ -351,6 +375,7 @@ def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db)):
             user_db.provider = "google"
             user_db.is_verified = True  # Google users are auto-verified
             user_db.profile_completed = False  # Need to complete profile on first login
+            user_db.consent_id = latest_consent.id
             db.commit()
             db.refresh(user_db)
             user = user_db
@@ -358,6 +383,10 @@ def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db)):
             # Update existing user's avatar if changed (optional, but good practice)
             if picture and user.avatar_url != picture:
                 user.avatar_url = picture
+                db.commit()
+                db.refresh(user)
+            if user.consent_id != latest_consent.id:
+                user.consent_id = latest_consent.id
                 db.commit()
                 db.refresh(user)
 

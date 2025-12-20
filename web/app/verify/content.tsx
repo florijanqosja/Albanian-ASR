@@ -246,7 +246,7 @@ function VerifyPageContent() {
                 py: 1.5, 
                 borderRadius: 2, 
                 fontWeight: 700,
-                boxShadow: '0 4px 14px 0 rgba(166, 77, 74, 0.39)'
+                boxShadow: (theme) => theme.shadows[4]
               }}
             >
               {loading ? "Verifying..." : "Verify Email"}

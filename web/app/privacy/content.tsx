@@ -5,13 +5,13 @@ import path from "path";
 import Footer from "@/components/Sections/Footer";
 import MarkdownPolicyPage from "@/components/Sections/MarkdownPolicyPage";
 
-export default async function TermsAndServicesPage() {
+export default async function PrivacyPage() {
   const markdownPath = path.join(
     process.cwd(),
     "src",
     "components",
     "Sections",
-    "terms_and_services.md",
+    "privacy_notice.md",
   );
   const markdown = await fs.readFile(markdownPath, "utf8");
 

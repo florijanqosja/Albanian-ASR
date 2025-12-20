@@ -16,6 +16,15 @@ type BackendUser = {
   avatar_url?: string | null
 }
 
+type ConsentResponse = {
+  status: string
+  data: {
+    id: number
+    version: string
+  } | null
+  message?: string
+}
+
 async function fetchUserProfile(accessToken: string): Promise<BackendUser> {
   const userRes = await axios.get(`${apiUrl}/users/me`, {
     headers: { Authorization: `Bearer ${accessToken}` }
@@ -43,6 +52,15 @@ async function refreshAccessToken(token: Record<string, unknown>) {
     console.error("Refresh token error", error)
     return { ...token, error: "RefreshAccessTokenError" }
   }
+}
+
+async function fetchLatestConsentId(): Promise<number> {
+  const res = await axios.get<ConsentResponse>(`${apiUrl}/consents/latest`)
+  const consentId = res.data.data?.id
+  if (!consentId) {
+    throw new Error("Consent version not configured")
+  }
+  return consentId
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -94,8 +112,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user, account }) {
       if (account?.provider === "google" && account.id_token) {
         try {
+          const consentId = await fetchLatestConsentId()
           const res = await axios.post<BackendTokenResponse>(`${apiUrl}/auth/google`, {
-            token: account.id_token
+            token: account.id_token,
+            consent_id: consentId,
           })
           const profile = await fetchUserProfile(res.data.access_token)
           return {

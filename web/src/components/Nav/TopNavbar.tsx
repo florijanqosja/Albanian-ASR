@@ -153,7 +153,7 @@ export default function TopNavbar() {
                         borderColor: 'primary.light',
                         padding: '2px',
                         transition: 'all 0.2s',
-                        '&:hover': { borderColor: 'primary.main', transform: 'scale(1.05)', boxShadow: '0 0 0 4px rgba(166, 77, 74, 0.1)' }
+                        '&:hover': { borderColor: 'primary.main', transform: 'scale(1.05)', boxShadow: (theme) => `0 0 0 4px ${theme.palette.action.focus}` }
                     }}
                 >
                     <Avatar 
@@ -239,7 +239,7 @@ export default function TopNavbar() {
                     <Link href="/login" className="px-6 py-2.5 text-sm font-bold text-gray-700 hover:text-primary hover:bg-gray-50 rounded-full transition-all">
                         {t("nav.login")}
                 </Link>
-                    <Link href="/login" className="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-primary to-[#FF8E53] hover:shadow-lg hover:scale-105 rounded-full transition-all duration-300">
+                    <Link href="/register" className="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-primary to-[#FF8E53] hover:shadow-lg hover:scale-105 rounded-full transition-all duration-300">
                         {t("nav.signup")}
                 </Link>
                 </div>

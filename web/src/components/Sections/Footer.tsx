@@ -1,7 +1,18 @@
 "use client";
-import React from "react";
+import React, { ComponentProps } from "react";
 import { Github, Linkedin, ArrowUp } from "lucide-react";
-import { Container, Grid, Typography, IconButton, Box } from "@mui/material";
+import {
+  Container,
+  Grid,
+  Typography,
+  IconButton,
+  Box,
+  Stack,
+  Button,
+  Divider,
+  Link as MuiLink,
+} from "@mui/material";
+import { alpha, useTheme } from "@mui/material/styles";
 import { useTranslations } from "next-intl";
 import { Link } from "../../../i18n/routing";
 import LogoImg from "../../assets/svg/Logo";
@@ -9,86 +20,171 @@ import LogoImg from "../../assets/svg/Logo";
 export default function Footer() {
   const t = useTranslations("footer");
   const tCommon = useTranslations("common");
+  const theme = useTheme();
   const docsUrl = process.env.NEXT_PUBLIC_API_DOCS_URL || "http://localhost:8000/docs";
+
+  type AppLinkHref = ComponentProps<typeof Link>["href"];
+
+  const navLinks: Array<{ href: AppLinkHref; label: string }> = [
+    { href: "/termsandservices", label: t("terms") },
+    { href: "/report", label: t("report") },
+    { href: "/privacy", label: t("privacy") },
+  ];
+
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const linkStyles = {
+    color: "text.secondary",
+    fontWeight: 600,
+    textDecoration: "none",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 0.5,
+    transition: "color 0.2s ease",
+    "&:hover": { color: "primary.main" },
+  } as const;
+
+  const iconButtonStyles = {
+    border: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
+    color: "text.secondary",
+    bgcolor: alpha(theme.palette.background.paper, 0.92),
+    transition: "all 0.2s ease",
+    "&:hover": {
+      bgcolor: alpha(theme.palette.primary.main, 0.08),
+      color: "primary.main",
+      borderColor: theme.palette.primary.main,
+    },
+  } as const;
+
   return (
-    <Box component="footer" sx={{ bgcolor: '#1F2937', color: 'white', py: 6, mt: 'auto' }}>
-      <Container maxWidth="lg">
-        <Grid container spacing={4} alignItems="center" justifyContent="space-between">
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-              <Box sx={{ width: 40, height: 40, color: 'primary.main' }}>
-                <LogoImg />
+    <Box
+      component="footer"
+      sx={{
+        mt: "auto",
+        bgcolor: alpha(theme.palette.primary.main, 0.06),
+        borderTop: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
+        px: 2,
+        py: { xs: 4, md: 6 },
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      <Box
+        sx={{
+          position: "absolute",
+          inset: 0,
+          background: `radial-gradient(circle at 15% 30%, ${alpha(
+            theme.palette.accent.main,
+            0.8
+          )}, transparent 35%), radial-gradient(circle at 85% 10%, ${alpha(
+            theme.palette.primary.main,
+            0.18
+          )}, transparent 30%)`,
+          pointerEvents: "none",
+        }}
+      />
+
+      <Container maxWidth="lg" sx={{ position: "relative" }}>
+        <Grid container spacing={{ xs: 4, md: 6 }} alignItems="center">
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Stack spacing={2.5}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <Box sx={{ width: 44, height: 44, color: "primary.main" }}>
+                  <LogoImg />
+                </Box>
+                <Typography variant="h5" fontWeight={800} color="text.primary">
+                  DibraSpeaks
+                </Typography>
               </Box>
-              <Typography variant="h5" fontWeight={700} sx={{ background: 'linear-gradient(45deg, #A64D4A, #FF8E53)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                DibraSpeaks
+              <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 440 }}>
+                {t("tagline")}
               </Typography>
-            </Box>
-            <Typography variant="body2" sx={{ color: 'grey.400', maxWidth: 300 }}>
-              {t("tagline")}
-            </Typography>
+              <Stack direction="row" spacing={1.25}>
+                <IconButton
+                  component="a"
+                  href="https://github.com/florijanqosja/Albanian-ASR"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={iconButtonStyles}
+                >
+                  <Github size={20} />
+                </IconButton>
+                <IconButton
+                  component="a"
+                  href="https://www.linkedin.com/in/florijan-qosja/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={iconButtonStyles}
+                >
+                  <Linkedin size={20} />
+                </IconButton>
+              </Stack>
+            </Stack>
           </Grid>
 
-          <Grid size={{ xs: 12, md: 4 }} sx={{ textAlign: { xs: 'left', md: 'center' } }}>
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: { xs: 'flex-start', md: 'center' }, mb: 2 }}>
-              <IconButton 
-                component="a" 
-                href="https://github.com/florijanqosja" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                sx={{ color: 'grey.400', '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.1)' } }}
-              >
-                <Github size={24} />
-              </IconButton>
-              <IconButton 
-                component="a" 
-                href="https://www.linkedin.com/in/florijan-qosja/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                sx={{ color: 'grey.400', '&:hover': { color: '#0077b5', bgcolor: 'rgba(0,119,181,0.1)' } }}
-              >
-                <Linkedin size={24} />
-              </IconButton>
-            </Box>
-            <Link href="/termsandservices" className="text-gray-400 hover:text-white text-sm transition-colors">
-              {t("terms")}
-            </Link>
-            {docsUrl && (
-              <a
-                href={docsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block text-gray-400 hover:text-white text-sm transition-colors mt-1"
-              >
-                {t("apiDocs")}
-              </a>
-            )}
-            <Typography variant="body2" sx={{ color: 'grey.500', mt: 1 }}>
-              {t("copyright")}
-            </Typography>
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 4 }} sx={{ textAlign: { xs: 'left', md: 'right' } }}>
-            <Box 
-              onClick={scrollToTop}
-              sx={{ 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                gap: 1, 
-                cursor: 'pointer', 
-                color: 'grey.400', 
-                '&:hover': { color: 'primary.main' },
-                transition: 'color 0.2s'
-              }}
-            >
-              <Typography variant="button" sx={{ textTransform: 'none', color: 'inherit' }}>{tCommon("backToTop")}</Typography>
-              <ArrowUp size={16} />
-            </Box>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Stack spacing={1.2} alignItems={{ xs: "flex-start", md: "flex-end" }}>
+              {navLinks.map((item) => (
+                <MuiLink
+                  key={item.href.toString()}
+                  component={Link}
+                  href={item.href}
+                  underline="none"
+                  sx={linkStyles}
+                >
+                  <Typography variant="body2" component="span">
+                    {item.label}
+                  </Typography>
+                </MuiLink>
+              ))}
+              {docsUrl && (
+                <Typography
+                  component="a"
+                  href={docsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variant="body2"
+                  sx={linkStyles}
+                >
+                  {t("apiDocs")}
+                </Typography>
+              )}
+            </Stack>
           </Grid>
         </Grid>
+
+        <Divider sx={{ my: { xs: 3, md: 4 }, borderColor: alpha(theme.palette.border.main, 0.6) }} />
+
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 2,
+          }}
+        >
+          <Typography variant="body2" color="text.secondary">
+            {t("copyright")}
+          </Typography>
+          <Button
+            onClick={scrollToTop}
+            variant="contained"
+            color="primary"
+            startIcon={<ArrowUp size={16} />}
+            sx={{
+              borderRadius: 999,
+              px: 2.5,
+              boxShadow: "none",
+              fontWeight: 700,
+              "&:hover": { boxShadow: "none" },
+            }}
+          >
+            {tCommon("backToTop")}
+          </Button>
+        </Box>
       </Container>
     </Box>
   );

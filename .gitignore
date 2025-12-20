@@ -26,3 +26,4 @@ ENV/
 .DS_Store
 .env
 .env.example
+web/package-lock.json

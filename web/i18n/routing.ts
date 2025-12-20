@@ -16,6 +16,8 @@ export const pathnames = {
   "/profile": "/profile",
   "/my-labels": "/my-labels",
   "/termsandservices": "/termsandservices",
+  "/report": "/report",
+  "/privacy": "/privacy",
 } as const;
 
 export const {Link, redirect, usePathname, useRouter, permanentRedirect} =

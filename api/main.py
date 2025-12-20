@@ -1,3 +1,4 @@
+import datetime as _dt
 import io
 import logging
 import math
@@ -6,7 +7,7 @@ import uuid
 import wave
 import fcntl
 from contextlib import asynccontextmanager
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 from fastapi import (
     BackgroundTasks,
@@ -34,7 +35,7 @@ from .database import schemas as _schemas
 from .database import services as _services
 from .database import models as _models
 from .database.enums import MediaProcessingStatus
-from .routers import auth, users
+from .routers import auth, users, support, consents
 from .utils.paths import (
     BASE_DIR,
     IS_PRODUCTION,
@@ -66,9 +67,18 @@ logger = logging.getLogger(__name__)
 
 # Constants - Use absolute paths in production (Docker), relative in development
 API_ROOT_PATH = os.getenv("API_ROOT_PATH", "")
-CONSENT_VERSION = os.getenv("CONSENT_VERSION", "2025-12-02")
 MIN_SPLICE_DURATION_MS = int(os.getenv("MIN_SPLICE_DURATION_MS", "30000"))
 DEFAULT_TEXT_SPLICE_PROMPTS = [f"sample{i}" for i in range(1, 11)]
+DEFAULT_CONSENT_VERSION = os.getenv("DEFAULT_CONSENT_VERSION", "2025-12-19")
+DEFAULT_CONSENT_EFFECTIVE_DATE = os.getenv("DEFAULT_CONSENT_EFFECTIVE_DATE", "2025-12-19")
+DEFAULT_PRIVACY_CONTENT = os.getenv(
+    "DEFAULT_PRIVACY_CONTENT",
+    "Initial privacy notice snapshot for DibraSpeaks (see /privacy for full text).",
+)
+DEFAULT_TERMS_CONTENT = os.getenv(
+    "DEFAULT_TERMS_CONTENT",
+    "Initial terms snapshot for DibraSpeaks (see /termsandservices for full text).",
+)
 
 SAMPLE_FILE_PATH = "sample_audio_njerez_dhe_fate_e2.mp3"
 DOCKER_SAMPLE_PATH = "/code/sample_audio_njerez_dhe_fate_e2.mp3"
@@ -142,12 +152,12 @@ def _convert_mp4_to_mp3(mp4_path: str, mp3_path: str) -> None:
         raise HTTPException(status_code=500, detail=f"Audio conversion failed: {str(e)}")
 
 
-def _store_recorded_audio(user_id: str, audio_bytes: bytes) -> Tuple[str, str, float]:
+def _store_recorded_audio(user_id: Union[uuid.UUID, str], audio_bytes: bytes) -> Tuple[str, str, float]:
     """Converts an uploaded blob into a WAV file under the user's splice directory."""
     if not audio_bytes:
         raise ValueError("Audio payload is empty")
 
-    user_dir = os.path.join(SPLICES_DIR, user_id)
+    user_dir = os.path.join(SPLICES_DIR, str(user_id))
     os.makedirs(user_dir, exist_ok=True)
 
     try:
@@ -216,14 +226,14 @@ def _splice_audio(
 
 
 async def _process_video_file(
-    video_id: int,
+    video_id: uuid.UUID,
     video_name: str,
     safe_filename: str,
     ext: str,
     original_path: str,
     mp3_path: str,
-    owner_id: str,
-    upload_record_id: Optional[int] = None,
+    owner_id: Union[uuid.UUID, str],
+    upload_record_id: Optional[uuid.UUID] = None,
     db_session: Optional[Session] = None,
 ) -> None:
     """Run conversion, splicing, and status updates for a stored media asset."""
@@ -315,6 +325,33 @@ async def lifespan(app: FastAPI):
         
         db = _services.SessionLocal()
         try:
+            try:
+                effective_date = _dt.date.fromisoformat(DEFAULT_CONSENT_EFFECTIVE_DATE)
+            except ValueError:
+                effective_date = _dt.date.today()
+                logger.warning(
+                    "DEFAULT_CONSENT_EFFECTIVE_DATE is not a valid ISO date. Falling back to today's date.")
+
+            try:
+                default_consent = _services.ensure_policy_consent(
+                    db,
+                    version=DEFAULT_CONSENT_VERSION,
+                    effective_date=effective_date,
+                    privacy_content=DEFAULT_PRIVACY_CONTENT,
+                    terms_content=DEFAULT_TERMS_CONTENT,
+                )
+                logger.info(
+                    "Policy consent version ready: %s (effective %s)",
+                    default_consent.version,
+                    default_consent.effective_date,
+                )
+            except Exception as consent_seed_error:
+                logger.error(f"Failed to seed default consent version: {consent_seed_error}", exc_info=True)
+                default_consent = _services.get_latest_policy_consent_model(db)
+
+            if default_consent is None:
+                raise RuntimeError("No policy consent version found; cannot continue initialization.")
+
             # Seed Users - use get_or_create pattern to handle race conditions
             system_user = _services.get_user_by_email(db, "system@albaniansr.com")
             if not system_user:
@@ -324,7 +361,8 @@ async def lifespan(app: FastAPI):
                         name="System",
                         surname="Admin",
                         password="password",
-                        provider="system"
+                        provider="system",
+                        consent_id=default_consent.id,
                     )
                     system_hash = auth.get_password_hash("password")
                     system_user = _services.create_user(db, system_user_create, hashed_password=system_hash)
@@ -346,7 +384,8 @@ async def lifespan(app: FastAPI):
                         name="Anonymous",
                         surname="User",
                         password="password",
-                        provider="system"
+                        provider="system",
+                        consent_id=default_consent.id,
                     )
                     anon_hash = auth.get_password_hash("password")
                     _services.create_user(db, anon_user_create, hashed_password=anon_hash)
@@ -480,7 +519,6 @@ async def lifespan(app: FastAPI):
         lock_file.close()
         
     yield
-    yield
 
 app = FastAPI(
     title=API_TITLE,
@@ -495,6 +533,12 @@ app = FastAPI(
     openapi_tags=TAGS_METADATA,
 )
 
+# Routers
+app.include_router(auth.router)
+app.include_router(consents.router)
+app.include_router(users.router)
+app.include_router(support.router)
+
 configure_documentation(app)
 
 app.add_middleware(
@@ -508,9 +552,6 @@ app.add_middleware(
 app.mount("/splices", StaticFiles(directory=SPLICES_DIR_ABS), name="splices")
 app.mount("/mp3", StaticFiles(directory=UPLOAD_DIR_MP3_ABS), name="mp3")
 app.mount("/mp4", StaticFiles(directory=UPLOAD_DIR_MP4_ABS), name="mp4")
-
-app.include_router(auth.router)
-app.include_router(users.router)
 
 @app.post(
     "/video/add",
@@ -533,6 +574,10 @@ async def create_video(
 ):
     if not consent:
         raise HTTPException(status_code=400, detail="Consent is required to upload media.")
+
+    latest_consent = _services.get_latest_policy_consent(db)
+    if latest_consent is None:
+        raise HTTPException(status_code=500, detail="No consent version configured on the server.")
 
     filename = video_file.filename
     if filename is None:
@@ -572,7 +617,7 @@ async def create_video(
                 original_filename=filename,
                 display_name=normalized_name,
                 category=video_category,
-                consent_version=CONSENT_VERSION,
+                consent_version=latest_consent.version,
                 consent_given=True,
                 status=MediaProcessingStatus.IN_PROGRESS,
             ),
@@ -1104,7 +1149,7 @@ async def get_record_prompt(
     ),
 )
 async def submit_recording(
-    text_splice_id: int = Form(...),
+    text_splice_id: uuid.UUID = Form(...),
     spoken_text: str = Form(...),
     audio_file: UploadFile = File(...),
     current_user: _models.User = Depends(auth.get_current_user),

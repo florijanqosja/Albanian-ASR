@@ -3,11 +3,21 @@ import { createContext, useContext, useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { usePathname } from "next/navigation"
 import ProfileCompletionModal from "../components/Modals/ProfileCompletionModal"
+import { locales } from "../../i18n/routing"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
 // Pages where we don't show the profile completion modal
-const EXCLUDED_PATHS = ["/login", "/register", "/verify", "/forgot-password", "/reset-password", "/termsandservices"]
+const EXCLUDED_PATHS = [
+  "/login",
+  "/register",
+  "/verify",
+  "/forgot-password",
+  "/reset-password",
+  "/termsandservices",
+  "/privacy",
+  "/report",
+]
 
 interface UserData {
   profile_completed: boolean
@@ -38,6 +48,12 @@ export default function ProfileCompletionWrapper({ children }: { children: React
   const [userData, setUserData] = useState<UserData | null>(null)
   const [checked, setChecked] = useState(false)
 
+  const normalizedPathname = (() => {
+    const pattern = new RegExp(`^/(${locales.join("|")})(?=/|$)`)
+    const stripped = pathname.replace(pattern, "")
+    return stripped.length ? stripped : "/"
+  })()
+
   useEffect(() => {
     const checkProfileCompletion = async () => {
       if (status !== "authenticated" || !session) {
@@ -46,7 +62,7 @@ export default function ProfileCompletionWrapper({ children }: { children: React
       }
 
       // Don't check on excluded paths
-      if (EXCLUDED_PATHS.some(path => pathname.startsWith(path))) {
+      if (EXCLUDED_PATHS.some(path => normalizedPathname.startsWith(path))) {
         setChecked(true)
         return
       }
@@ -69,7 +85,7 @@ export default function ProfileCompletionWrapper({ children }: { children: React
           const data: UserData = await response.json()
           setUserData(data)
 
-          if (data.provider === "google" && !data.profile_completed) {
+          if (!data.profile_completed && data.provider !== "system" && data.provider !== "deleted") {
             setShowModal(true)
           }
         }
@@ -81,12 +97,18 @@ export default function ProfileCompletionWrapper({ children }: { children: React
     }
 
     checkProfileCompletion()
-  }, [session, status, pathname])
+  }, [session, status, pathname, normalizedPathname])
 
   const handleProfileComplete = () => {
     setShowModal(false)
+    setUserData(prev => (prev ? { ...prev, profile_completed: true } : prev))
     // Optionally refresh the page or update local state
     window.location.reload()
+  }
+
+  const handleProfileDismiss = () => {
+    setShowModal(false)
+    setUserData(prev => (prev ? { ...prev, profile_completed: true } : prev))
   }
 
   // Don't render anything until we've checked
@@ -105,6 +127,7 @@ export default function ProfileCompletionWrapper({ children }: { children: React
           accessToken={extendedSession?.accessToken || ""}
           userName={userData?.name}
           onComplete={handleProfileComplete}
+          onClose={handleProfileDismiss}
         />
       )}
     </UserProfileContext.Provider>
