@@ -558,6 +558,7 @@ app = FastAPI(
     title=API_TITLE,
     description=API_DESCRIPTION,
     version=API_VERSION,
+    openapi_url=f"{API_ROOT_PATH}/openapi.json" if API_ROOT_PATH else "/openapi.json",
     lifespan=lifespan,
     docs_url=None,
     redoc_url=None,

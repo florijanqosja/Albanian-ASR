@@ -20,7 +20,7 @@ MAIL_ACCOUNT_ID = os.getenv("AHASEND_ACCOUNT_ID")
 MAIL_FROM_EMAIL = os.getenv("MAIL_FROM_EMAIL", "noreply@dibraspeaks.com")
 MAIL_FROM_NAME = os.getenv("MAIL_FROM_NAME", "DibraSpeaks")
 APP_URL = os.getenv("NEXTAUTH_URL", "http://localhost:3000")
-LOGO_URL = os.getenv("LOGO_URL")
+LOGO_URL = os.getenv("LOGO_URL") or "https://uneduashqiperine.com/_next/image?url=%2Flogo.png&w=64&q=75"
 
 
 def is_production() -> bool:
