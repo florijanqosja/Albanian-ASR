@@ -218,16 +218,16 @@ def _inject_branding(original: HTMLResponse, hero_markup: str, extra_head: str) 
     )
 
 
-def configure_documentation(app: FastAPI) -> None:
+def configure_documentation(app: FastAPI, base_path: str = "") -> None:
     """Attach OpenAPI metadata and register branded documentation routes."""
 
-    root_path = (app.root_path or "").rstrip("/")
+    root_prefix = base_path.rstrip("/")
 
     def _with_root(path: str) -> str:
-        """Prefix absolute paths with the app's root_path when defined."""
+        """Prefix absolute paths with the provided base_path when defined."""
         if not path.startswith("/"):
             return path
-        return f"{root_path}{path}" if root_path else path
+        return f"{root_prefix}{path}" if root_prefix else path
 
     def custom_openapi() -> dict[str, Any]:
         if app.openapi_schema:

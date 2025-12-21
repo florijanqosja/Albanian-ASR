@@ -558,7 +558,6 @@ app = FastAPI(
     title=API_TITLE,
     description=API_DESCRIPTION,
     version=API_VERSION,
-    root_path=API_ROOT_PATH,
     openapi_url='/openapi.json',
     lifespan=lifespan,
     docs_url=None,
@@ -575,7 +574,7 @@ app.include_router(consents.router)
 app.include_router(users.router)
 app.include_router(support.router)
 
-configure_documentation(app)
+configure_documentation(app, base_path=API_ROOT_PATH)
 
 app.add_middleware(
     CORSMiddleware,
