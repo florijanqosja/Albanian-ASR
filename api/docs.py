@@ -191,7 +191,17 @@ REDOC_STYLE = dedent(
 
 
 def _inject_branding(original: HTMLResponse, hero_markup: str, extra_head: str) -> HTMLResponse:
-    """Injects custom hero sections and CSS into a generated HTMLResponse."""
+    """
+    Insert branding markup and additional head content into an existing HTMLResponse and return a new HTMLResponse.
+    
+    Parameters:
+        original (starlette.responses.HTMLResponse): The original HTMLResponse to modify; its status code and media type are preserved.
+        hero_markup (str): HTML markup to inject as a hero section; if the Swagger UI container exists it is inserted before it, otherwise it is inserted at the start of the body. When provided, the body element will receive a `ds-docs` class.
+        extra_head (str): HTML/CSS or other head content to insert immediately before the closing `</head>` tag.
+    
+    Returns:
+        starlette.responses.HTMLResponse: A new HTMLResponse with the modified body and the original headers preserved except for `Content-Length`.
+    """
     content = original.body.decode("utf-8")
     if extra_head:
         content = content.replace("</head>", f"{extra_head}</head>", 1)
@@ -219,17 +229,46 @@ def _inject_branding(original: HTMLResponse, hero_markup: str, extra_head: str) 
 
 
 def configure_documentation(app: FastAPI, base_path: str = "") -> None:
-    """Attach OpenAPI metadata and register branded documentation routes."""
+    """
+    Register branded OpenAPI/Swagger and ReDoc documentation routes on the given FastAPI app and attach a customized OpenAPI schema.
+    
+    This replaces the app.openapi generator with a cached custom implementation that injects contact, license, terms of service, logo, servers, and external documentation into the OpenAPI schema. It also mounts branded UI routes for:
+    - /docs (Swagger UI) with an OAuth2 redirect at /docs/oauth2-redirect
+    - /redoc (ReDoc)
+    
+    Parameters:
+        app (FastAPI): The FastAPI application to modify.
+        base_path (str): Optional base path to prefix absolute documentation and OpenAPI URLs; if empty, no prefix is applied.
+    
+    Modifies:
+        The provided FastAPI app in place (no return value).
+    """
 
     root_prefix = base_path.rstrip("/")
 
     def _with_root(path: str) -> str:
-        """Prefix absolute paths with the provided base_path when defined."""
+        """
+        Prefix an absolute path with the module's configured root_prefix.
+        
+        Parameters:
+            path (str): The path to adjust; may be absolute (starts with "/") or relative.
+        
+        Returns:
+            str: The adjusted path — if `path` starts with "/", returns `root_prefix + path` when `root_prefix` is set, otherwise returns `path` unchanged.
+        """
         if not path.startswith("/"):
             return path
         return f"{root_prefix}{path}" if root_prefix else path
 
     def custom_openapi() -> dict[str, Any]:
+        """
+        Create and cache the application's OpenAPI schema enriched with branding and metadata.
+        
+        This generates a complete OpenAPI schema using the app's routes and tags, augments the schema's `info` with contact, license, termsOfService and an `x-logo` entry, and sets top-level `servers` and `externalDocs`. The generated schema is cached on the app object so subsequent calls return the cached schema.
+        
+        Returns:
+            dict[str, Any]: The OpenAPI schema dictionary.
+        """
         if app.openapi_schema:
             return app.openapi_schema
         openapi_schema = get_openapi(
