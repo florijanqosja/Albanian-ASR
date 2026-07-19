@@ -233,6 +233,89 @@ async def create_splice(splice: _schemas.SpliceCreate, db: "Session") -> _schema
     db.refresh(splice_db)
     return _schemas.Splice.model_validate(splice_db)
 
+async def persist_processing_success(
+    db: "Session",
+    *,
+    video_id: UUID,
+    video_update: dict,
+    splices: "list[_schemas.SpliceCreate]",
+    upload_record_id: Optional[UUID] = None,
+) -> int:
+    """
+    Persist a video's splices AND its terminal statuses in ONE transaction.
+
+    Everything commits together so a mid-flight failure can never leave committed orphan
+    splices under a video that ends up marked ERROR (which would still name-join into
+    upload-history stats), nor flip an already-COMPLETED video back to ERROR because a
+    follow-up bookkeeping commit failed. Either all of it lands or none of it does.
+
+    Replaces the old per-splice commits (one connection checkout + commit per segment, up
+    to ~190 per video) that exhausted the SQLAlchemy pool under concurrent uploads. The
+    splices go in via a single multi-row INSERT (one round-trip) rather than one statement
+    per row; omitted columns (id/created_at/updated_at) fall back to their server defaults.
+
+    Returns:
+        int: Number of splice rows inserted.
+
+    Raises:
+        HTTPException: 404 if no Video with `video_id` exists.
+    """
+    video_db = db.query(_models.Video).filter(_models.Video.id == video_id).first()
+    if video_db is None:
+        raise HTTPException(404, detail="Video not found")
+
+    if splices:
+        db.execute(
+            _sql.insert(_models.Splice).values([splice.model_dump() for splice in splices])
+        )
+
+    for key, value in video_update.items():
+        setattr(video_db, key, value)
+
+    if upload_record_id is not None:
+        upload_db = (
+            db.query(_models.UploadRecord)
+            .filter(_models.UploadRecord.id == upload_record_id)
+            .first()
+        )
+        if upload_db is not None:
+            upload_db.status = MediaProcessingStatus.COMPLETED
+            upload_db.error_message = None
+
+    db.commit()
+    return len(splices)
+
+
+async def persist_processing_error(
+    db: "Session",
+    *,
+    video_id: UUID,
+    error: str,
+    upload_record_id: Optional[UUID] = None,
+) -> None:
+    """
+    Mark a video (and its upload record, if any) ERROR in ONE transaction, best-effort.
+
+    Used on the failure path. Missing rows are tolerated rather than raising so the error
+    handler never masks the original processing exception with a secondary one.
+    """
+    video_db = db.query(_models.Video).filter(_models.Video.id == video_id).first()
+    if video_db is not None:
+        video_db.processing_status = MediaProcessingStatus.ERROR
+        video_db.processing_error = error
+
+    if upload_record_id is not None:
+        upload_db = (
+            db.query(_models.UploadRecord)
+            .filter(_models.UploadRecord.id == upload_record_id)
+            .first()
+        )
+        if upload_db is not None:
+            upload_db.status = MediaProcessingStatus.ERROR
+            upload_db.error_message = error
+
+    db.commit()
+
 async def create_splice_being_processed(splice: _schemas.SpliceBeingProcessedCreate, db: "Session") -> _schemas.SpliceBeingProcessed:
     splice_dict = splice.model_dump()
     splice_being_processed_db = _models.SpliceBeingProcessed(**splice_dict)
@@ -854,10 +937,9 @@ def get_user_stats(db: "Session", user_id: UUID):
     )
     hours_recorded = sum_duration(recorded_duration_query) / 3600.0
 
-    recorded_splice_ids_subquery = (
+    recorded_splice_ids_select = (
         select(_models.TextSpliceRecording.recorded_splice_id)
         .where(_models.TextSpliceRecording.recorded_splice_id.isnot(None))
-        .subquery()
     )
 
     # Labeled count: Exclude auto-recorded clips so recording work is tracked separately
@@ -866,7 +948,7 @@ def get_user_stats(db: "Session", user_id: UUID):
         .filter(
             _models.LabeledSplice.labeler_id == user_id,
             _models.LabeledSplice.name.notlike(recording_name_pattern),
-            ~_models.LabeledSplice.id.in_(recorded_splice_ids_subquery),
+            ~_models.LabeledSplice.id.in_(recorded_splice_ids_select),
         )
         .scalar()
         or 0
@@ -894,7 +976,7 @@ def get_user_stats(db: "Session", user_id: UUID):
         .filter(
             _models.LabeledSplice.labeler_id == user_id,
             _models.LabeledSplice.name.notlike(recording_name_pattern),
-            ~_models.LabeledSplice.id.in_(recorded_splice_ids_subquery),
+            ~_models.LabeledSplice.id.in_(recorded_splice_ids_select),
         )
     )
     labeled_q2 = (
@@ -1023,9 +1105,9 @@ def get_user_activity(db: "Session", user_id: UUID, page: int, page_size: int):
                 - activity_rank: integer used to break ties when ordering
     """
     recording_name_pattern = "recordings_%"
-    recorded_splice_ids_subquery = (
+    recorded_splice_ids_select = (
         select(_models.TextSpliceRecording.recorded_splice_id)
-        .subquery()
+        .where(_models.TextSpliceRecording.recorded_splice_id.isnot(None))
     )
 
     labeled_stmt = (
@@ -1047,7 +1129,7 @@ def get_user_activity(db: "Session", user_id: UUID, page: int, page_size: int):
         .where(
             _models.LabeledSplice.labeler_id == user_id,
             _models.LabeledSplice.name.notlike(recording_name_pattern),
-            ~_models.LabeledSplice.id.in_(recorded_splice_ids_subquery),
+            ~_models.LabeledSplice.id.in_(recorded_splice_ids_select),
         )
     )
 
