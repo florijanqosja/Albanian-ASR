@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import { Typography, Grid, Box, Container, Paper } from "@mui/material";
-import { Database, CheckCircle, Clock, ClipboardCheck } from "lucide-react";
+import { Database, CheckCircle, Clock, ClipboardCheck, CircleDashed, Hourglass, Layers } from "lucide-react";
 import axios from "axios";
 import { useTranslations } from "next-intl";
 
@@ -84,6 +84,13 @@ export default function Statistics() {
     </Paper>
   );
 
+  const grandTotalClips = summaryInfo
+    ? summaryInfo.total_labeled + summaryInfo.total_unlabeled + summaryInfo.total_validated
+    : 0;
+  const grandTotalHours = summaryInfo
+    ? summaryInfo.total_duration_labeled + summaryInfo.total_duration_unlabeled + summaryInfo.total_duration_validated
+    : 0;
+
   return (
     <Box sx={{ py: 10, bgcolor: 'grey.50' }}>
       <Container maxWidth="lg">
@@ -125,42 +132,109 @@ export default function Statistics() {
                 <Grid size={{ xs: 12, md: 8 }}>
                     <Grid container spacing={3}>
                         <Grid size={{ xs: 12, sm: 6 }}>
-                            <StatCard 
-                                title={t("totalLabeled")} 
-                                value={summaryInfo.total_labeled.toLocaleString()} 
+                            <StatCard
+                                title={t("totalLabeled")}
+                                value={summaryInfo.total_labeled.toLocaleString()}
                                 subtitle={t("labeledSubtitle", { percent: summaryInfo.sumofLabeled.toFixed(1) })}
                                 icon={<Database size={24} />}
                                 color="#3B82F6"
                             />
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6 }}>
-                            <StatCard 
-                                title={t("validatedHours")}
-                                value={summaryInfo.total_duration_validated.toFixed(1)} 
-                                subtitle={t("validatedHoursSubtitle")}
-                                icon={<CheckCircle size={24} />}
-                                color="#10B981"
-                            />
-                        </Grid>
-                        <Grid size={{ xs: 12, sm: 6 }}>
-                            <StatCard 
+                            <StatCard
                                 title={t("labeledHours")}
-                                value={summaryInfo.total_duration_labeled.toFixed(1)} 
+                                value={summaryInfo.total_duration_labeled.toFixed(1)}
                                 subtitle={t("labeledHoursSubtitle")}
                                 icon={<Clock size={24} />}
                                 color="#F59E0B"
                             />
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6 }}>
-                            <StatCard 
+                            <StatCard
+                                title={t("totalUnlabeled")}
+                                value={summaryInfo.total_unlabeled.toLocaleString()}
+                                subtitle={t("unlabeledSubtitle", { percent: summaryInfo.sumofUnLabeled.toFixed(1) })}
+                                icon={<CircleDashed size={24} />}
+                                color="#EF4444"
+                            />
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                            <StatCard
+                                title={t("unlabeledHours")}
+                                value={summaryInfo.total_duration_unlabeled.toFixed(1)}
+                                subtitle={t("unlabeledHoursSubtitle")}
+                                icon={<Hourglass size={24} />}
+                                color="#F97316"
+                            />
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                            <StatCard
                                 title={t("totalValidated")}
-                                value={summaryInfo.total_validated?.toLocaleString() || "0"} 
+                                value={summaryInfo.total_validated?.toLocaleString() || "0"}
                                 subtitle={t("totalValidatedSubtitle")}
                                 icon={<ClipboardCheck size={24} />}
                                 color="#8B5CF6"
                             />
                         </Grid>
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                            <StatCard
+                                title={t("validatedHours")}
+                                value={summaryInfo.total_duration_validated.toFixed(1)}
+                                subtitle={t("validatedHoursSubtitle")}
+                                icon={<CheckCircle size={24} />}
+                                color="#10B981"
+                            />
+                        </Grid>
                     </Grid>
+                </Grid>
+
+                <Grid size={{ xs: 12 }}>
+                    <Paper
+                        elevation={0}
+                        sx={{
+                            p: { xs: 3, md: 4 },
+                            borderRadius: 4,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            background: 'linear-gradient(120deg, rgba(166,77,74,0.06) 0%, rgba(255,142,83,0.06) 100%)',
+                            display: 'flex',
+                            flexDirection: { xs: 'column', sm: 'row' },
+                            alignItems: { xs: 'flex-start', sm: 'center' },
+                            gap: 3,
+                        }}
+                    >
+                        <Box sx={{ display: 'flex', alignItems: 'center', minWidth: { sm: 220 } }}>
+                            <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: 'rgba(166,77,74,0.12)', color: '#A64D4A', mr: 2, display: 'flex' }}>
+                                <Layers size={24} />
+                            </Box>
+                            <Box>
+                                <Typography variant="h6" fontWeight={700} color="textPrimary">
+                                    {t("grandTotal")}
+                                </Typography>
+                                <Typography variant="body2" color="textSecondary">
+                                    {t("grandTotalHelp")}
+                                </Typography>
+                            </Box>
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: { xs: 4, sm: 6 }, flexWrap: 'wrap' }}>
+                            <Box>
+                                <Typography variant="h3" fontWeight={800} sx={{ background: 'linear-gradient(45deg, #A64D4A, #FF8E53)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                                    {grandTotalClips.toLocaleString()}
+                                </Typography>
+                                <Typography variant="body2" color="textSecondary" fontWeight={600}>
+                                    {t("totalClips")}
+                                </Typography>
+                            </Box>
+                            <Box>
+                                <Typography variant="h3" fontWeight={800} sx={{ background: 'linear-gradient(45deg, #A64D4A, #FF8E53)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                                    {grandTotalHours.toFixed(1)}
+                                </Typography>
+                                <Typography variant="body2" color="textSecondary" fontWeight={600}>
+                                    {t("totalHours")}
+                                </Typography>
+                            </Box>
+                        </Box>
+                    </Paper>
                 </Grid>
             </Grid>
         )}

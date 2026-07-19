@@ -3,7 +3,7 @@ import { useSession } from "next-auth/react"
 import { useState, useEffect, ChangeEvent, ReactNode, useCallback } from "react"
 import { Container, Typography, Paper, Grid, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Box, Chip, TextField, Button, FormControlLabel, Checkbox, Alert, TablePagination, CircularProgress } from "@mui/material"
 import { alpha } from "@mui/material/styles"
-import { CheckCircle, Mic, Clock, Activity, Edit3, Timer } from "lucide-react"
+import { CheckCircle, Mic, Clock, Activity, Edit3, Timer, Layers, CircleDashed, Hourglass } from "lucide-react"
 import axios from "axios"
 import Footer from "@/components/Sections/Footer"
 import { buildFileAccessUrl } from "@/lib/utils"
@@ -83,7 +83,11 @@ export default function MyLabelsPage() {
     validated_count: 0,
     hours_recorded: 0,
     hours_labeled: 0,
-    hours_validated: 0
+    hours_validated: 0,
+    uploaded_splices: 0,
+    unlabeled_splices: 0,
+    hours_uploaded: 0,
+    hours_unlabeled: 0
   })
   const [activity, setActivity] = useState<ActivityItem[]>([])
   const [activityPage, setActivityPage] = useState(0)
@@ -222,7 +226,11 @@ export default function MyLabelsPage() {
           validated_count: payload.validated_count ?? 0,
           hours_recorded: payload.hours_recorded ?? 0,
           hours_labeled: payload.hours_labeled ?? 0,
-          hours_validated: payload.hours_validated ?? 0
+          hours_validated: payload.hours_validated ?? 0,
+          uploaded_splices: payload.uploaded_splices ?? 0,
+          unlabeled_splices: payload.unlabeled_splices ?? 0,
+          hours_uploaded: payload.hours_uploaded ?? 0,
+          hours_unlabeled: payload.hours_unlabeled ?? 0
         })
       } catch (error) {
         console.error(error)
@@ -472,6 +480,50 @@ export default function MyLabelsPage() {
               value={stats.hours_validated.toFixed(2)}
               icon={<Activity size={28} />}
               color="#8B5CF6"
+            />
+          </Grid>
+        </Grid>
+
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" fontWeight={700} gutterBottom>
+          Your Uploads
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+          Every clip generated from the media you upload — including the segments no one has labeled yet.
+        </Typography>
+      </Box>
+
+        <Grid container spacing={3} sx={{ mb: 6 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <StatCard
+              title="Splices Generated"
+              value={stats.uploaded_splices}
+              icon={<Layers size={28} />}
+              color="#6366F1"
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <StatCard
+              title="Unlabeled Splices"
+              value={stats.unlabeled_splices}
+              icon={<CircleDashed size={28} />}
+              color="#F59E0B"
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <StatCard
+              title="Hours Uploaded"
+              value={stats.hours_uploaded.toFixed(2)}
+              icon={<Hourglass size={28} />}
+              color="#0EA5E9"
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <StatCard
+              title="Hours Unlabeled"
+              value={stats.hours_unlabeled.toFixed(2)}
+              icon={<Clock size={28} />}
+              color="#EAB308"
             />
           </Grid>
         </Grid>

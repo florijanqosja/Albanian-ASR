@@ -910,7 +910,7 @@ def get_user_stats(db: "Session", user_id: UUID):
     validated_q = db.query(_models.HighQualityLabeledSplice.duration).filter(_models.HighQualityLabeledSplice.validator_id == user_id)
     hours_validated = sum_duration(validated_q) / 3600.0
 
-    return {
+    stats = {
         "recorded_count": recorded_count,
         "labeled_count": labeled_count,
         "validated_count": validated_count,
@@ -918,6 +918,86 @@ def get_user_stats(db: "Session", user_id: UUID):
         "hours_labeled": round(hours_labeled, 2),
         "hours_validated": round(hours_validated, 2),
     }
+    stats.update(get_user_upload_stats(db, user_id))
+    return stats
+
+
+def get_user_upload_stats(db: "Session", user_id: UUID):
+    """
+    Aggregate splice generation metrics for the media a user has uploaded.
+
+    Splices are tied to an upload through `UploadRecord.display_name` == `Splice.name`
+    (the shared normalized video name), so this walks every splice queue for the
+    user's upload names and totals how many segments were generated versus how many
+    are still awaiting a label.
+
+    Parameters:
+        user_id (UUID): The user whose uploaded media should be aggregated.
+
+    Returns:
+        dict: A mapping with:
+            uploaded_splices (int): Total splices generated across all of the user's uploads.
+            unlabeled_splices (int): Generated splices that are still unlabeled.
+            hours_uploaded (float): Total duration of every generated splice, in hours.
+            hours_unlabeled (float): Duration of the unlabeled splices, in hours.
+    """
+    def _sum_duration(rows):
+        total = 0.0
+        for row in rows:
+            try:
+                total += float(row.duration)
+            except (ValueError, TypeError):
+                pass
+        return total
+
+    empty = {
+        "uploaded_splices": 0,
+        "unlabeled_splices": 0,
+        "hours_uploaded": 0.0,
+        "hours_unlabeled": 0.0,
+    }
+
+    upload_names = [
+        row.display_name
+        for row in (
+            db.query(_models.UploadRecord.display_name)
+            .filter(_models.UploadRecord.user_id == user_id)
+            .all()
+        )
+        if row.display_name
+    ]
+    names = list(set(upload_names))
+    if not names:
+        return empty
+
+    def _count_and_seconds(model, *extra_filters):
+        query = db.query(model.duration).filter(model.name.in_(names))
+        for extra in extra_filters:
+            query = query.filter(extra)
+        rows = query.all()
+        return len(rows), _sum_duration(rows)
+
+    unlabeled_c, unlabeled_s = _count_and_seconds(_models.Splice)
+    labeled_c, labeled_s = _count_and_seconds(_models.LabeledSplice)
+    validated_c, validated_s = _count_and_seconds(_models.HighQualityLabeledSplice)
+    processing_c, processing_s = _count_and_seconds(_models.SpliceBeingProcessed)
+    processing_unlabeled_c, processing_unlabeled_s = _count_and_seconds(
+        _models.SpliceBeingProcessed,
+        _models.SpliceBeingProcessed.status == "un_labeled",
+    )
+
+    generated_count = unlabeled_c + labeled_c + validated_c + processing_c
+    generated_seconds = unlabeled_s + labeled_s + validated_s + processing_s
+    still_unlabeled_count = unlabeled_c + processing_unlabeled_c
+    still_unlabeled_seconds = unlabeled_s + processing_unlabeled_s
+
+    return {
+        "uploaded_splices": generated_count,
+        "unlabeled_splices": still_unlabeled_count,
+        "hours_uploaded": round(generated_seconds / 3600.0, 2),
+        "hours_unlabeled": round(still_unlabeled_seconds / 3600.0, 2),
+    }
+
 
 def get_user_activity(db: "Session", user_id: UUID, page: int, page_size: int):
     """
