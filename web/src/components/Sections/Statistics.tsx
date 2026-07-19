@@ -85,12 +85,11 @@ export default function Statistics() {
   );
 
   const grandTotalClips = summaryInfo
-    ? summaryInfo.total_labeled + summaryInfo.total_unlabeled + summaryInfo.total_validated
+    ? (summaryInfo.total_labeled ?? 0) + (summaryInfo.total_unlabeled ?? 0) + (summaryInfo.total_validated ?? 0)
     : 0;
   const grandTotalHours = summaryInfo
-    ? summaryInfo.total_duration_labeled + summaryInfo.total_duration_unlabeled + summaryInfo.total_duration_validated
+    ? (summaryInfo.total_duration_labeled ?? 0) + (summaryInfo.total_duration_unlabeled ?? 0) + (summaryInfo.total_duration_validated ?? 0)
     : 0;
-
   return (
     <Box sx={{ py: 10, bgcolor: 'grey.50' }}>
       <Container maxWidth="lg">
