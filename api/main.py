@@ -1,5 +1,6 @@
 import asyncio
 import datetime as _dt
+import hashlib
 import io
 import json
 import logging
@@ -128,13 +129,35 @@ logger.info(f"Running in {'production' if IS_PRODUCTION else 'development'} mode
 logger.info(f"Static file directories: mp4={UPLOAD_DIR_MP4_ABS}, mp3={UPLOAD_DIR_MP3_ABS}, splices={SPLICES_DIR_ABS}")
 
 
+# Keep the normalized name usable as BOTH a directory component and a splice
+# filename stem. Filesystems cap a path component at 255 bytes; we leave headroom
+# for the "_{start}-{end}.wav" splice suffix too. Segmentation truncates the
+# on-disk filename as a backstop, but capping here keeps the DB name (the
+# load-bearing join key), the directory, and the filenames identical.
+_MAX_NAME_BYTES = 200
+
+
+def _cap_name_length(name: str) -> str:
+    """Shorten an over-long normalized name to fit the filesystem's per-component
+    limit, appending a short hash of the full name so distinct long titles that
+    share a prefix don't collapse onto the same directory. Short names are
+    returned unchanged."""
+    if len(name.encode("utf-8")) <= _MAX_NAME_BYTES:
+        return name
+    digest = hashlib.sha1(name.encode("utf-8")).hexdigest()[:8]
+    stem = name
+    while len(stem.encode("utf-8")) > _MAX_NAME_BYTES - 9:  # room for "_" + 8 hex
+        stem = stem[:-1]
+    return f"{stem.rstrip('._-')}_{digest}"
+
+
 def _normalize_video_name(video_name: str) -> str:
     """
     Normalize a user-provided media name for use as a directory component.
-    
+
     Parameters:
     	video_name (str): Media name to normalize.
-    
+
     Returns:
     	str: A sanitized, non-empty directory name with reserved recording names prefixed by "v_".
     """
@@ -145,7 +168,7 @@ def _normalize_video_name(video_name: str) -> str:
         normalized_name = f"upload_{uuid.uuid4().hex[:12]}"
     if normalized_name.startswith("recordings_"):
         normalized_name = f"v_{normalized_name}"
-    return normalized_name
+    return _cap_name_length(normalized_name)
 
 
 def _persist_media_file(
