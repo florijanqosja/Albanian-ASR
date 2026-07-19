@@ -8,10 +8,12 @@ import wave
 import numpy as np
 
 from api.services.segmentation import (
+    MAX_FILENAME_BYTES,
     SAMPLE_RATE,
     VAD_WINDOW,
     SegmentationConfig,
     SegmentationError,
+    build_splice_filename,
     build_utterances,
     decode_audio,
     energy_speech_probs,
@@ -168,6 +170,19 @@ class WavExportTests(unittest.TestCase):
             self.assertEqual(wav_file.getframerate(), SAMPLE_RATE)
             self.assertEqual(wav_file.getnframes(), len(samples))
 
+    def test_build_splice_filename_leaves_short_names_intact(self):
+        self.assertEqual(
+            build_splice_filename("Test_Video", 0, 1000),
+            "Test_Video_00000000-00001000.wav",
+        )
+
+    def test_build_splice_filename_truncates_over_long_names(self):
+        # A name that would overflow the 255-byte component limit is trimmed, but
+        # the "_{start}-{end}.wav" suffix is preserved so it stays unique.
+        filename = build_splice_filename("x" * 400, 234, 14806)
+        self.assertLessEqual(len(filename.encode("utf-8")), MAX_FILENAME_BYTES)
+        self.assertTrue(filename.endswith("_00000234-00014806.wav"))
+
 
 @unittest.skipUnless(_has_ffmpeg(), "ffmpeg not available")
 class SegmentAudioFileTests(unittest.TestCase):
@@ -244,6 +259,26 @@ class SegmentAudioFileTests(unittest.TestCase):
         for prev, cur in zip(segments, segments[1:]):
             self.assertLessEqual(prev.end_s, cur.start_s)
         # Only the exported wavs live in the output dir (it feeds the DB queue)
+        self.assertEqual(
+            sorted(os.listdir(self.output_dir)), sorted(s.filename for s in segments)
+        )
+
+    def test_over_long_name_is_truncated_to_fit_filesystem(self):
+        # A pathologically long title (e.g. a full audiobook chapter name) must not
+        # blow past the 255-byte filename limit and crash with [Errno 36].
+        long_name = "Perralla_e_car_salltanit_" * 12  # ~300 chars, > 255 bytes
+        audio = np.concatenate([
+            self._silence(2), self._noise_burst(3, seed=1), self._silence(2),
+        ])
+        input_path = self._write_input(audio)
+        segments = segment_audio_file(input_path, self.output_dir, long_name, self.config)
+
+        self.assertTrue(segments)
+        for segment in segments:
+            self.assertTrue(os.path.exists(segment.path))
+            self.assertLessEqual(len(segment.filename.encode("utf-8")), MAX_FILENAME_BYTES)
+            self.assertTrue(segment.filename.endswith(".wav"))
+        # On-disk names still match the returned Segment metadata (feeds the DB queue).
         self.assertEqual(
             sorted(os.listdir(self.output_dir)), sorted(s.filename for s in segments)
         )

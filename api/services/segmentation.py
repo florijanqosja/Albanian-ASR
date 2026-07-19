@@ -185,6 +185,33 @@ def write_wav(path: str, samples: np.ndarray, sample_rate: int = SAMPLE_RATE) ->
         wav_file.writeframes(pcm.tobytes())
 
 
+# Most filesystems (ext4/xfs/APFS) cap a single path COMPONENT at 255 bytes. Long
+# titles (e.g. full audiobook chapter names) overflow that once the
+# "_{start}-{end}.wav" suffix is appended, failing hard with
+# [Errno 36] File name too long. Only the DB `Splice.name` (the normalized video
+# name) is the load-bearing join key; the on-disk filename is stored as-written
+# and never re-parsed, so truncating just the name portion here is safe.
+MAX_FILENAME_BYTES = 255
+
+
+def build_splice_filename(base_name: str, start_ms: int, end_ms: int) -> str:
+    """Return the splice WAV filename, truncating an over-long name portion so the
+    whole component stays within the filesystem's byte limit (MAX_FILENAME_BYTES).
+
+    The ``_{start}-{end}.wav`` suffix is never trimmed, so filenames stay unique
+    within a video's directory even after the name is shortened. Short names are
+    returned unchanged.
+    """
+    suffix = f"_{start_ms:08d}-{end_ms:08d}.wav"
+    budget = MAX_FILENAME_BYTES - len(suffix.encode("utf-8"))
+    stem = base_name
+    # Trim whole characters (not bytes) until the UTF-8 encoding fits the budget,
+    # so we never split a multi-byte character.
+    while len(stem.encode("utf-8")) > budget:
+        stem = stem[:-1]
+    return f"{stem}{suffix}"
+
+
 class SileroOnnxVAD:
     """Minimal numpy/onnxruntime driver for the vendored Silero VAD model."""
 
@@ -526,7 +553,7 @@ def segment_audio_file(
 
         start_ms = int(round(start * 1000 / SAMPLE_RATE))
         end_ms = int(round(end * 1000 / SAMPLE_RATE))
-        filename = f"{base_name}_{start_ms:08d}-{end_ms:08d}.wav"
+        filename = build_splice_filename(base_name, start_ms, end_ms)
         path = os.path.join(output_dir, filename)
         try:
             write_wav(path, samples)

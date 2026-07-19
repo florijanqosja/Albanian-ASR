@@ -1,4 +1,6 @@
+import asyncio
 import datetime as _dt
+import hashlib
 import io
 import json
 import logging
@@ -82,6 +84,42 @@ DEFAULT_TERMS_CONTENT = os.getenv(
 SAMPLE_FILE_PATH = "sample_audio_njerez_dhe_fate_e2.mp3"
 DOCKER_SAMPLE_PATH = "/code/sample_audio_njerez_dhe_fate_e2.mp3"
 
+# Bound how many media files a single worker processes at once. Segmentation is CPU-bound
+# and each job commits a batch of splices (a DB connection), so unbounded concurrency
+# exhausted the SQLAlchemy pool under upload bursts. This limit is PER WORKER PROCESS, so
+# the effective global limit is PROCESSING_CONCURRENCY * (uvicorn --workers). Keep it <=
+# the engine pool_size (see api/database/database.py) so processing never forces overflow.
+# Clamp to >= 1: a value of 0 would make Semaphore.acquire() block forever, and a
+# non-numeric value would crash-loop the worker at import.
+try:
+    PROCESSING_CONCURRENCY = max(1, int(os.getenv("PROCESSING_CONCURRENCY", "2")))
+except ValueError:
+    PROCESSING_CONCURRENCY = 2
+
+# The limiter is built lazily on first use, inside the running event loop, on purpose:
+# on Python 3.9 an asyncio.Semaphore binds to its event loop at construction time, so
+# building it at import (no running loop) would bind to the wrong loop and raise
+# "got Future attached to a different loop" the instant the limit is first hit under load.
+# We also remember which loop it was built on and rebuild it if the running loop changes,
+# so a process that runs more than one event-loop lifecycle (e.g. tests spinning the app
+# up repeatedly) never awaits a semaphore bound to a dead loop.
+_processing_limiter: Optional["asyncio.Semaphore"] = None
+_processing_limiter_loop: Optional["asyncio.AbstractEventLoop"] = None
+
+
+def _get_processing_limiter() -> "asyncio.Semaphore":
+    """Return the per-worker media-processing concurrency limiter, creating it on first
+    use (and re-creating it if the running event loop has changed) so it always binds to
+    the live serving loop rather than an import-time or torn-down loop. Safe under
+    asyncio's single-threaded scheduling: the check-and-set has no await, so it cannot
+    race."""
+    global _processing_limiter, _processing_limiter_loop
+    loop = asyncio.get_running_loop()
+    if _processing_limiter is None or _processing_limiter_loop is not loop:
+        _processing_limiter = asyncio.Semaphore(PROCESSING_CONCURRENCY)
+        _processing_limiter_loop = loop
+    return _processing_limiter
+
 # In development, ensure directories exist. In production, entrypoint.sh handles this.
 if not IS_PRODUCTION:
     for directory in [UPLOAD_DIR_MP4, UPLOAD_DIR_MP3, SPLICES_DIR]:
@@ -91,13 +129,35 @@ logger.info(f"Running in {'production' if IS_PRODUCTION else 'development'} mode
 logger.info(f"Static file directories: mp4={UPLOAD_DIR_MP4_ABS}, mp3={UPLOAD_DIR_MP3_ABS}, splices={SPLICES_DIR_ABS}")
 
 
+# Keep the normalized name usable as BOTH a directory component and a splice
+# filename stem. Filesystems cap a path component at 255 bytes; we leave headroom
+# for the "_{start}-{end}.wav" splice suffix too. Segmentation truncates the
+# on-disk filename as a backstop, but capping here keeps the DB name (the
+# load-bearing join key), the directory, and the filenames identical.
+_MAX_NAME_BYTES = 200
+
+
+def _cap_name_length(name: str) -> str:
+    """Shorten an over-long normalized name to fit the filesystem's per-component
+    limit, appending a short hash of the full name so distinct long titles that
+    share a prefix don't collapse onto the same directory. Short names are
+    returned unchanged."""
+    if len(name.encode("utf-8")) <= _MAX_NAME_BYTES:
+        return name
+    digest = hashlib.sha1(name.encode("utf-8")).hexdigest()[:8]
+    stem = name
+    while len(stem.encode("utf-8")) > _MAX_NAME_BYTES - 9:  # room for "_" + 8 hex
+        stem = stem[:-1]
+    return f"{stem.rstrip('._-')}_{digest}"
+
+
 def _normalize_video_name(video_name: str) -> str:
     """
     Normalize a user-provided media name for use as a directory component.
-    
+
     Parameters:
     	video_name (str): Media name to normalize.
-    
+
     Returns:
     	str: A sanitized, non-empty directory name with reserved recording names prefixed by "v_".
     """
@@ -108,7 +168,7 @@ def _normalize_video_name(video_name: str) -> str:
         normalized_name = f"upload_{uuid.uuid4().hex[:12]}"
     if normalized_name.startswith("recordings_"):
         normalized_name = f"v_{normalized_name}"
-    return normalized_name
+    return _cap_name_length(normalized_name)
 
 
 def _persist_media_file(
@@ -240,6 +300,14 @@ async def _process_video_file(
 
     db = db_session or _services.SessionLocal()
     owns_session = db_session is None
+    # Track the splice files we write this run so the error path can report orphans left
+    # behind (defined here so it is always bound, even if we fail before segmenting).
+    segments = []
+
+    # Acquire the concurrency slot immediately before the try so the finally's
+    # release() is always paired with this acquire() (no line in between can raise).
+    limiter = _get_processing_limiter()
+    await limiter.acquire()
 
     try:
         if ext == ".mp4":
@@ -253,12 +321,13 @@ async def _process_video_file(
             video_name,
         )
         if not segments:
-            logger.warning(
-                f"No usable speech detected in {mp3_path}; no splices created for {video_name}"
-            )
+            # No speech -> nothing to label. Don't silently report success: a COMPLETED
+            # video with zero splices is indistinguishable from a real success in the
+            # upload-history stats. Route it through the ERROR path with a clear message.
+            raise ValueError(f"No usable speech detected in {mp3_path}")
 
-        for segment in segments:
-            create_splice_data = _schemas.SpliceCreate(
+        splice_payloads = [
+            _schemas.SpliceCreate(
                 name=video_name,
                 path=segment.path,
                 origin=safe_filename,
@@ -267,41 +336,64 @@ async def _process_video_file(
                 label="",
                 owner_id=owner_id,
             )
-            await _services.create_splice(splice=create_splice_data, db=db)
-
-        await _services.update_video_by_id(
+            for segment in segments
+        ]
+        # Persist the splices AND the COMPLETED statuses in one transaction (see
+        # persist_processing_success): all-or-nothing, so a failure can never leave orphan
+        # splices under an ERROR video nor flip a COMPLETED video. This also replaced the
+        # per-splice commits (one connection checkout/commit per segment, up to ~190) that
+        # were the source of the QueuePool exhaustion under concurrent uploads.
+        await _services.persist_processing_success(
+            db,
             video_id=video_id,
-            update_data={
+            video_update={
                 "mp3_path": mp3_path,
                 "to_mp3_status": "True",
                 "splice_status": "True",
                 "processing_status": MediaProcessingStatus.COMPLETED,
                 "processing_error": None,
             },
-            db=db,
+            splices=splice_payloads,
+            upload_record_id=upload_record_id,
         )
-
-        if upload_record_id is not None:
-            _services.set_upload_status(upload_record_id, MediaProcessingStatus.COMPLETED, db)
     except Exception as exc:
         logger.error(f"Video processing failed for video_id={video_id}: {exc}", exc_info=True)
-        await _services.update_video_by_id(
-            video_id=video_id,
-            update_data={
-                "processing_status": MediaProcessingStatus.ERROR,
-                "processing_error": str(exc),
-            },
-            db=db,
-        )
-        if upload_record_id is not None:
-            _services.set_upload_status(
-                upload_record_id,
-                MediaProcessingStatus.ERROR,
+        # A failed commit leaves the session in a pending-rollback state; clear it so the
+        # ERROR-status write below can run. Guard the rollback itself: if it raises (e.g.
+        # the DB connection is gone, the very thing most likely to have caused the failure)
+        # it must not mask `exc` or skip the ERROR write and leave the video IN_PROGRESS.
+        try:
+            db.rollback()
+        except Exception:
+            logger.error(f"Rollback failed for video_id={video_id}", exc_info=True)
+        # The splice .wav files written before the failed commit are now DB-less orphans.
+        # We deliberately do NOT delete them here: splice files live in the non-unique
+        # SPLICES_DIR/<video_name>/ dir under deterministic names ({name}_{startms}-{endms}.wav),
+        # so a concurrent or retried same-named upload can legitimately own the identical
+        # path — deleting by path could destroy another upload's *committed* audio. The
+        # orphans are harmless (no Splice row references them, so they never join into
+        # upload-history stats); reclaim them out-of-band with a GC that removes only files
+        # that no Splice row points to.
+        if segments:
+            logger.warning(
+                "Left %d orphan splice file(s) on disk for video_id=%s after failure; "
+                "reclaim via offline GC (see SPLICES_DIR/%s)",
+                len(segments), video_id, video_name,
+            )
+        try:
+            await _services.persist_processing_error(
                 db,
-                error_message=str(exc),
+                video_id=video_id,
+                error=str(exc),
+                upload_record_id=upload_record_id,
+            )
+        except Exception:
+            logger.error(
+                f"Failed to persist ERROR status for video_id={video_id}", exc_info=True
             )
         raise
     finally:
+        limiter.release()
         if owns_session:
             db.close()
 
