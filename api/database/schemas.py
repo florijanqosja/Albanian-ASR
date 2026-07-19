@@ -187,7 +187,7 @@ class TextSpliceUpdate(_pydantic.BaseModel):
 
 class TextSpliceRecordingBase(_pydantic.BaseModel):
     text_splice_id: UUID
-    recorded_splice_id: UUID
+    recorded_splice_id: Optional[UUID] = None
     name: Optional[str] = None
     path: str
     label: str

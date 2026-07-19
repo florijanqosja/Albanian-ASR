@@ -214,7 +214,10 @@ class TextSpliceRecording(_database.Base):
     __tablename__ = "text_splice_recordings"
     id = _uuid_pk()
     text_splice_id = _sql.Column(UUID(as_uuid=True), _sql.ForeignKey("text_splices.id"), nullable=False)
-    recorded_splice_id = _sql.Column(UUID(as_uuid=True), _sql.ForeignKey("labeled_splices.id"), nullable=False)
+    # Nullable: the referenced labeled splice is transient (it is deleted when it
+    # moves on to validation). The snapshot must survive, so this link is cleared
+    # rather than the row being cascade-deleted. See delete_labeled_splice.
+    recorded_splice_id = _sql.Column(UUID(as_uuid=True), _sql.ForeignKey("labeled_splices.id"), nullable=True)
     name = _sql.Column(_sql.String, nullable=True)
     path = _sql.Column(_sql.String, nullable=False)
     label = _sql.Column(_sql.String, nullable=False)
