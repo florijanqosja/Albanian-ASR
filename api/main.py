@@ -92,12 +92,14 @@ logger.info(f"Static file directories: mp4={UPLOAD_DIR_MP4_ABS}, mp3={UPLOAD_DIR
 
 
 def _normalize_video_name(video_name: str) -> str:
-    """Normalize a user-supplied media name into a safe directory component.
-
-    The normalized name becomes an on-disk directory under the static mounts,
-    so it must never contain path separators or dot-only names (traversal),
-    and must not collide with the reserved "recordings_" prefix used to tag
-    microphone submissions in user statistics.
+    """
+    Normalize a user-provided media name for use as a directory component.
+    
+    Parameters:
+    	video_name (str): Media name to normalize.
+    
+    Returns:
+    	str: A sanitized, non-empty directory name with reserved recording names prefixed by "v_".
     """
     normalized_name = str(video_name).replace(" ", "_")
     normalized_name = "".join(x for x in normalized_name if x.isalnum() or x in "._-")
@@ -114,7 +116,20 @@ def _persist_media_file(
     filename: str,
     file_content: bytes,
 ) -> Tuple[str, str, str, str, str, Optional[str]]:
-    """Save incoming media to disk and prepare derivative paths."""
+    """
+    Persist an MP4 or MP3 upload and determine its related media paths.
+    
+    Parameters:
+    	video_name (str): Name used to derive the media directory.
+    	filename (str): Original uploaded filename.
+    	file_content (bytes): Media data to write to disk.
+    
+    Returns:
+    	Tuple[str, str, str, str, str, Optional[str]]: Normalized name, sanitized filename, extension, stored file path, MP3 path, and MP4 path.
+    
+    Raises:
+    	HTTPException: If the filename extension is not `.mp4` or `.mp3`.
+    """
 
     normalized_name = _normalize_video_name(video_name)
     ext = os.path.splitext(filename)[1].lower()
@@ -150,7 +165,7 @@ def _convert_mp4_to_mp3(mp4_path: str, mp3_path: str) -> None:
     Convert an MP4 video file to an MP3 audio file.
     
     Raises:
-        HTTPException: if conversion fails; returns status code 500 with error details.
+        HTTPException: If conversion fails, with status code 500 and error details.
     """
     try:
         logger.info(f"Converting {mp4_path} to {mp3_path}")
@@ -212,14 +227,15 @@ async def _process_video_file(
     db_session: Optional[Session] = None,
 ) -> None:
     """
-    Process a stored media asset by converting video to MP3 (if needed), segmenting the audio into utterance splices, and updating related database records.
-
-    Performs conversion and segmentation work in background threads, creates one splice record per exported utterance, and updates the video's processing status and optional upload record.
-
+    Process a stored media asset, create audio splice records, and update processing statuses.
+    
     Parameters:
-        owner_id (Union[uuid.UUID, str]): Identifier of the user who owns the video; stored on created splice records.
-        upload_record_id (Optional[uuid.UUID]): If provided, the corresponding upload record's processing status will be updated.
-        db_session (Optional[Session]): If provided, this database session will be used; otherwise a new session is created and closed by the function.
+        owner_id (Union[uuid.UUID, str]): Identifier of the user who owns the created splice records.
+        upload_record_id (Optional[uuid.UUID]): Upload record whose status should be updated when processing completes or fails.
+        db_session (Optional[Session]): Database session to use; a session is created and closed when omitted.
+    
+    Raises:
+        Exception: Re-raises processing failures after recording the error status.
     """
 
     db = db_session or _services.SessionLocal()
@@ -1275,6 +1291,13 @@ async def get_summary(db: Session = Depends(_services.get_db)):
     # We can just execute them.
     
     # Helper to handle None result from sum
+    """
+    Summarize dataset duration and record counts by labeling stage.
+    
+    Returns:
+        _schemas.ResponseModel: A response containing total durations and record counts
+            for labeled, validated, and unlabeled audio.
+    """
     def get_sum(model, col):
         return db.query(func.sum(col.cast(_sql.Float))).scalar() or 0.0
     
@@ -1314,12 +1337,29 @@ async def export_dataset(
     format: str = Query("jsonl", pattern="^(jsonl|csv)$"),
     db: Session = Depends(_services.get_db),
 ):
+    """
+    Stream a labeled or validated dataset manifest in JSONL or CSV format.
+    
+    Parameters:
+        stage (str): Dataset stage to export: ``"validated"`` or ``"labeled"``.
+        format (str): Manifest format: ``"jsonl"`` or ``"csv"``.
+    
+    Returns:
+        StreamingResponse: A downloadable manifest containing audio paths and transcript labels.
+    """
     model = (
         _models.HighQualityLabeledSplice if stage == "validated" else _models.LabeledSplice
     )
     rows = db.query(model).order_by(model.created_at).all()
 
     def iter_lines():
+        """
+        Generate dataset manifest lines for the selected export format.
+        
+        Yields:
+            str: A JSONL or pipe-separated manifest line for each row with a non-empty
+                label.
+        """
         for row in rows:
             label = " ".join((row.label or "").split())
             if not label:

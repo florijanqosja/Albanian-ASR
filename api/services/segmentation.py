@@ -53,6 +53,16 @@ class SegmentationError(RuntimeError):
 
 
 def _env_float(name: str, default: float) -> float:
+    """
+    Read a floating-point setting from an environment variable.
+    
+    Parameters:
+    	name (str): Environment variable name.
+    	default (float): Value to use when the variable is unset or invalid.
+    
+    Returns:
+    	float: The parsed environment value, or `default` if parsing fails.
+    """
     try:
         return float(os.getenv(name, default))
     except (TypeError, ValueError):
@@ -83,12 +93,23 @@ class SegmentationConfig:
 
     @property
     def neg_threshold(self) -> float:
+        """Return the speech probability threshold used to end a detected speech region.
+        
+        Returns:
+            float: The configured negative threshold, or a value derived from the speech threshold.
+        """
         if self.vad_neg_threshold is not None:
             return self.vad_neg_threshold
         return max(self.vad_threshold - 0.15, 0.01)
 
     @classmethod
     def from_env(cls) -> "SegmentationConfig":
+        """
+        Create a segmentation configuration from environment variables, using defaults for unset or invalid numeric values.
+        
+        Returns:
+        	SegmentationConfig: Configuration populated from the supported `SEGMENTER_*` environment variables.
+        """
         return cls(
             backend=os.getenv("SEGMENTER_BACKEND", "silero").strip().lower(),
             model_path=os.getenv("SEGMENTER_VAD_MODEL_PATH", DEFAULT_MODEL_PATH),
@@ -120,7 +141,19 @@ class Segment:
 
 
 def decode_audio(input_path: str, sample_rate: int = SAMPLE_RATE) -> np.ndarray:
-    """Decode any ffmpeg-readable media file to mono float32 PCM in [-1, 1]."""
+    """
+    Decode a media file to mono float32 PCM samples.
+    
+    Parameters:
+    	input_path (str): Path to the input media file.
+    	sample_rate (int): Target audio sample rate in Hz.
+    
+    Returns:
+    	np.ndarray: Decoded mono audio samples in the range [-1, 1].
+    
+    Raises:
+    	SegmentationError: If the input file is missing, ffmpeg is unavailable or fails, or no audio samples are decoded.
+    """
     if not os.path.exists(input_path):
         raise SegmentationError(f"Input file not found: {input_path}")
     cmd = [
@@ -156,6 +189,14 @@ class SileroOnnxVAD:
     """Minimal numpy/onnxruntime driver for the vendored Silero VAD model."""
 
     def __init__(self, model_path: str):
+        """Initialize the Silero VAD inference session for the specified model.
+        
+        Parameters:
+        	model_path (str): Path to the Silero VAD ONNX model.
+        
+        Raises:
+        	SegmentationError: If the model file does not exist.
+        """
         import onnxruntime  # deferred: keep module import light for tests/workers
 
         if not os.path.exists(model_path):
@@ -170,7 +211,17 @@ class SileroOnnxVAD:
         self._lock = threading.Lock()
 
     def speech_probs(self, audio: np.ndarray) -> np.ndarray:
-        """Per-window speech probability; window i covers samples [i*512, (i+1)*512)."""
+        """
+        Estimate speech probability for each fixed-size audio window.
+        
+        Parameters:
+            audio (np.ndarray): Audio samples to analyze.
+        
+        Returns:
+            np.ndarray: Speech probabilities, one for each 512-sample window. The final
+                window is zero-padded when the audio length is not an exact multiple of
+                the window size.
+        """
         state = np.zeros((2, 1, 128), dtype=np.float32)
         context = np.zeros(VAD_CONTEXT, dtype=np.float32)
         sr = np.array(SAMPLE_RATE, dtype=np.int64)
@@ -197,6 +248,14 @@ _vad_init_lock = threading.Lock()
 
 
 def _get_vad(model_path: str) -> SileroOnnxVAD:
+    """Return the shared Silero VAD instance for the specified model path.
+    
+    Parameters:
+    	model_path (str): Path to the Silero ONNX model.
+    
+    Returns:
+    	SileroOnnxVAD: The initialized VAD instance for the model path.
+    """
     global _vad_instance
     with _vad_init_lock:
         if _vad_instance is None or _vad_instance.model_path != model_path:
@@ -206,11 +265,15 @@ def _get_vad(model_path: str) -> SileroOnnxVAD:
 
 
 def energy_speech_probs(audio: np.ndarray) -> np.ndarray:
-    """Adaptive energy-based pseudo speech probabilities (fallback backend).
-
-    Unlike the fixed -20 dBFS threshold this replaces, the threshold adapts to
-    the recording's own noise floor, with an absolute floor so pure silence is
-    never classified as speech.
+    """
+    Estimate speech activity from short-term audio energy using an adaptive threshold.
+    
+    Parameters:
+        audio (np.ndarray): Audio samples from which to estimate speech activity.
+    
+    Returns:
+        np.ndarray: Smoothed activity values for each analysis window, where higher
+            values indicate greater speech likelihood.
     """
     n_windows = math.ceil(len(audio) / VAD_WINDOW)
     padded = np.pad(audio, (0, n_windows * VAD_WINDOW - len(audio)))
@@ -234,13 +297,16 @@ def probs_to_speech_regions(
     total_samples: int,
     config: SegmentationConfig,
 ) -> List[dict]:
-    """Turn per-window speech probabilities into padded speech regions.
-
-    Implements the hysteresis logic of silero-vad's get_speech_timestamps:
-    trigger at `vad_threshold`, release only after `min_silence_ms` below
-    `neg_threshold`, drop bursts shorter than `min_speech_ms`, then pad region
-    edges by `speech_pad_ms` without overlapping neighbours.
-    Regions are expressed in samples.
+    """
+    Convert per-window speech probabilities into padded speech regions.
+    
+    Parameters:
+        probs (np.ndarray): Speech probabilities for consecutive VAD windows.
+        total_samples (int): Total number of audio samples used to bound the regions.
+        config (SegmentationConfig): Threshold and timing settings for speech detection.
+    
+    Returns:
+        List[dict]: Regions with integer ``start`` and ``end`` sample indices.
     """
     threshold = config.vad_threshold
     neg_threshold = config.neg_threshold
@@ -297,11 +363,18 @@ def _split_at_least_speechy(
     max_samples: int,
     min_samples: int,
 ) -> List[dict]:
-    """Split an overlong region at the lowest-probability window near each cut.
-
-    Mirrors what WhisperX/pyannote do for regions the VAD never released:
-    rather than cutting mid-word at a fixed offset, cut where the model is
-    least confident speech is happening.
+    """
+    Split an overlong speech region into utterance-sized pieces at low-probability boundaries.
+    
+    Parameters:
+        start (int): Start sample index of the region.
+        end (int): End sample index of the region.
+        probs (np.ndarray): Speech probabilities for successive VAD windows.
+        max_samples (int): Maximum allowed length of each piece in samples.
+        min_samples (int): Minimum required length of each piece in samples.
+    
+    Returns:
+        List[dict]: Non-overlapping regions with ``start`` and ``end`` sample indices.
     """
     pieces: List[dict] = []
     cursor = start
@@ -368,6 +441,18 @@ def build_utterances(
 
 
 def _segment_metrics(samples: np.ndarray, probs: np.ndarray, start: int, end: int) -> dict:
+    """
+    Compute quality metrics for an audio segment.
+    
+    Parameters:
+    	samples (np.ndarray): Audio samples in the segment.
+    	probs (np.ndarray): Speech probabilities for the audio.
+    	start (int): Segment start sample index.
+    	end (int): Segment end sample index.
+    
+    Returns:
+    	dict: Metrics containing RMS level in dBFS, clipping ratio, and average speech probability.
+    """
     rms = float(np.sqrt(np.mean(samples.astype(np.float64) ** 2)))
     rms_dbfs = 20.0 * math.log10(rms + 1e-10)
     clipping_ratio = float(np.mean(np.abs(samples) >= 0.999))

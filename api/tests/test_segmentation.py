@@ -188,11 +188,30 @@ class SegmentAudioFileTests(unittest.TestCase):
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def _write_input(self, samples, name="input.wav"):
+        """Write float32 audio samples to a temporary WAV input file.
+        
+        Parameters:
+        	samples: Audio samples to write.
+        	name (str): Output filename within the temporary directory.
+        
+        Returns:
+        	str: Path to the written WAV file.
+        """
         path = os.path.join(self.temp_dir, name)
         write_wav(path, samples.astype(np.float32))
         return path
 
     def _noise_burst(self, seconds, amplitude=0.3, seed=0):
+        """Generate a deterministic Gaussian noise waveform for the specified duration.
+        
+        Parameters:
+            seconds (float): Duration of the waveform in seconds.
+            amplitude (float): Scale applied to the generated noise.
+            seed (int): Seed for the random number generator.
+        
+        Returns:
+            numpy.ndarray: Float waveform containing Gaussian noise samples.
+        """
         rng = np.random.default_rng(seed)
         return amplitude * rng.standard_normal(int(seconds * SAMPLE_RATE))
 
