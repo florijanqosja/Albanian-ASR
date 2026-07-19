@@ -72,9 +72,6 @@ jobs:
           ENVIRONMENT=production
           EOF
 
-      - name: Create Audio Directories
-        run: |
-          mkdir -p audio_files/mp3 audio_files/mp4 audio_files/splices
 
       - name: Stop Existing Containers
         run: |
