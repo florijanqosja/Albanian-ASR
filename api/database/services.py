@@ -971,12 +971,14 @@ def get_user_upload_stats(db: "Session", user_id: UUID):
         return empty
 
     def _count_and_seconds(model, *extra_filters):
-        query = db.query(model.duration).filter(model.name.in_(names))
+        query = db.query(model.duration).filter(
+            model.owner_id == user_id,
+            model.name.in_(names)
+        )
         for extra in extra_filters:
             query = query.filter(extra)
         rows = query.all()
         return len(rows), _sum_duration(rows)
-
     unlabeled_c, unlabeled_s = _count_and_seconds(_models.Splice)
     labeled_c, labeled_s = _count_and_seconds(_models.LabeledSplice)
     validated_c, validated_s = _count_and_seconds(_models.HighQualityLabeledSplice)
