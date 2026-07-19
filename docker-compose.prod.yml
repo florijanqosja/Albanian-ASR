@@ -52,10 +52,15 @@ services:
       context: .
       dockerfile: ./api/dockerfiles/Dockerfile.prod
     restart: always
+    # Audio assets MUST live in named volumes, not checkout-relative bind mounts.
+    # The deploy runs `actions/checkout` (git clean -ffdx) which wipes the
+    # gitignored ./audio_files tree on every push, orphaning splice DB rows.
+    # Named volumes are docker-managed and survive `checkout`, `compose down`,
+    # and rebuilds - the same guarantee postgres_data_prod already relies on.
     volumes:
-      - ./audio_files/mp3:/code/mp3
-      - ./audio_files/mp4:/code/mp4
-      - ./audio_files/splices:/code/splices
+      - audio_mp3_prod:/code/mp3
+      - audio_mp4_prod:/code/mp4
+      - audio_splices_prod:/code/splices
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -144,5 +149,10 @@ networks:
 # ============================================
 # Volumes
 # ============================================
+# All persistent state uses named volumes so it survives deploys, which run
+# `actions/checkout` (git clean) against the repo working tree.
 volumes:
   postgres_data_prod:
+  audio_mp3_prod:
+  audio_mp4_prod:
+  audio_splices_prod:
