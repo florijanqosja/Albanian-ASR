@@ -688,7 +688,7 @@ async def list_upload_history(
 ):
     total, records = _services.get_user_upload_records(db, current_user.id, page, page_size)
     names = [record.display_name for record in records if record.display_name]
-    stats_map = _services.get_splice_stats_for_video_names(db, names)
+    stats_map = _services.get_splice_stats_for_video_names(db, current_user.id, names)
 
     items = []
     for record in records:

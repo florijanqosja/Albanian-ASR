@@ -149,9 +149,17 @@
     "validatedHours": "Orë të validuara",
     "labeledHours": "Orë të etiketuara",
     "totalValidated": "Totali i validimeve",
+    "totalUnlabeled": "Totali i paetiketuara",
+    "unlabeledHours": "Orë të paetiketuara",
+    "grandTotal": "Totali i përgjithshëm",
+    "grandTotalHelp": "I gjithë audio i mbledhur në çdo fazë.",
+    "totalClips": "Klipet totale",
+    "totalHours": "Orë totale",
     "labeledSubtitle": "{percent}% e klipëve gjithsej",
+    "unlabeledSubtitle": "{percent}% e klipëve gjithsej",
     "validatedHoursSubtitle": "Orë audio me cilësi të lartë",
     "labeledHoursSubtitle": "Orë të transkriptuara",
+    "unlabeledHoursSubtitle": "Orë në pritje për transkriptim",
     "totalValidatedSubtitle": "Klipet totale të validuara"
   },
   "footer": {

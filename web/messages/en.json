@@ -149,9 +149,17 @@
     "validatedHours": "Validated Hours",
     "labeledHours": "Labeled Hours",
     "totalValidated": "Total Validated",
+    "totalUnlabeled": "Total Unlabeled",
+    "unlabeledHours": "Unlabeled Hours",
+    "grandTotal": "Grand Total",
+    "grandTotalHelp": "All audio collected across every stage.",
+    "totalClips": "Total Clips",
+    "totalHours": "Total Hours",
     "labeledSubtitle": "{percent}% of total clips",
+    "unlabeledSubtitle": "{percent}% of total clips",
     "validatedHoursSubtitle": "Hours of high-quality audio",
     "labeledHoursSubtitle": "Total hours transcribed",
+    "unlabeledHoursSubtitle": "Hours awaiting transcription",
     "totalValidatedSubtitle": "Total clips validated"
   },
   "footer": {
