@@ -1,6 +1,10 @@
 librosa==0.10.0.post2
 moviepy==1.0.3
 numpy==1.23.5
+# Silero VAD inference for utterance segmentation (model vendored in api/assets).
+# onnxruntime >=1.20 drops Python 3.9 wheels, hence the marker split.
+onnxruntime>=1.16.1,<1.20; python_version < "3.10"
+onnxruntime>=1.16.1; python_version >= "3.10"
 protobuf==4.23.2
 pydub==0.25.1
 pytube==15.0.0

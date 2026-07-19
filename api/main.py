@@ -1,10 +1,10 @@
 import datetime as _dt
 import io
+import json
 import logging
 import math
 import os
 import uuid
-import wave
 import fcntl
 from contextlib import asynccontextmanager
 from typing import Optional, Tuple, Union
@@ -20,13 +20,12 @@ from fastapi import (
     UploadFile,
     Request,
 )
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.concurrency import run_in_threadpool
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from moviepy.editor import VideoFileClip
 from pydub import AudioSegment
-from pydub.silence import split_on_silence, detect_silence
 from sqlalchemy.orm import Session
 from sqlalchemy import func, select
 import sqlalchemy as _sql
@@ -36,6 +35,7 @@ from .database import services as _services
 from .database import models as _models
 from .database.enums import MediaProcessingStatus
 from .routers import auth, users, support, consents
+from .services import segmentation as _segmentation
 from .utils.paths import (
     BASE_DIR,
     IS_PRODUCTION,
@@ -67,7 +67,6 @@ logger = logging.getLogger(__name__)
 
 # Constants - Use absolute paths in production (Docker), relative in development
 API_ROOT_PATH = os.getenv("API_ROOT_PATH", "")
-MIN_SPLICE_DURATION_MS = int(os.getenv("MIN_SPLICE_DURATION_MS", "30000"))
 DEFAULT_TEXT_SPLICE_PROMPTS = [f"sample{i}" for i in range(1, 11)]
 DEFAULT_CONSENT_VERSION = os.getenv("DEFAULT_CONSENT_VERSION", "2025-12-19")
 DEFAULT_CONSENT_EFFECTIVE_DATE = os.getenv("DEFAULT_CONSENT_EFFECTIVE_DATE", "2025-12-19")
@@ -92,14 +91,47 @@ logger.info(f"Running in {'production' if IS_PRODUCTION else 'development'} mode
 logger.info(f"Static file directories: mp4={UPLOAD_DIR_MP4_ABS}, mp3={UPLOAD_DIR_MP3_ABS}, splices={SPLICES_DIR_ABS}")
 
 
+def _normalize_video_name(video_name: str) -> str:
+    """
+    Normalize a user-provided media name for use as a directory component.
+    
+    Parameters:
+    	video_name (str): Media name to normalize.
+    
+    Returns:
+    	str: A sanitized, non-empty directory name with reserved recording names prefixed by "v_".
+    """
+    normalized_name = str(video_name).replace(" ", "_")
+    normalized_name = "".join(x for x in normalized_name if x.isalnum() or x in "._-")
+    normalized_name = normalized_name.strip("._-")
+    if not normalized_name:
+        normalized_name = f"upload_{uuid.uuid4().hex[:12]}"
+    if normalized_name.startswith("recordings_"):
+        normalized_name = f"v_{normalized_name}"
+    return normalized_name
+
+
 def _persist_media_file(
     video_name: str,
     filename: str,
     file_content: bytes,
 ) -> Tuple[str, str, str, str, str, Optional[str]]:
-    """Save incoming media to disk and prepare derivative paths."""
+    """
+    Persist an MP4 or MP3 upload and determine its related media paths.
+    
+    Parameters:
+    	video_name (str): Name used to derive the media directory.
+    	filename (str): Original uploaded filename.
+    	file_content (bytes): Media data to write to disk.
+    
+    Returns:
+    	Tuple[str, str, str, str, str, Optional[str]]: Normalized name, sanitized filename, extension, stored file path, MP3 path, and MP4 path.
+    
+    Raises:
+    	HTTPException: If the filename extension is not `.mp4` or `.mp3`.
+    """
 
-    normalized_name = str(video_name).replace(" ", "_")
+    normalized_name = _normalize_video_name(video_name)
     ext = os.path.splitext(filename)[1].lower()
     if ext not in [".mp4", ".mp3"]:
         raise HTTPException(status_code=400, detail="Invalid document type. Only .mp4 and .mp3 are supported.")
@@ -128,23 +160,12 @@ def _persist_media_file(
 
     return normalized_name, safe_filename, ext, file_location, mp3_path, mp4_path
 
-def _get_wav_duration(wav_path: str) -> float:
-    """Calculates the duration of a WAV file in seconds."""
-    try:
-        with wave.open(wav_path, 'rb') as wav_file:
-            frames = wav_file.getnframes()
-            rate = wav_file.getframerate()
-            return frames / float(rate)
-    except Exception as e:
-        logger.error(f"Error calculating duration for {wav_path}: {e}")
-        return 0.0
-
 def _convert_mp4_to_mp3(mp4_path: str, mp3_path: str) -> None:
     """
     Convert an MP4 video file to an MP3 audio file.
     
     Raises:
-        HTTPException: if conversion fails; returns status code 500 with error details.
+        HTTPException: If conversion fails, with status code 500 and error details.
     """
     try:
         logger.info(f"Converting {mp4_path} to {mp3_path}")
@@ -194,58 +215,6 @@ def _store_recorded_audio(user_id: Union[uuid.UUID, str], audio_bytes: bytes) ->
 
     return file_path, filename, duration_seconds
 
-def _splice_audio(
-    file_path: str,
-    video_name: str,
-    min_silence_len: int = 700,
-    silence_thresh: int = -20,
-    keep_silence: int = 150,
-    min_chunk_duration_ms: int = MIN_SPLICE_DURATION_MS,
-) -> None:
-    """Splits audio into chunks based on silence and enforces a minimum duration."""
-    try:
-        logger.info(f"Splicing audio for {video_name}")
-        output_dir = os.path.join(SPLICES_DIR, video_name)
-        os.makedirs(output_dir, exist_ok=True)
-        
-        audio = AudioSegment.from_file(file_path)
-        
-        silences = detect_silence(
-            audio,
-            min_silence_len=min_silence_len,
-            silence_thresh=silence_thresh
-        )
-        
-        last_split = 0
-        
-        for start, end in silences:
-            mid_point = int((start + end) / 2)
-            
-            current_chunk_duration = mid_point - last_split
-            remaining_duration = len(audio) - mid_point
-            
-            if current_chunk_duration >= min_chunk_duration_ms:
-                if remaining_duration < min_chunk_duration_ms:
-                    continue
-                
-                chunk = audio[last_split:mid_point]
-                chunk_filename = f"videoplaybackmp4_{last_split/1000}-{mid_point/1000}.wav"
-                chunk_path = os.path.join(output_dir, chunk_filename)
-                chunk.export(chunk_path, format="wav")
-                
-                last_split = mid_point
-        
-        # Export final chunk
-        final_chunk = audio[last_split:]
-        final_filename = f"videoplaybackmp4_{last_split/1000}-{len(audio)/1000}.wav"
-        final_path = os.path.join(output_dir, final_filename)
-        final_chunk.export(final_path, format="wav")
-            
-    except Exception as e:
-        logger.error(f"Error splicing audio: {e}")
-        raise HTTPException(status_code=500, detail=f"Audio splicing failed: {str(e)}")
-
-
 async def _process_video_file(
     video_id: uuid.UUID,
     video_name: str,
@@ -258,14 +227,15 @@ async def _process_video_file(
     db_session: Optional[Session] = None,
 ) -> None:
     """
-    Process a stored media asset by converting video to MP3 (if needed), splitting the audio into splices, and updating related database records.
-    
-    Performs conversion and splicing work in background threads, creates splice records for each generated WAV file, and updates the video's processing status and optional upload record.
+    Process a stored media asset, create audio splice records, and update processing statuses.
     
     Parameters:
-        owner_id (Union[uuid.UUID, str]): Identifier of the user who owns the video; stored on created splice records.
-        upload_record_id (Optional[uuid.UUID]): If provided, the corresponding upload record's processing status will be updated.
-        db_session (Optional[Session]): If provided, this database session will be used; otherwise a new session is created and closed by the function.
+        owner_id (Union[uuid.UUID, str]): Identifier of the user who owns the created splice records.
+        upload_record_id (Optional[uuid.UUID]): Upload record whose status should be updated when processing completes or fails.
+        db_session (Optional[Session]): Database session to use; a session is created and closed when omitted.
+    
+    Raises:
+        Exception: Re-raises processing failures after recording the error status.
     """
 
     db = db_session or _services.SessionLocal()
@@ -275,24 +245,29 @@ async def _process_video_file(
         if ext == ".mp4":
             await run_in_threadpool(_convert_mp4_to_mp3, original_path, mp3_path)
 
-        await run_in_threadpool(_splice_audio, mp3_path, video_name)
-
         splices_output_dir = os.path.join(SPLICES_DIR, video_name)
-        if os.path.exists(splices_output_dir):
-            for splice_file in os.listdir(splices_output_dir):
-                splice_path = os.path.join(splices_output_dir, splice_file)
-                duration = await run_in_threadpool(_get_wav_duration, splice_path)
+        segments = await run_in_threadpool(
+            _segmentation.segment_audio_file,
+            mp3_path,
+            splices_output_dir,
+            video_name,
+        )
+        if not segments:
+            logger.warning(
+                f"No usable speech detected in {mp3_path}; no splices created for {video_name}"
+            )
 
-                create_splice_data = _schemas.SpliceCreate(
-                    name=video_name,
-                    path=splice_path,
-                    origin=safe_filename,
-                    duration=str(duration),
-                    validation="0",
-                    label="",
-                    owner_id=owner_id,
-                )
-                await _services.create_splice(splice=create_splice_data, db=db)
+        for segment in segments:
+            create_splice_data = _schemas.SpliceCreate(
+                name=video_name,
+                path=segment.path,
+                origin=safe_filename,
+                duration=str(round(segment.duration_s, 3)),
+                validation="0",
+                label="",
+                owner_id=owner_id,
+            )
+            await _services.create_splice(splice=create_splice_data, db=db)
 
         await _services.update_video_by_id(
             video_id=video_id,
@@ -1316,6 +1291,13 @@ async def get_summary(db: Session = Depends(_services.get_db)):
     # We can just execute them.
     
     # Helper to handle None result from sum
+    """
+    Summarize dataset duration and record counts by labeling stage.
+    
+    Returns:
+        _schemas.ResponseModel: A response containing total durations and record counts
+            for labeled, validated, and unlabeled audio.
+    """
     def get_sum(model, col):
         return db.query(func.sum(col.cast(_sql.Float))).scalar() or 0.0
     
@@ -1335,6 +1317,77 @@ async def get_summary(db: Session = Depends(_services.get_db)):
         status="success",
         data=data,
         message="Dataset summary retrieved"
+    )
+
+
+@app.get(
+    "/dataset/export",
+    tags=["Dataset Insights"],
+    summary="Export the labeled corpus as a training manifest",
+    description=(
+        "Streams the labeled or validated corpus as a training-ready manifest. "
+        "`format=jsonl` emits one NeMo-style JSON object per line "
+        "(`audio_filepath`, `duration`, `text`); `format=csv` emits LJSpeech-style "
+        "pipe-separated rows (`file_name|transcription|normalized_transcription`, "
+        "no header, file_name without extension) as consumed by the training notebooks."
+    ),
+)
+async def export_dataset(
+    stage: str = Query("validated", pattern="^(validated|labeled)$"),
+    format: str = Query("jsonl", pattern="^(jsonl|csv)$"),
+    db: Session = Depends(_services.get_db),
+):
+    """
+    Stream a labeled or validated dataset manifest in JSONL or CSV format.
+    
+    Parameters:
+        stage (str): Dataset stage to export: ``"validated"`` or ``"labeled"``.
+        format (str): Manifest format: ``"jsonl"`` or ``"csv"``.
+    
+    Returns:
+        StreamingResponse: A downloadable manifest containing audio paths and transcript labels.
+    """
+    model = (
+        _models.HighQualityLabeledSplice if stage == "validated" else _models.LabeledSplice
+    )
+    rows = db.query(model).order_by(model.created_at).all()
+
+    def iter_lines():
+        """
+        Generate dataset manifest lines for the selected export format.
+        
+        Yields:
+            str: A JSONL or pipe-separated manifest line for each row with a non-empty
+                label.
+        """
+        for row in rows:
+            label = " ".join((row.label or "").split())
+            if not label:
+                continue
+            if format == "jsonl":
+                try:
+                    duration = round(float(row.duration), 3)
+                except (TypeError, ValueError):
+                    duration = None
+                yield json.dumps(
+                    {
+                        "audio_filepath": get_public_path(row.path, include_version=False),
+                        "duration": duration,
+                        "text": label,
+                    },
+                    ensure_ascii=False,
+                ) + "\n"
+            else:
+                file_name = os.path.splitext(os.path.basename(row.path or ""))[0]
+                clean = label.replace("|", " ")
+                yield f"{file_name}|{clean}|{clean.lower()}\n"
+
+    extension = "jsonl" if format == "jsonl" else "csv"
+    media_type = "application/x-ndjson" if format == "jsonl" else "text/csv"
+    return StreamingResponse(
+        iter_lines(),
+        media_type=media_type,
+        headers={"Content-Disposition": f"attachment; filename=dataset_{stage}.{extension}"},
     )
 
 

@@ -12,6 +12,26 @@ This project is an AI-based transcription tool for the Albanian language. It inc
 - User-friendly interface to label and validate speech data.
 - Dataset management tools.
 
+## Utterance Segmentation
+
+Uploaded media is segmented into labeling-ready utterances by
+`api/services/segmentation.py`:
+
+1. Audio is decoded to 16 kHz mono via ffmpeg.
+2. Speech is detected with [Silero VAD](https://github.com/snakers4/silero-vad)
+   (ONNX model vendored in `api/assets/`, runs on CPU via onnxruntime — no
+   torch dependency), so music, jingles, and silence never enter the labeling
+   queue.
+3. Speech regions are assembled into 1–15 s utterances (short regions merged
+   across small pauses, overlong regions split at the least-speech-like frame).
+4. Near-silent, clipped, or mostly non-speech segments are rejected.
+5. Each utterance is exported as 16 kHz mono 16-bit PCM WAV — the exact format
+   the training pipeline consumes.
+
+Tuning knobs are environment variables documented in `.env.example`
+(`SEGMENTER_*`). The labeled corpus can be exported as a training manifest via
+`GET /dataset/export` (NeMo-style JSONL or LJSpeech-style CSV).
+
 ## Project Structure
 
 - `api/`: FastAPI backend service.
