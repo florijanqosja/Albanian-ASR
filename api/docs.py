@@ -48,7 +48,10 @@ TAGS_METADATA = [
     },
     {
         "name": "Video Intake",
-        "description": "Endpoints that ingest long-form media, convert to MP3, splice, and seed queues.",
+        "description": (
+            "Endpoints that ingest long-form media, convert to MP3, segment speech into "
+            "utterances with VAD, and seed queues."
+        ),
     },
     {
         "name": "Labeling Queue",
@@ -68,7 +71,10 @@ TAGS_METADATA = [
     },
     {
         "name": "Dataset Insights",
-        "description": "Operational metrics covering throughput, durations, and splice counts per stage.",
+        "description": (
+            "Operational metrics covering throughput, durations, and splice counts per stage, "
+            "plus training-ready dataset manifest exports."
+        ),
     },
     {
         "name": "Operational Utilities",
