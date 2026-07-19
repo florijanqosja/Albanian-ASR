@@ -18,12 +18,24 @@ if TYPE_CHECKING:
 def _add_tables():
     """
     Ensure the PostgreSQL pgcrypto extension exists and create all database tables from the module metadata.
-    
+
     This initializes database schema by creating the "pgcrypto" extension if it is missing, then invoking the SQLAlchemy metadata to create all configured tables.
     """
     with _database.engine.begin() as conn:
         conn.execute(_sql.text('CREATE EXTENSION IF NOT EXISTS "pgcrypto"'))
-    return _database.Base.metadata.create_all(bind=_database.engine)
+    _database.Base.metadata.create_all(bind=_database.engine)
+    # Idempotent schema patch (this project has no migration tooling — schema is
+    # create_all only). Older prod databases created
+    # text_splice_recordings.recorded_splice_id as NOT NULL, which blocks deleting a
+    # labeled splice when it advances to validation while its recording snapshot is
+    # preserved. DROP NOT NULL is a no-op once already nullable.
+    with _database.engine.begin() as conn:
+        conn.execute(
+            _sql.text(
+                "ALTER TABLE IF EXISTS text_splice_recordings "
+                "ALTER COLUMN recorded_splice_id DROP NOT NULL"
+            )
+        )
 
 SessionLocal = _database.SessionLocal
 
@@ -395,12 +407,12 @@ def set_upload_status(
 async def delete_labeled_splice(splice_id: UUID, db: "Session"):
     """
     Delete a labeled splice and preserve any referencing text splice recordings.
-    
-    Removes the LabeledSplice with the given `splice_id`. For each TextSplice that referenced the deleted splice, a TextSpliceRecording snapshot is created if one does not already exist, and the TextSplice's recorded_splice_id is cleared and marked as updated.
-    
+
+    Removes the LabeledSplice with the given `splice_id`. For each TextSplice that referenced the deleted splice, a TextSpliceRecording snapshot is created if one does not already exist, and the TextSplice's recorded_splice_id is cleared and marked as updated. Any existing TextSpliceRecording snapshots that still point at this splice have their recorded_splice_id cleared as well, so the (transient) labeled splice can be deleted without violating the foreign key while the snapshot itself is preserved.
+
     Parameters:
         splice_id (UUID): Identifier of the LabeledSplice to delete.
-    
+
     """
     labeled_splice = (
         db.query(_models.LabeledSplice)
@@ -425,7 +437,7 @@ async def delete_labeled_splice(splice_id: UUID, db: "Session"):
         if not existing_snapshot:
             snapshot_db = _models.TextSpliceRecording(
                 text_splice_id=text_splice.id,
-                recorded_splice_id=splice_id,
+                recorded_splice_id=None,
                 name=labeled_splice.name,
                 path=labeled_splice.path,
                 label=labeled_splice.label or "",
@@ -438,6 +450,15 @@ async def delete_labeled_splice(splice_id: UUID, db: "Session"):
             db.add(snapshot_db)
         text_splice.recorded_splice_id = None
         text_splice.updated_at = _dt.datetime.utcnow()
+
+    # Release any existing snapshots that still point at this splice (e.g. created
+    # by the record_text_splice flow) so the foreign key does not block the delete.
+    db.query(_models.TextSpliceRecording).filter(
+        _models.TextSpliceRecording.recorded_splice_id == splice_id
+    ).update(
+        {_models.TextSpliceRecording.recorded_splice_id: None},
+        synchronize_session=False,
+    )
 
     db.delete(labeled_splice)
     db.commit()
