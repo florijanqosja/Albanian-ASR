@@ -151,7 +151,7 @@ def read_user_activity(
 ):
     total, rows = services.get_user_activity(db, current_user.id, page, page_size)
     names = [row.name for row in rows if getattr(row, "name", None)]
-    stats_map = services.get_splice_stats_for_video_names(db, names)
+    stats_map = services.get_splice_stats_for_video_names(db, current_user.id, names)
     items: list[dict] = []
 
     for row in rows:

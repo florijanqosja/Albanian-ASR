@@ -1194,7 +1194,22 @@ def get_user_upload_records(db: "Session", user_id: UUID, page: int, page_size: 
     return total, records
 
 
-def get_splice_stats_for_video_names(db: "Session", video_names: list[str]):
+def get_splice_stats_for_video_names(db: "Session", user_id: UUID, video_names: list[str]):
+    """
+    Aggregate splice counts per video name for a single owner.
+
+    Splice ``name`` is derived from the user-supplied upload title and is not
+    globally unique, so every query is additionally scoped by ``owner_id`` to
+    avoid mixing in another user's splices that happen to share a name.
+
+    Parameters:
+        user_id (UUID): Owner whose splices should be counted.
+        video_names (list[str]): Upload names to aggregate counts for.
+
+    Returns:
+        dict: Mapping of video name to ``{total_generated, validated_count,
+        labeled_count, unlabeled_count}``.
+    """
     if not video_names:
         return {}
 
@@ -1214,7 +1229,7 @@ def get_splice_stats_for_video_names(db: "Session", video_names: list[str]):
 
     unlabeled_rows = (
         db.query(_models.Splice.name, func.count(_models.Splice.id))
-        .filter(_models.Splice.name.in_(unique_names))
+        .filter(_models.Splice.owner_id == user_id, _models.Splice.name.in_(unique_names))
         .group_by(_models.Splice.name)
         .all()
     )
@@ -1225,7 +1240,7 @@ def get_splice_stats_for_video_names(db: "Session", video_names: list[str]):
 
     labeled_rows = (
         db.query(_models.LabeledSplice.name, func.count(_models.LabeledSplice.id))
-        .filter(_models.LabeledSplice.name.in_(unique_names))
+        .filter(_models.LabeledSplice.owner_id == user_id, _models.LabeledSplice.name.in_(unique_names))
         .group_by(_models.LabeledSplice.name)
         .all()
     )
@@ -1236,7 +1251,7 @@ def get_splice_stats_for_video_names(db: "Session", video_names: list[str]):
 
     validated_rows = (
         db.query(_models.HighQualityLabeledSplice.name, func.count(_models.HighQualityLabeledSplice.id))
-        .filter(_models.HighQualityLabeledSplice.name.in_(unique_names))
+        .filter(_models.HighQualityLabeledSplice.owner_id == user_id, _models.HighQualityLabeledSplice.name.in_(unique_names))
         .group_by(_models.HighQualityLabeledSplice.name)
         .all()
     )
@@ -1251,7 +1266,7 @@ def get_splice_stats_for_video_names(db: "Session", video_names: list[str]):
             _models.SpliceBeingProcessed.status,
             func.count(_models.SpliceBeingProcessed.id),
         )
-        .filter(_models.SpliceBeingProcessed.name.in_(unique_names))
+        .filter(_models.SpliceBeingProcessed.owner_id == user_id, _models.SpliceBeingProcessed.name.in_(unique_names))
         .group_by(_models.SpliceBeingProcessed.name, _models.SpliceBeingProcessed.status)
         .all()
     )
